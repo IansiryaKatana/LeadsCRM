@@ -140,7 +140,7 @@ export function exportToCSV(data: ExportData) {
   const link = document.createElement("a");
   const url = URL.createObjectURL(blob);
   link.setAttribute("href", url);
-  link.setAttribute("download", `ISKA_CRM_Report_${date.replace(/\//g, "-")}.csv`);
+  link.setAttribute("download", `Urban_Hub_Report_${date.replace(/\//g, "-")}.csv`);
   link.style.visibility = "hidden";
   document.body.appendChild(link);
   link.click();
@@ -238,7 +238,8 @@ export async function exportToExcel(data: ExportData) {
   let rowIndex = 1;
   
   // Header Row
-  const headerRow = worksheet.addRow(["ISKA Leads CRM - Performance Analytics Report"]);
+  const headerRow = worksheet.addRow(["Urban Hub Students Accommodations - Performance Analytics Report"]);
+  worksheet.addRow(["Intellectual Property of Ian Katana"]);
   headerRow.height = 30;
   worksheet.mergeCells(`A${rowIndex}:E${rowIndex}`);
   headerRow.getCell(1).style = headerStyle;
@@ -466,7 +467,7 @@ export async function exportToExcel(data: ExportData) {
   const link = document.createElement("a");
   const url = URL.createObjectURL(blob);
   link.setAttribute("href", url);
-  link.setAttribute("download", `ISKA_CRM_Report_${date.replace(/\//g, "-")}.xlsx`);
+  link.setAttribute("download", `Urban_Hub_Report_${date.replace(/\//g, "-")}.xlsx`);
   link.style.visibility = "hidden";
   document.body.appendChild(link);
   link.click();
@@ -514,7 +515,9 @@ export async function exportToPDF(data: ExportData) {
   doc.setTextColor(255, 255, 255);
   doc.setFontSize(28);
   doc.setFont("helvetica", "bold");
-  doc.text("ISKA Leads CRM", margin, 25);
+  doc.text("Urban Hub Students Accommodations", margin, 25);
+  doc.setFontSize(10);
+  doc.text("Intellectual Property of Ian Katana", margin, 32);
   
   doc.setFontSize(14);
   doc.setFont("helvetica", "normal");
@@ -828,7 +831,7 @@ export async function exportToPDF(data: ExportData) {
       { align: "center" }
     );
     doc.text(
-      "ISKA Leads CRM - Confidential",
+      "Urban Hub Students Accommodations - Confidential",
       pageWidth / 2,
       pageHeight - 5,
       { align: "center" }
@@ -836,6 +839,6 @@ export async function exportToPDF(data: ExportData) {
   }
   
   // Save PDF
-  doc.save(`ISKA_CRM_Report_${date.replace(/\//g, "-")}.pdf`);
+  doc.save(`Urban_Hub_Report_${date.replace(/\//g, "-")}.pdf`);
 }
 

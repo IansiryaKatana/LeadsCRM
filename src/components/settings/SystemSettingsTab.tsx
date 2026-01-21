@@ -17,8 +17,8 @@ export function SystemSettingsTab() {
   const [roomLabels, setRoomLabels] = useState<RoomLabels>(settings.room_labels);
   const [logoUrl, setLogoUrl] = useState(settings.branding.logo_url || "");
   const [faviconUrl, setFaviconUrl] = useState(settings.branding.favicon_url || "");
-  const [systemName, setSystemName] = useState(settings.system_name || "ISKA Leads CRM");
-  const [emailFromAddress, setEmailFromAddress] = useState(settings.email_from_address || "ISKA CRM <noreply@send.portal.urbanhub.uk>");
+  const [systemName, setSystemName] = useState(settings.system_name || "Urban Hub Students Accommodations");
+  const [emailFromAddress, setEmailFromAddress] = useState(settings.email_from_address || "Urban Hub <noreply@send.portal.urbanhub.uk>");
   const [academicYears, setAcademicYears] = useState<string[]>(settings.academic_years || []);
   const [defaultAcademicYear, setDefaultAcademicYear] = useState(settings.default_academic_year || "");
   const [newYearInput, setNewYearInput] = useState("");

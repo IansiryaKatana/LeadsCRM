@@ -16,8 +16,8 @@ export default defineConfig(({ mode }) => ({
       registerType: "autoUpdate",
       includeAssets: ["favicon.ico", "apple-touch-icon.png", "masked-icon.svg"],
       manifest: {
-        name: "ISKA Leads CRM",
-        short_name: "ISKA CRM",
+        name: "Urban Hub Students Accommodations",
+        short_name: "Urban Hub",
         description: "Student accommodation leads management system",
         theme_color: "#51A6FF",
         background_color: "#F5F5F5",

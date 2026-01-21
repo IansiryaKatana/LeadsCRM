@@ -58,7 +58,7 @@ export function SystemSettingsProvider({ children }: { children: ReactNode }) {
         defaultAcademicYear: settings.default_academic_year || "",
         currentAcademicYear,
         setCurrentAcademicYear,
-        systemName: settings.system_name ?? "ISKA Leads CRM",
+        systemName: settings.system_name ?? "Urban Hub Students Accommodations",
       }}
     >
       {children}

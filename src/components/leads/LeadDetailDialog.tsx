@@ -40,9 +40,11 @@ import { FollowUpForm } from "@/components/leads/FollowUpForm";
 import { ExceptionRequestDialog } from "@/components/leads/ExceptionRequestDialog";
 import { AuditTrailDisplay } from "@/components/leads/AuditTrailDisplay";
 import { EmailTab } from "@/components/leads/EmailTab";
+import { TasksTab } from "@/components/leads/TasksTab";
+import { CalendarTab } from "@/components/leads/CalendarTab";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Progress } from "@/components/ui/progress";
-import { Flame, Mail, Phone, Calendar, DollarSign, User, MessageSquare, Loader2, PhoneCall, Plus, History } from "lucide-react";
+import { Flame, Mail, Phone, Calendar, DollarSign, User, MessageSquare, Loader2, PhoneCall, Plus, History, CheckSquare, CalendarDays } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
 import type { Database } from "@/integrations/supabase/types";
 
@@ -163,7 +165,11 @@ export function LeadDetailDialog({ lead, onClose }: LeadDetailDialogProps) {
           <TabsList
             className={cn(
               "grid w-full",
-              isWebSimpleDialog ? "grid-cols-3" : hasElevatedRole ? "grid-cols-5" : "grid-cols-4",
+              isWebSimpleDialog 
+                ? "grid-cols-3" 
+                : hasElevatedRole 
+                  ? "grid-cols-7" 
+                  : "grid-cols-6",
             )}
           >
             <TabsTrigger value="details">
@@ -182,6 +188,14 @@ export function LeadDetailDialog({ lead, onClose }: LeadDetailDialogProps) {
                       {followUpCount}
                     </span>
                   )}
+                </TabsTrigger>
+                <TabsTrigger value="tasks">
+                  <CheckSquare className="h-4 w-4 mr-1" />
+                  Tasks
+                </TabsTrigger>
+                <TabsTrigger value="calendar">
+                  <CalendarDays className="h-4 w-4 mr-1" />
+                  Calendar
                 </TabsTrigger>
                 <TabsTrigger value="notes">
                   Notes
@@ -424,6 +438,20 @@ export function LeadDetailDialog({ lead, onClose }: LeadDetailDialogProps) {
                 </div>
               )}
             </div>
+          </TabsContent>
+          )}
+
+          {/* Tasks Tab (not shown for Web Contact / Keyworkers) */}
+          {!isWebSimpleDialog && (
+          <TabsContent value="tasks" className="mt-4 overflow-y-auto max-h-[60vh] pr-2 scrollbar-thin scrollbar-thumb-muted scrollbar-track-transparent">
+            <TasksTab leadId={leadData.id} />
+          </TabsContent>
+          )}
+
+          {/* Calendar Tab (not shown for Web Contact / Keyworkers) */}
+          {!isWebSimpleDialog && (
+          <TabsContent value="calendar" className="mt-4 overflow-y-auto max-h-[60vh] pr-2 scrollbar-thin scrollbar-thumb-muted scrollbar-track-transparent">
+            <CalendarTab leadId={leadData.id} leadName={leadData.full_name} />
           </TabsContent>
           )}
 

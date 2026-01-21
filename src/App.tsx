@@ -10,6 +10,8 @@ import { useFavicon } from "@/hooks/useFavicon";
 import Dashboard from "./pages/Dashboard";
 import Leads from "./pages/Leads";
 import LeadSourcePage from "./pages/LeadSourcePage";
+import Tasks from "./pages/Tasks";
+import Calendar from "./pages/Calendar";
 import Reports from "./pages/Reports";
 import BulkUpload from "./pages/BulkUpload";
 import Settings from "./pages/Settings";
@@ -44,6 +46,8 @@ const App = () => (
             <Route path="/" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
             <Route path="/leads" element={<ProtectedRoute><Leads /></ProtectedRoute>} />
             <Route path="/leads/source/:sourceSlug" element={<ProtectedRoute><LeadSourcePage /></ProtectedRoute>} />
+            <Route path="/tasks" element={<ProtectedRoute><Tasks /></ProtectedRoute>} />
+            <Route path="/calendar" element={<ProtectedRoute><Calendar /></ProtectedRoute>} />
             <Route path="/reports" element={<ProtectedRoute><Reports /></ProtectedRoute>} />
             <Route path="/upload" element={<ProtectedRoute><BulkUpload /></ProtectedRoute>} />
             <Route path="/settings" element={<ProtectedRoute requireRole={["super_admin", "admin"]}><Settings /></ProtectedRoute>} />

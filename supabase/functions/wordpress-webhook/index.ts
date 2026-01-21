@@ -341,6 +341,53 @@ serve(async (req) => {
       });
     }
 
+    // Automatically create calendar event for booking forms with preferred_date and preferred_time
+    if ((formType === "booking" || formType === "callback") && preferredDate) {
+      try {
+        // Parse the date and time
+        let startDateTime: string;
+        if (preferredTime) {
+          // Combine date and time
+          const timeStr = preferredTime.includes(":") ? preferredTime : `${preferredTime}:00`;
+          startDateTime = `${preferredDate}T${timeStr}`;
+        } else {
+          // Default to 12:00 PM if no time provided
+          startDateTime = `${preferredDate}T12:00:00`;
+        }
+
+        // Create calendar event
+        const eventTitle = formType === "booking" 
+          ? `Viewing: ${lead.full_name}`
+          : `Callback: ${lead.full_name}`;
+
+        // Use the lead's assigned_to or created_by for the event creator, or null for system
+        const eventCreator = lead.assigned_to || lead.created_by || null;
+
+        const { error: eventError } = await supabase
+          .from("calendar_events")
+          .insert({
+            lead_id: lead.id,
+            event_type: formType === "booking" ? "viewing" : "callback",
+            title: eventTitle,
+            description: `Automatically created from ${payload.form_name || "web form"} submission`,
+            start_date: startDateTime,
+            end_date: null, // Can be set later if needed
+            location: null,
+            created_by: eventCreator, // Use lead's assigned user or creator
+          });
+
+        if (eventError) {
+          console.error("Error creating calendar event:", eventError);
+          // Don't fail the webhook if event creation fails
+        } else {
+          console.log("Calendar event created successfully for lead:", lead.id);
+        }
+      } catch (eventError) {
+        console.error("Error creating calendar event:", eventError);
+        // Don't fail the webhook if event creation fails
+      }
+    }
+
     // Trigger email notification for new leads (not deposits, as they're already converted)
     if (!isDepositForm) {
       try {

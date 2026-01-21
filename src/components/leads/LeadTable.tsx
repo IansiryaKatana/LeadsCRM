@@ -27,6 +27,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Search, Filter, Flame, Eye, MoreHorizontal, Trash2, CheckSquare, Square, UserPlus } from "lucide-react";
+import { LeadFilters, ActiveFiltersDisplay, type LeadFilters as LeadFiltersType } from "./LeadFilters";
 import { useDeleteLead, useToggleHotLead, useUpdateLeadStatus, useAssignLead } from "@/hooks/useLeads";
 import { useAuth } from "@/hooks/useAuth";
 import { useSystemSettingsContext } from "@/contexts/SystemSettingsContext";
@@ -61,6 +62,18 @@ interface LeadTableProps {
 
 export function LeadTable({ leads, onViewLead, viewMode = "default", allLeadIds }: LeadTableProps) {
   const [searchQuery, setSearchQuery] = useState("");
+  const [filters, setFilters] = useState<LeadFiltersType>({
+    statuses: [],
+    sources: [],
+    roomChoices: [],
+    assignedTo: null,
+    dateFrom: null,
+    dateTo: null,
+    hotOnly: false,
+    hasOverdueFollowups: false,
+    hasNotes: false,
+    minRevenue: null,
+  });
   const [sortField, setSortField] = useState<keyof Lead>("created_at");
   const [sortOrder, setSortOrder] = useState<"asc" | "desc">("desc");
   const [selectedLeads, setSelectedLeads] = useState<Set<string>>(new Set());
@@ -83,12 +96,103 @@ export function LeadTable({ leads, onViewLead, viewMode = "default", allLeadIds 
   const { data: teamMembers = [] } = useTeamMembers();
   const { markLeadAsRead, isLeadUnread } = useWebLeadReadManager();
 
-  const filteredLeads = leads.filter(
-    (lead) =>
+  // Apply search and filters
+  const filteredLeads = leads.filter((lead) => {
+    // Search filter
+    const matchesSearch =
       lead.full_name.toLowerCase().includes(searchQuery.toLowerCase()) ||
       lead.email.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      lead.phone.includes(searchQuery)
-  );
+      lead.phone.includes(searchQuery);
+
+    if (!matchesSearch) return false;
+
+    // Status filter
+    if (filters.statuses.length > 0 && !filters.statuses.includes(lead.lead_status)) {
+      return false;
+    }
+
+    // Source filter
+    if (filters.sources.length > 0 && !filters.sources.includes(lead.source)) {
+      return false;
+    }
+
+    // Room choice filter
+    if (filters.roomChoices.length > 0 && lead.room_choice && !filters.roomChoices.includes(lead.room_choice)) {
+      return false;
+    }
+
+    // Assigned to filter
+    if (filters.assignedTo && lead.assigned_to !== filters.assignedTo) {
+      return false;
+    }
+
+    // Date range filter
+    if (filters.dateFrom || filters.dateTo) {
+      const leadDate = new Date(lead.created_at);
+      if (filters.dateFrom && leadDate < new Date(filters.dateFrom)) {
+        return false;
+      }
+      if (filters.dateTo) {
+        const toDate = new Date(filters.dateTo);
+        toDate.setHours(23, 59, 59, 999);
+        if (leadDate > toDate) {
+          return false;
+        }
+      }
+    }
+
+    // Hot only filter
+    if (filters.hotOnly && !lead.is_hot) {
+      return false;
+    }
+
+    // Revenue filter
+    if (filters.minRevenue !== null && (lead.potential_revenue || 0) < filters.minRevenue) {
+      return false;
+    }
+
+    // Note: hasOverdueFollowups and hasNotes would require additional queries
+    // For now, we'll skip these filters or implement them later
+
+    return true;
+  });
+
+  const handleRemoveFilter = (type: string, value?: string) => {
+    setFilters(prev => {
+      const newFilters = { ...prev };
+      switch (type) {
+        case "status":
+          newFilters.statuses = value ? prev.statuses.filter(s => s !== value) : [];
+          break;
+        case "source":
+          newFilters.sources = value ? prev.sources.filter(s => s !== value) : [];
+          break;
+        case "room":
+          newFilters.roomChoices = value ? prev.roomChoices.filter(r => r !== value) : [];
+          break;
+        case "assigned":
+          newFilters.assignedTo = null;
+          break;
+        case "date":
+          newFilters.dateFrom = null;
+          newFilters.dateTo = null;
+          break;
+        case "hot":
+          newFilters.hotOnly = false;
+          break;
+        case "overdue":
+          newFilters.hasOverdueFollowups = false;
+          break;
+        case "notes":
+          newFilters.hasNotes = false;
+          break;
+        case "revenue":
+          newFilters.minRevenue = null;
+          break;
+      }
+      return newFilters;
+    });
+  };
 
   const sortedLeads = [...filteredLeads].sort((a, b) => {
     const aValue = a[sortField];
@@ -295,11 +399,27 @@ export function LeadTable({ leads, onViewLead, viewMode = "default", allLeadIds 
                   className="pl-10 bg-muted/50 border-0"
                 />
               </div>
-              <Button variant="outline" size="icon" className="shrink-0">
-                <Filter className="h-4 w-4" />
-              </Button>
+              <LeadFilters
+                filters={filters}
+                onFiltersChange={setFilters}
+                onClear={() => setFilters({
+                  statuses: [],
+                  sources: [],
+                  roomChoices: [],
+                  assignedTo: null,
+                  dateFrom: null,
+                  dateTo: null,
+                  hotOnly: false,
+                  hasOverdueFollowups: false,
+                  hasNotes: false,
+                  minRevenue: null,
+                })}
+              />
             </div>
           </div>
+
+          {/* Active Filters Display */}
+          <ActiveFiltersDisplay filters={filters} onRemoveFilter={handleRemoveFilter} />
 
           {/* Bulk Actions Bar */}
           {selectedLeads.size > 0 && (

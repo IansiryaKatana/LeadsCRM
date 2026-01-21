@@ -34,7 +34,7 @@ export function PWASettingsTab() {
       <CardHeader>
         <CardTitle className="font-display">Install App</CardTitle>
         <CardDescription>
-          Install ISKA Leads CRM as a Progressive Web App
+          Install Urban Hub Students Accommodations as a Progressive Web App
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-6">
@@ -47,7 +47,7 @@ export function PWASettingsTab() {
                   App Installed
                 </h3>
                 <p className="text-muted-foreground">
-                  ISKA Leads CRM is installed on your device
+                  Urban Hub Students Accommodations is installed on your device
                 </p>
               </div>
             </div>
@@ -87,7 +87,7 @@ export function PWASettingsTab() {
                 disabled={isInstalling}
               >
                 <Download className="mr-2 h-4 w-4" />
-                {isInstalling ? "Installing..." : "Install ISKA Leads CRM"}
+                {isInstalling ? "Installing..." : "Install Urban Hub Students Accommodations"}
               </Button>
             ) : (
               <div className="space-y-2">

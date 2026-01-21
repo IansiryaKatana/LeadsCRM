@@ -13,6 +13,8 @@ import {
   Building2,
   Menu,
   X,
+  CheckSquare,
+  CalendarDays,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -43,6 +45,8 @@ import { getSourceIcon } from "@/utils/sourceIcons";
 const navigation = [
   { name: "Dashboard", href: "/", icon: LayoutDashboard },
   { name: "All Leads", href: "/leads", icon: Users },
+  { name: "Tasks", href: "/tasks", icon: CheckSquare },
+  { name: "Calendar", href: "/calendar", icon: CalendarDays },
   { name: "Reports", href: "/reports", icon: FileBarChart },
   { name: "Bulk Upload", href: "/upload", icon: Upload },
   { name: "Settings", href: "/settings", icon: Settings, requireAdmin: true },

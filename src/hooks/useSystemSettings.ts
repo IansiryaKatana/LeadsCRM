@@ -58,8 +58,8 @@ const DEFAULT_SETTINGS: SystemSettings = {
   },
   academic_years: ["2024/2025", "2025/2026"],
   default_academic_year: "2025/2026",
-  system_name: "ISKA Leads CRM",
-  email_from_address: "ISKA CRM <noreply@send.portal.urbanhub.uk>",
+  system_name: "Urban Hub Students Accommodations",
+  email_from_address: "Urban Hub <noreply@send.portal.urbanhub.uk>",
 };
 
 export const CURRENCY_OPTIONS: CurrencySettings[] = [
