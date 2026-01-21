@@ -45,6 +45,7 @@ export default function Auth() {
   
   const isRecovery = searchParams.get("type") === "recovery";
   const logoUrl = settings.branding?.logo_url;
+  const faviconUrl = settings.branding?.favicon_url;
 
   useEffect(() => {
     if (user && !authLoading && !isRecovery) {
@@ -143,16 +144,20 @@ export default function Auth() {
     <div className="min-h-screen flex items-center justify-center bg-background p-4">
       <Card className="w-full max-w-md shadow-elevated">
         <CardHeader className="text-center space-y-4">
-          <div className="mx-auto w-16 h-16 rounded-2xl bg-primary flex items-center justify-center overflow-hidden">
-            {logoUrl ? (
-              <img src={logoUrl} alt="Logo" className="w-full h-full object-contain p-2" />
+          <div className="mx-auto w-16 h-16 flex items-center justify-center overflow-hidden">
+            {faviconUrl ? (
+              <img src={faviconUrl} alt="Favicon" className="w-full h-full object-contain" />
+            ) : logoUrl ? (
+              <img src={logoUrl} alt="Logo" className="w-full h-full object-contain" />
             ) : (
-              <Building2 className="h-8 w-8 text-primary-foreground" />
+              <Building2 className="h-12 w-12 text-primary" />
             )}
           </div>
           <div>
-            <CardTitle className="font-display text-3xl">{systemName}</CardTitle>
-            <CardDescription className="mt-2">
+            <CardTitle className="font-display text-4xl font-black text-black uppercase tracking-tighter">
+              URBAN HUB
+            </CardTitle>
+            <CardDescription className="mt-2 text-muted-foreground font-medium">
               {isRecovery ? "Reset your password" : "Student accommodation leads management"}
             </CardDescription>
           </div>
