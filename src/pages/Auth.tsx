@@ -40,7 +40,7 @@ export default function Auth() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const { user, signIn, resetPassword, loading: authLoading } = useAuth();
-  const { settings, systemName } = useSystemSettingsContext();
+  const { settings, systemName, isLoading: settingsLoading } = useSystemSettingsContext();
   const [activeTab, setActiveTab] = useState("login");
   const [isSubmitting, setIsSubmitting] = useState(false);
   
@@ -133,7 +133,7 @@ export default function Auth() {
     }
   };
 
-  if (authLoading) {
+  if (authLoading || settingsLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background">
         <Loader2 className="h-8 w-8 animate-spin text-primary" />
