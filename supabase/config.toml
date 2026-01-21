@@ -1,0 +1,16 @@
+project_id = "btbsslznsexidjnzizre"
+
+[functions.wpforms-webhook]
+verify_jwt = false
+
+[functions.wordpress-webhook]
+verify_jwt = false
+
+[functions.send-notification]
+verify_jwt = true
+
+[functions.process-csv-import]
+verify_jwt = true
+
+[functions.process-followup-reminders]
+verify_jwt = true
