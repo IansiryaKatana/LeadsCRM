@@ -1,11 +1,12 @@
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
+  Sheet,
+  SheetContent,
+  SheetHeader,
+  SheetTitle,
+  SheetFooter,
+} from "@/components/ui/sheet";
 import {
   Select,
   SelectContent,
@@ -17,7 +18,8 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
-import { X, Filter } from "lucide-react";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { X, Filter, ChevronDown } from "lucide-react";
 import { useLeadSources } from "@/hooks/useLeadSources";
 import { useTeamMembers } from "@/hooks/useDashboardStats";
 import { LEAD_STATUS_CONFIG } from "@/types/crm";
@@ -127,218 +129,256 @@ export function LeadFilters({ filters, onFiltersChange, onClear }: LeadFiltersPr
         )}
       </Button>
 
-      <Dialog open={open} onOpenChange={setOpen}>
-        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
-              <Filter className="h-5 w-5" />
-              Filters
-            </DialogTitle>
-          </DialogHeader>
+      <Sheet open={open} onOpenChange={setOpen}>
+        <SheetContent side="right" className="w-full sm:w-[540px] lg:w-[640px] overflow-y-auto">
+          <SheetHeader className="pb-4 border-b">
+            <SheetTitle>Filters</SheetTitle>
+          </SheetHeader>
 
-          <div className="space-y-6 mt-4">
-            {/* Status Filter */}
-            <div className="space-y-3">
-              <Label className="text-sm font-semibold">Status</Label>
-              <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-                {Object.entries(LEAD_STATUS_CONFIG).map(([key, config]) => (
-                  <div key={key} className="flex items-center space-x-2">
-                    <Checkbox
-                      id={`status-${key}`}
-                      checked={localFilters.statuses.includes(key)}
-                      onCheckedChange={() => toggleStatus(key)}
-                    />
-                    <Label
-                      htmlFor={`status-${key}`}
-                      className="text-sm font-normal cursor-pointer flex items-center gap-2"
+          <div className="mt-6 space-y-6">
+            <div className="space-y-5">
+              {/* Status Filter */}
+              <div className="space-y-2">
+                <Label className="text-sm font-semibold">Status</Label>
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <Button
+                      variant="outline"
+                      role="combobox"
+                      className="w-full justify-between font-normal"
                     >
-                      <span
-                        className="w-2 h-2 rounded-full"
-                        style={{ backgroundColor: config.color }}
-                      />
-                      {config.label}
-                    </Label>
-                  </div>
-                ))}
+                      {localFilters.statuses.length > 0
+                        ? `${localFilters.statuses.length} selected`
+                        : "Select statuses..."}
+                      <ChevronDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-full p-0" align="start">
+                    <div className="max-h-64 overflow-y-auto p-2">
+                      {Object.entries(LEAD_STATUS_CONFIG).map(([key, config]) => (
+                        <div key={key} className="flex items-center space-x-2 p-2 rounded-sm hover:bg-accent">
+                          <Checkbox
+                            id={`status-${key}`}
+                            checked={localFilters.statuses.includes(key)}
+                            onCheckedChange={() => toggleStatus(key)}
+                          />
+                          <Label
+                            htmlFor={`status-${key}`}
+                            className="text-sm font-normal cursor-pointer flex items-center gap-2 flex-1"
+                          >
+                            <span
+                              className="w-2 h-2 rounded-full"
+                              style={{ backgroundColor: config.color }}
+                            />
+                            {config.label}
+                          </Label>
+                        </div>
+                      ))}
+                    </div>
+                  </PopoverContent>
+                </Popover>
               </div>
-            </div>
 
-            {/* Source Filter */}
-            <div className="space-y-3">
-              <Label className="text-sm font-semibold">Source</Label>
-              <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 max-h-48 overflow-y-auto">
-                {sources.map((source) => (
-                  <div key={source.slug} className="flex items-center space-x-2">
-                    <Checkbox
-                      id={`source-${source.slug}`}
-                      checked={localFilters.sources.includes(source.slug)}
-                      onCheckedChange={() => toggleSource(source.slug)}
-                    />
-                    <Label
-                      htmlFor={`source-${source.slug}`}
-                      className="text-sm font-normal cursor-pointer"
+              {/* Source Filter */}
+              <div className="space-y-2">
+                <Label className="text-sm font-semibold">Source</Label>
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <Button
+                      variant="outline"
+                      role="combobox"
+                      className="w-full justify-between font-normal"
                     >
-                      {source.name}
-                    </Label>
-                  </div>
-                ))}
+                      {localFilters.sources.length > 0
+                        ? `${localFilters.sources.length} selected`
+                        : "Select sources..."}
+                      <ChevronDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-full p-0" align="start">
+                    <div className="max-h-64 overflow-y-auto p-2">
+                      {sources.map((source) => (
+                        <div key={source.slug} className="flex items-center space-x-2 p-2 rounded-sm hover:bg-accent">
+                          <Checkbox
+                            id={`source-${source.slug}`}
+                            checked={localFilters.sources.includes(source.slug)}
+                            onCheckedChange={() => toggleSource(source.slug)}
+                          />
+                          <Label
+                            htmlFor={`source-${source.slug}`}
+                            className="text-sm font-normal cursor-pointer flex-1"
+                          >
+                            {source.name}
+                          </Label>
+                        </div>
+                      ))}
+                    </div>
+                  </PopoverContent>
+                </Popover>
               </div>
-            </div>
 
-            {/* Room Choice Filter */}
-            <div className="space-y-3">
-              <Label className="text-sm font-semibold">Room Choice</Label>
-              <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-                {["platinum", "gold", "silver", "bronze", "standard"].map((room) => (
-                  <div key={room} className="flex items-center space-x-2">
-                    <Checkbox
-                      id={`room-${room}`}
-                      checked={localFilters.roomChoices.includes(room)}
-                      onCheckedChange={() => toggleRoomChoice(room)}
-                    />
-                    <Label
-                      htmlFor={`room-${room}`}
-                      className="text-sm font-normal cursor-pointer capitalize"
+              {/* Room Choice Filter */}
+              <div className="space-y-2">
+                <Label className="text-sm font-semibold">Room Choice</Label>
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <Button
+                      variant="outline"
+                      role="combobox"
+                      className="w-full justify-between font-normal"
                     >
-                      {room}
-                    </Label>
-                  </div>
-                ))}
+                      {localFilters.roomChoices.length > 0
+                        ? `${localFilters.roomChoices.length} selected`
+                        : "Select room choices..."}
+                      <ChevronDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-full p-0" align="start">
+                    <div className="max-h-64 overflow-y-auto p-2">
+                      {["platinum", "gold", "silver", "bronze", "standard"].map((room) => (
+                        <div key={room} className="flex items-center space-x-2 p-2 rounded-sm hover:bg-accent">
+                          <Checkbox
+                            id={`room-${room}`}
+                            checked={localFilters.roomChoices.includes(room)}
+                            onCheckedChange={() => toggleRoomChoice(room)}
+                          />
+                          <Label
+                            htmlFor={`room-${room}`}
+                            className="text-sm font-normal cursor-pointer capitalize flex-1"
+                          >
+                            {room}
+                          </Label>
+                        </div>
+                      ))}
+                    </div>
+                  </PopoverContent>
+                </Popover>
               </div>
-            </div>
+              {/* Assigned To Filter */}
+              <div className="space-y-2">
+                <Label className="text-sm font-semibold">Assigned To</Label>
+                <Select
+                  value={localFilters.assignedTo || "all"}
+                  onValueChange={(value) =>
+                    setLocalFilters(prev => ({
+                      ...prev,
+                      assignedTo: value === "all" ? null : value,
+                    }))
+                  }
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="All users" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All users</SelectItem>
+                    {teamMembers.map((member) => (
+                      <SelectItem key={member.user_id} value={member.user_id}>
+                        {member.full_name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
 
-            {/* Assigned To Filter */}
-            <div className="space-y-2">
-              <Label className="text-sm font-semibold">Assigned To</Label>
-              <Select
-                value={localFilters.assignedTo || ""}
-                onValueChange={(value) =>
-                  setLocalFilters(prev => ({ ...prev, assignedTo: value || null }))
-                }
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="All users" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="">All users</SelectItem>
-                  {teamMembers.map((member) => (
-                    <SelectItem key={member.user_id} value={member.user_id}>
-                      {member.full_name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
+              {/* Date Range Filter */}
+              <div className="space-y-2">
+                <Label className="text-sm font-semibold">Date Range</Label>
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="space-y-1.5">
+                    <Label className="text-xs text-muted-foreground">From</Label>
+                    <Input
+                      type="date"
+                      value={localFilters.dateFrom || ""}
+                      onChange={(e) =>
+                        setLocalFilters(prev => ({ ...prev, dateFrom: e.target.value || null }))
+                      }
+                    />
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label className="text-xs text-muted-foreground">To</Label>
+                    <Input
+                      type="date"
+                      value={localFilters.dateTo || ""}
+                      onChange={(e) =>
+                        setLocalFilters(prev => ({ ...prev, dateTo: e.target.value || null }))
+                      }
+                    />
+                  </div>
+                </div>
+              </div>
 
-            {/* Date Range Filter */}
-            <div className="space-y-3">
-              <Label className="text-sm font-semibold">Date Range</Label>
-              <div className="grid grid-cols-2 gap-3">
+              {/* Additional Filters */}
+              <div className="space-y-2">
+                <Label className="text-sm font-semibold">Additional Filters</Label>
                 <div className="space-y-2">
-                  <Label className="text-xs text-muted-foreground">From</Label>
-                  <Input
-                    type="date"
-                    value={localFilters.dateFrom || ""}
-                    onChange={(e) =>
-                      setLocalFilters(prev => ({ ...prev, dateFrom: e.target.value || null }))
-                    }
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label className="text-xs text-muted-foreground">To</Label>
-                  <Input
-                    type="date"
-                    value={localFilters.dateTo || ""}
-                    onChange={(e) =>
-                      setLocalFilters(prev => ({ ...prev, dateTo: e.target.value || null }))
-                    }
-                  />
-                </div>
-              </div>
-            </div>
-
-            {/* Additional Filters */}
-            <div className="space-y-3">
-              <Label className="text-sm font-semibold">Additional Filters</Label>
-              <div className="space-y-3">
-                <div className="flex items-center space-x-2">
-                  <Checkbox
-                    id="hot-only"
-                    checked={localFilters.hotOnly}
-                    onCheckedChange={(checked) =>
-                      setLocalFilters(prev => ({ ...prev, hotOnly: checked as boolean }))
-                    }
-                  />
-                  <Label htmlFor="hot-only" className="text-sm font-normal cursor-pointer">
-                    Hot leads only
-                  </Label>
-                </div>
-                <div className="flex items-center space-x-2">
-                  <Checkbox
-                    id="overdue-followups"
-                    checked={localFilters.hasOverdueFollowups}
-                    onCheckedChange={(checked) =>
-                      setLocalFilters(prev => ({ ...prev, hasOverdueFollowups: checked as boolean }))
-                    }
-                  />
-                  <Label htmlFor="overdue-followups" className="text-sm font-normal cursor-pointer">
-                    Has overdue follow-ups
-                  </Label>
-                </div>
-                <div className="flex items-center space-x-2">
-                  <Checkbox
-                    id="has-notes"
-                    checked={localFilters.hasNotes}
-                    onCheckedChange={(checked) =>
-                      setLocalFilters(prev => ({ ...prev, hasNotes: checked as boolean }))
-                    }
-                  />
-                  <Label htmlFor="has-notes" className="text-sm font-normal cursor-pointer">
-                    Has notes
-                  </Label>
-                </div>
-                <div className="flex items-center space-x-2 gap-3">
-                  <Checkbox
-                    id="min-revenue"
-                    checked={!!localFilters.minRevenue}
-                    onCheckedChange={(checked) =>
-                      setLocalFilters(prev => ({
-                        ...prev,
-                        minRevenue: checked ? 0 : null,
-                      }))
-                    }
-                  />
-                  <Label htmlFor="min-revenue" className="text-sm font-normal cursor-pointer">
-                    Minimum revenue:
-                  </Label>
-                  <Input
-                    type="number"
-                    placeholder="0"
-                    value={localFilters.minRevenue || ""}
-                    onChange={(e) =>
-                      setLocalFilters(prev => ({
-                        ...prev,
-                        minRevenue: e.target.value ? Number(e.target.value) : null,
-                      }))
-                    }
-                    disabled={!localFilters.minRevenue && localFilters.minRevenue !== 0}
-                    className="w-32"
-                  />
+                  <div className="flex items-center space-x-2">
+                    <Checkbox
+                      id="hot-only"
+                      checked={localFilters.hotOnly}
+                      onCheckedChange={(checked) =>
+                        setLocalFilters(prev => ({ ...prev, hotOnly: checked as boolean }))
+                      }
+                    />
+                    <Label htmlFor="hot-only" className="text-sm font-normal cursor-pointer">
+                      Hot leads only
+                    </Label>
+                  </div>
+                  <div className="flex items-center space-x-2">
+                    <Checkbox
+                      id="overdue-followups"
+                      checked={localFilters.hasOverdueFollowups}
+                      onCheckedChange={(checked) =>
+                        setLocalFilters(prev => ({ ...prev, hasOverdueFollowups: checked as boolean }))
+                      }
+                    />
+                    <Label htmlFor="overdue-followups" className="text-sm font-normal cursor-pointer">
+                      Has overdue follow-ups
+                    </Label>
+                  </div>
+                  <div className="flex items-center space-x-2">
+                    <Checkbox
+                      id="has-notes"
+                      checked={localFilters.hasNotes}
+                      onCheckedChange={(checked) =>
+                        setLocalFilters(prev => ({ ...prev, hasNotes: checked as boolean }))
+                      }
+                    />
+                    <Label htmlFor="has-notes" className="text-sm font-normal cursor-pointer">
+                      Has notes
+                    </Label>
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="min-revenue" className="text-sm font-semibold">
+                      Minimum revenue
+                    </Label>
+                    <Input
+                      id="min-revenue"
+                      type="number"
+                      placeholder="0"
+                      value={localFilters.minRevenue || ""}
+                      onChange={(e) =>
+                        setLocalFilters(prev => ({
+                          ...prev,
+                          minRevenue: e.target.value ? Number(e.target.value) : null,
+                        }))
+                      }
+                    />
+                  </div>
                 </div>
               </div>
             </div>
           </div>
 
-          <div className="flex gap-3 pt-4 border-t">
+          <SheetFooter className="mt-6 pt-4 border-t">
             <Button variant="outline" onClick={handleClear} className="flex-1">
               Clear All
             </Button>
             <Button onClick={handleApply} className="flex-1">
               Apply Filters
             </Button>
-          </div>
-        </DialogContent>
-      </Dialog>
+          </SheetFooter>
+        </SheetContent>
+      </Sheet>
     </>
   );
 }

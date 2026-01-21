@@ -25,6 +25,7 @@ export interface NotificationPreferences {
   exception_requested: boolean;
   exception_approved: boolean;
   exception_rejected: boolean;
+  event_reminder: boolean;
   daily_summary: boolean;
   email_enabled: boolean;
   push_enabled: boolean;

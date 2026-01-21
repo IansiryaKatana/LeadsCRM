@@ -1,9 +1,10 @@
 import { useState, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { useAuth } from "@/hooks/useAuth";
+import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -18,9 +19,11 @@ const loginSchema = z.object({
   password: z.string().min(6, "Password must be at least 6 characters"),
 });
 
-const signupSchema = z.object({
-  fullName: z.string().min(2, "Name must be at least 2 characters"),
+const forgotPasswordSchema = z.object({
   email: z.string().email("Please enter a valid email"),
+});
+
+const updatePasswordSchema = z.object({
   password: z.string().min(6, "Password must be at least 6 characters"),
   confirmPassword: z.string(),
 }).refine((data) => data.password === data.confirmPassword, {
@@ -29,31 +32,39 @@ const signupSchema = z.object({
 });
 
 type LoginFormData = z.infer<typeof loginSchema>;
-type SignupFormData = z.infer<typeof signupSchema>;
+type ForgotPasswordFormData = z.infer<typeof forgotPasswordSchema>;
+type UpdatePasswordFormData = z.infer<typeof updatePasswordSchema>;
 
 export default function Auth() {
   const navigate = useNavigate();
-  const { user, signIn, signUp, loading: authLoading } = useAuth();
+  const [searchParams] = useSearchParams();
+  const { user, signIn, resetPassword, loading: authLoading } = useAuth();
   const { settings, systemName } = useSystemSettingsContext();
   const [activeTab, setActiveTab] = useState("login");
   const [isSubmitting, setIsSubmitting] = useState(false);
   
+  const isRecovery = searchParams.get("type") === "recovery";
   const logoUrl = settings.branding?.logo_url;
 
   useEffect(() => {
-    if (user && !authLoading) {
+    if (user && !authLoading && !isRecovery) {
       navigate("/");
     }
-  }, [user, authLoading, navigate]);
+  }, [user, authLoading, navigate, isRecovery]);
 
   const loginForm = useForm<LoginFormData>({
     resolver: zodResolver(loginSchema),
     defaultValues: { email: "", password: "" },
   });
 
-  const signupForm = useForm<SignupFormData>({
-    resolver: zodResolver(signupSchema),
-    defaultValues: { fullName: "", email: "", password: "", confirmPassword: "" },
+  const forgotPasswordForm = useForm<ForgotPasswordFormData>({
+    resolver: zodResolver(forgotPasswordSchema),
+    defaultValues: { email: "" },
+  });
+
+  const updatePasswordForm = useForm<UpdatePasswordFormData>({
+    resolver: zodResolver(updatePasswordSchema),
+    defaultValues: { password: "", confirmPassword: "" },
   });
 
   const handleLogin = async (data: LoginFormData) => {
@@ -78,32 +89,45 @@ export default function Auth() {
     }
   };
 
-  const handleSignup = async (data: SignupFormData) => {
+  const handleForgotPassword = async (data: ForgotPasswordFormData) => {
     setIsSubmitting(true);
-    const { error } = await signUp(data.email, data.password, data.fullName);
+    const { error } = await resetPassword(data.email);
     setIsSubmitting(false);
 
     if (error) {
-      if (error.message.includes("already registered")) {
-        toast({
-          title: "Account Exists",
-          description: "An account with this email already exists. Please login instead.",
-          variant: "destructive",
-        });
-        setActiveTab("login");
-      } else {
-        toast({
-          title: "Signup Failed",
-          description: error.message,
-          variant: "destructive",
-        });
-      }
+      toast({
+        title: "Error",
+        description: error.message,
+        variant: "destructive",
+      });
     } else {
       toast({
-        title: "Account Created!",
-        description: "Please check your email for a confirmation link to activate your account.",
+        title: "Email Sent",
+        description: "If an account exists for this email, you will receive a password reset link.",
       });
-      // Don't navigate - let user check email first
+      setActiveTab("login");
+    }
+  };
+
+  const handleUpdatePassword = async (data: UpdatePasswordFormData) => {
+    setIsSubmitting(true);
+    const { error } = await supabase.auth.updateUser({
+      password: data.password,
+    });
+    setIsSubmitting(false);
+
+    if (error) {
+      toast({
+        title: "Error",
+        description: error.message,
+        variant: "destructive",
+      });
+    } else {
+      toast({
+        title: "Password Updated",
+        description: "Your password has been updated successfully. You can now login.",
+      });
+      navigate("/auth", { replace: true });
     }
   };
 
@@ -129,136 +153,155 @@ export default function Auth() {
           <div>
             <CardTitle className="font-display text-3xl">{systemName}</CardTitle>
             <CardDescription className="mt-2">
-              Student accommodation leads management
+              {isRecovery ? "Reset your password" : "Student accommodation leads management"}
             </CardDescription>
           </div>
         </CardHeader>
         <CardContent>
-          <Tabs value={activeTab} onValueChange={setActiveTab}>
-            <TabsList className="grid w-full grid-cols-2 mb-6">
-              <TabsTrigger value="login">Login</TabsTrigger>
-              <TabsTrigger value="signup">Sign Up</TabsTrigger>
-            </TabsList>
+          {isRecovery ? (
+            <form onSubmit={updatePasswordForm.handleSubmit(handleUpdatePassword)} className="space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="new-password">New Password</Label>
+                <Input
+                  id="new-password"
+                  type="password"
+                  placeholder="••••••••"
+                  {...updatePasswordForm.register("password")}
+                  className={updatePasswordForm.formState.errors.password ? "border-destructive" : ""}
+                />
+                {updatePasswordForm.formState.errors.password && (
+                  <p className="text-sm text-destructive">
+                    {updatePasswordForm.formState.errors.password.message}
+                  </p>
+                )}
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="confirm-password">Confirm Password</Label>
+                <Input
+                  id="confirm-password"
+                  type="password"
+                  placeholder="••••••••"
+                  {...updatePasswordForm.register("confirmPassword")}
+                  className={updatePasswordForm.formState.errors.confirmPassword ? "border-destructive" : ""}
+                />
+                {updatePasswordForm.formState.errors.confirmPassword && (
+                  <p className="text-sm text-destructive">
+                    {updatePasswordForm.formState.errors.confirmPassword.message}
+                  </p>
+                )}
+              </div>
+              <Button type="submit" className="w-full" disabled={isSubmitting}>
+                {isSubmitting ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Updating...
+                  </>
+                ) : (
+                  "Update Password"
+                )}
+              </Button>
+            </form>
+          ) : (
+            <Tabs value={activeTab} onValueChange={setActiveTab}>
+              <TabsList className="grid w-full grid-cols-2 mb-6">
+                <TabsTrigger value="login">Login</TabsTrigger>
+                <TabsTrigger value="forgot-password">Forgot Password</TabsTrigger>
+              </TabsList>
 
-            <TabsContent value="login">
-              <form onSubmit={loginForm.handleSubmit(handleLogin)} className="space-y-4">
-                <div className="space-y-2">
-                  <Label htmlFor="login-email">Email</Label>
-                  <Input
-                    id="login-email"
-                    type="email"
-                    placeholder="you@email.com"
-                    {...loginForm.register("email")}
-                    className={loginForm.formState.errors.email ? "border-destructive" : ""}
-                  />
-                  {loginForm.formState.errors.email && (
-                    <p className="text-sm text-destructive">
-                      {loginForm.formState.errors.email.message}
-                    </p>
-                  )}
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="login-password">Password</Label>
-                  <Input
-                    id="login-password"
-                    type="password"
-                    placeholder="••••••••"
-                    {...loginForm.register("password")}
-                    className={loginForm.formState.errors.password ? "border-destructive" : ""}
-                  />
-                  {loginForm.formState.errors.password && (
-                    <p className="text-sm text-destructive">
-                      {loginForm.formState.errors.password.message}
-                    </p>
-                  )}
-                </div>
-                <Button type="submit" className="w-full" disabled={isSubmitting}>
-                  {isSubmitting ? (
-                    <>
-                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                      Logging in...
-                    </>
-                  ) : (
-                    "Login"
-                  )}
-                </Button>
-              </form>
-            </TabsContent>
+              <TabsContent value="login">
+                <form onSubmit={loginForm.handleSubmit(handleLogin)} className="space-y-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="login-email">Email</Label>
+                    <Input
+                      id="login-email"
+                      type="email"
+                      placeholder="you@email.com"
+                      {...loginForm.register("email")}
+                      className={loginForm.formState.errors.email ? "border-destructive" : ""}
+                    />
+                    {loginForm.formState.errors.email && (
+                      <p className="text-sm text-destructive">
+                        {loginForm.formState.errors.email.message}
+                      </p>
+                    )}
+                  </div>
+                  <div className="space-y-2">
+                    <div className="flex items-center justify-between">
+                      <Label htmlFor="login-password">Password</Label>
+                      <button
+                        type="button"
+                        onClick={() => setActiveTab("forgot-password")}
+                        className="text-sm font-medium text-primary hover:underline focus:outline-none"
+                      >
+                        Forgot password?
+                      </button>
+                    </div>
+                    <Input
+                      id="login-password"
+                      type="password"
+                      placeholder="••••••••"
+                      {...loginForm.register("password")}
+                      className={loginForm.formState.errors.password ? "border-destructive" : ""}
+                    />
+                    {loginForm.formState.errors.password && (
+                      <p className="text-sm text-destructive">
+                        {loginForm.formState.errors.password.message}
+                      </p>
+                    )}
+                  </div>
+                  <Button type="submit" className="w-full" disabled={isSubmitting}>
+                    {isSubmitting ? (
+                      <>
+                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                        Logging in...
+                      </>
+                    ) : (
+                      "Login"
+                    )}
+                  </Button>
+                </form>
+              </TabsContent>
 
-            <TabsContent value="signup">
-              <form onSubmit={signupForm.handleSubmit(handleSignup)} className="space-y-4">
-                <div className="space-y-2">
-                  <Label htmlFor="signup-name">Full Name</Label>
-                  <Input
-                    id="signup-name"
-                    placeholder="John Doe"
-                    {...signupForm.register("fullName")}
-                    className={signupForm.formState.errors.fullName ? "border-destructive" : ""}
-                  />
-                  {signupForm.formState.errors.fullName && (
-                    <p className="text-sm text-destructive">
-                      {signupForm.formState.errors.fullName.message}
-                    </p>
-                  )}
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="signup-email">Email</Label>
-                  <Input
-                    id="signup-email"
-                    type="email"
-                    placeholder="you@email.com"
-                    {...signupForm.register("email")}
-                    className={signupForm.formState.errors.email ? "border-destructive" : ""}
-                  />
-                  {signupForm.formState.errors.email && (
-                    <p className="text-sm text-destructive">
-                      {signupForm.formState.errors.email.message}
-                    </p>
-                  )}
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="signup-password">Password</Label>
-                  <Input
-                    id="signup-password"
-                    type="password"
-                    placeholder="••••••••"
-                    {...signupForm.register("password")}
-                    className={signupForm.formState.errors.password ? "border-destructive" : ""}
-                  />
-                  {signupForm.formState.errors.password && (
-                    <p className="text-sm text-destructive">
-                      {signupForm.formState.errors.password.message}
-                    </p>
-                  )}
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="signup-confirm">Confirm Password</Label>
-                  <Input
-                    id="signup-confirm"
-                    type="password"
-                    placeholder="••••••••"
-                    {...signupForm.register("confirmPassword")}
-                    className={signupForm.formState.errors.confirmPassword ? "border-destructive" : ""}
-                  />
-                  {signupForm.formState.errors.confirmPassword && (
-                    <p className="text-sm text-destructive">
-                      {signupForm.formState.errors.confirmPassword.message}
-                    </p>
-                  )}
-                </div>
-                <Button type="submit" className="w-full" disabled={isSubmitting}>
-                  {isSubmitting ? (
-                    <>
-                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                      Creating account...
-                    </>
-                  ) : (
-                    "Create Account"
-                  )}
-                </Button>
-              </form>
-            </TabsContent>
-          </Tabs>
+              <TabsContent value="forgot-password">
+                <form onSubmit={forgotPasswordForm.handleSubmit(handleForgotPassword)} className="space-y-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="forgot-email">Email</Label>
+                    <Input
+                      id="forgot-email"
+                      type="email"
+                      placeholder="you@email.com"
+                      {...forgotPasswordForm.register("email")}
+                      className={forgotPasswordForm.formState.errors.email ? "border-destructive" : ""}
+                    />
+                    {forgotPasswordForm.formState.errors.email && (
+                      <p className="text-sm text-destructive">
+                        {forgotPasswordForm.formState.errors.email.message}
+                      </p>
+                    )}
+                  </div>
+                  <Button type="submit" className="w-full" disabled={isSubmitting}>
+                    {isSubmitting ? (
+                      <>
+                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                        Sending email...
+                      </>
+                    ) : (
+                      "Reset Password"
+                    )}
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    className="w-full"
+                    onClick={() => setActiveTab("login")}
+                    disabled={isSubmitting}
+                  >
+                    Back to login
+                  </Button>
+                </form>
+              </TabsContent>
+            </Tabs>
+          )}
         </CardContent>
       </Card>
     </div>

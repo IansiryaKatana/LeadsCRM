@@ -1,5 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/hooks/useAuth";
 
 export interface CurrencySettings {
   code: string;
@@ -40,7 +41,7 @@ export interface SystemSettings {
 }
 
 const DEFAULT_SETTINGS: SystemSettings = {
-  currency: { code: "GBP", symbol: "£", name: "British Pound" },
+  currency: { code: "KES", symbol: "KES", name: "Kenyan Shilling" },
   branding: { logo_url: null, favicon_url: null },
   room_prices: {
     platinum: 8500,
@@ -74,6 +75,7 @@ export const CURRENCY_OPTIONS: CurrencySettings[] = [
 
 export function useSystemSettings() {
   const queryClient = useQueryClient();
+  const { user } = useAuth();
 
   const { data: settings, isLoading, error } = useQuery({
     queryKey: ["system-settings"],
@@ -82,7 +84,10 @@ export function useSystemSettings() {
         .from("system_settings")
         .select("setting_key, setting_value");
 
-      if (error) throw error;
+      if (error) {
+        console.error("Error fetching system settings:", error);
+        throw error;
+      }
 
       const settingsMap: SystemSettings = { ...DEFAULT_SETTINGS };
 
@@ -107,19 +112,24 @@ export function useSystemSettings() {
       key: keyof SystemSettings;
       value: any;
     }) => {
-      const { data: user } = await supabase.auth.getUser();
+      if (!user) {
+        throw new Error("You must be logged in to update settings");
+      }
       
       const { error } = await supabase
         .from("system_settings")
         .upsert({ 
           setting_key: key,
           setting_value: value,
-          updated_by: user?.user?.id,
+          updated_by: user.id,
         }, {
           onConflict: "setting_key"
         });
 
-      if (error) throw error;
+      if (error) {
+        console.error(`Error updating system setting ${key}:`, error);
+        throw error;
+      }
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["system-settings"] });

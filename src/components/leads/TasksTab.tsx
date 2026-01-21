@@ -9,6 +9,7 @@ import {
   DialogContent,
   DialogHeader,
   DialogTitle,
+  DialogDescription,
 } from "@/components/ui/dialog";
 import {
   Select,
@@ -279,6 +280,9 @@ export function TasksTab({ leadId }: TasksTabProps) {
         <DialogContent className="max-w-2xl">
           <DialogHeader>
             <DialogTitle>Create Task</DialogTitle>
+            <DialogDescription>
+              Create a follow-up task linked to this lead so your team can track next actions.
+            </DialogDescription>
           </DialogHeader>
           <div className="space-y-4 mt-4">
             <div className="space-y-2">
@@ -310,14 +314,19 @@ export function TasksTab({ leadId }: TasksTabProps) {
               <div className="space-y-2">
                 <Label>Assigned To</Label>
                 <Select
-                  value={newTask.assigned_to}
-                  onValueChange={(value) => setNewTask({ ...newTask, assigned_to: value })}
+                  value={newTask.assigned_to || "unassigned"}
+                  onValueChange={(value) =>
+                    setNewTask({
+                      ...newTask,
+                      assigned_to: value === "unassigned" ? "" : value,
+                    })
+                  }
                 >
                   <SelectTrigger>
                     <SelectValue placeholder="Select user" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="">Unassigned</SelectItem>
+                    <SelectItem value="unassigned">Unassigned</SelectItem>
                     {teamMembers.map((member) => (
                       <SelectItem key={member.user_id} value={member.user_id}>
                         {member.full_name}
@@ -369,6 +378,9 @@ export function TasksTab({ leadId }: TasksTabProps) {
         <DialogContent className="max-w-2xl">
           <DialogHeader>
             <DialogTitle>Edit Task</DialogTitle>
+            <DialogDescription>
+              Update task details or reassign it to another team member.
+            </DialogDescription>
           </DialogHeader>
           <div className="space-y-4 mt-4">
             <div className="space-y-2">
@@ -400,14 +412,19 @@ export function TasksTab({ leadId }: TasksTabProps) {
               <div className="space-y-2">
                 <Label>Assigned To</Label>
                 <Select
-                  value={newTask.assigned_to}
-                  onValueChange={(value) => setNewTask({ ...newTask, assigned_to: value })}
+                  value={newTask.assigned_to || "unassigned"}
+                  onValueChange={(value) =>
+                    setNewTask({
+                      ...newTask,
+                      assigned_to: value === "unassigned" ? "" : value,
+                    })
+                  }
                 >
                   <SelectTrigger>
                     <SelectValue placeholder="Select user" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="">Unassigned</SelectItem>
+                    <SelectItem value="unassigned">Unassigned</SelectItem>
                     {teamMembers.map((member) => (
                       <SelectItem key={member.user_id} value={member.user_id}>
                         {member.full_name}

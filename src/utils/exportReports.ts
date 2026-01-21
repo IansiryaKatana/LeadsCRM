@@ -61,7 +61,7 @@ export function exportToCSV(data: ExportData) {
   const date = new Date().toLocaleDateString("en-GB");
   const time = new Date().toLocaleTimeString("en-GB");
   
-  let csv = `ISKA Leads CRM - Reports Export\n`;
+  let csv = `Urban Hub Students Accommodations - Reports Export\n`;
   csv += `Generated: ${date} at ${time}\n`;
   csv += `Date Range: ${dateRange}\n`;
   csv += `\n`;
@@ -151,7 +151,7 @@ export function exportToCSV(data: ExportData) {
 export async function exportToExcel(data: ExportData) {
   const ExcelJS = (await import("exceljs")).default;
   const workbook = new ExcelJS.Workbook();
-  workbook.creator = "ISKA Leads CRM";
+  workbook.creator = "Urban Hub Students Accommodations";
   workbook.created = new Date();
   
   const { stats, monthlyData, roomDistribution, statusDistribution, dateRange, currencySymbol = "" } = data;

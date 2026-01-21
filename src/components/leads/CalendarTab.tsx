@@ -52,9 +52,7 @@ export function CalendarTab({ leadId, leadName }: CalendarTabProps) {
     description: "",
     start_date: "",
     start_time: "",
-    end_date: "",
     end_time: "",
-    location: "",
   });
 
   const { data: events = [], isLoading } = useCalendarEvents(leadId);
@@ -101,25 +99,33 @@ export function CalendarTab({ leadId, leadName }: CalendarTabProps) {
   };
 
   const handleCreate = () => {
+    if (!newEvent.start_date) {
+      return; // Validation: start_date is required
+    }
+
     const startDateTime = newEvent.start_date && newEvent.start_time
       ? `${newEvent.start_date}T${newEvent.start_time}:00`
-      : newEvent.start_date
-      ? `${newEvent.start_date}T12:00:00`
-      : new Date().toISOString();
+      : `${newEvent.start_date}T12:00:00`;
 
-    const endDateTime = newEvent.end_date && newEvent.end_time
-      ? `${newEvent.end_date}T${newEvent.end_time}:00`
-      : newEvent.end_date
-      ? `${newEvent.end_date}T13:00:00`
-      : null;
+    // Calculate end_date from start_date and end_time (same day)
+    let endDateTime: string | null = null;
+    if (newEvent.end_time) {
+      endDateTime = `${newEvent.start_date}T${newEvent.end_time}:00`;
+    } else if (newEvent.start_time) {
+      // Default to 1 hour after start if no end_time specified
+      const startHour = parseInt(newEvent.start_time.split(':')[0]) || 12;
+      const endHour = (startHour + 1) % 24;
+      endDateTime = `${newEvent.start_date}T${endHour.toString().padStart(2, '0')}:00:00`;
+    }
 
     createEvent.mutate({
       lead_id: leadId,
-      ...newEvent,
+      event_type: newEvent.event_type,
+      title: newEvent.title,
+      description: newEvent.description || null,
       start_date: startDateTime,
       end_date: endDateTime,
-      location: newEvent.location || null,
-      description: newEvent.description || null,
+      location: "Urban Hub", // Fixed location
     }, {
       onSuccess: () => {
         setNewEvent({
@@ -128,9 +134,7 @@ export function CalendarTab({ leadId, leadName }: CalendarTabProps) {
           description: "",
           start_date: "",
           start_time: "",
-          end_date: "",
           end_time: "",
-          location: "",
         });
         setCreateDialogOpen(false);
       },
@@ -147,34 +151,37 @@ export function CalendarTab({ leadId, leadName }: CalendarTabProps) {
       description: event.description || "",
       start_date: format(startDate, "yyyy-MM-dd"),
       start_time: format(startDate, "HH:mm"),
-      end_date: endDate ? format(endDate, "yyyy-MM-dd") : "",
       end_time: endDate ? format(endDate, "HH:mm") : "",
-      location: event.location || "",
     });
     setEditDialogOpen(true);
   };
 
   const handleUpdate = () => {
-    if (!selectedEvent) return;
+    if (!selectedEvent || !newEvent.start_date) return;
+
     const startDateTime = newEvent.start_date && newEvent.start_time
       ? `${newEvent.start_date}T${newEvent.start_time}:00`
-      : newEvent.start_date
-      ? `${newEvent.start_date}T12:00:00`
-      : new Date().toISOString();
+      : `${newEvent.start_date}T12:00:00`;
 
-    const endDateTime = newEvent.end_date && newEvent.end_time
-      ? `${newEvent.end_date}T${newEvent.end_time}:00`
-      : newEvent.end_date
-      ? `${newEvent.end_date}T13:00:00`
-      : null;
+    // Calculate end_date from start_date and end_time (same day)
+    let endDateTime: string | null = null;
+    if (newEvent.end_time) {
+      endDateTime = `${newEvent.start_date}T${newEvent.end_time}:00`;
+    } else if (newEvent.start_time) {
+      // Default to 1 hour after start if no end_time specified
+      const startHour = parseInt(newEvent.start_time.split(':')[0]) || 12;
+      const endHour = (startHour + 1) % 24;
+      endDateTime = `${newEvent.start_date}T${endHour.toString().padStart(2, '0')}:00:00`;
+    }
 
     updateEvent.mutate({
       id: selectedEvent.id,
-      ...newEvent,
+      event_type: newEvent.event_type,
+      title: newEvent.title,
+      description: newEvent.description || null,
       start_date: startDateTime,
       end_date: endDateTime,
-      location: newEvent.location || null,
-      description: newEvent.description || null,
+      location: "Urban Hub", // Fixed location
     }, {
       onSuccess: () => {
         setEditDialogOpen(false);
@@ -359,31 +366,21 @@ export function CalendarTab({ leadId, leadName }: CalendarTabProps) {
                 rows={3}
               />
             </div>
+            <div className="space-y-2">
+              <Label>Date *</Label>
+              <Input
+                type="date"
+                value={newEvent.start_date}
+                onChange={(e) => setNewEvent({ ...newEvent, start_date: e.target.value })}
+              />
+            </div>
             <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label>Start Date *</Label>
-                <Input
-                  type="date"
-                  value={newEvent.start_date}
-                  onChange={(e) => setNewEvent({ ...newEvent, start_date: e.target.value })}
-                />
-              </div>
               <div className="space-y-2">
                 <Label>Start Time</Label>
                 <Input
                   type="time"
                   value={newEvent.start_time}
                   onChange={(e) => setNewEvent({ ...newEvent, start_time: e.target.value })}
-                />
-              </div>
-            </div>
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label>End Date</Label>
-                <Input
-                  type="date"
-                  value={newEvent.end_date}
-                  onChange={(e) => setNewEvent({ ...newEvent, end_date: e.target.value })}
                 />
               </div>
               <div className="space-y-2">
@@ -395,16 +392,6 @@ export function CalendarTab({ leadId, leadName }: CalendarTabProps) {
                 />
               </div>
             </div>
-            {newEvent.event_type === "viewing" && (
-              <div className="space-y-2">
-                <Label>Location</Label>
-                <Input
-                  value={newEvent.location}
-                  onChange={(e) => setNewEvent({ ...newEvent, location: e.target.value })}
-                  placeholder="Property address or location"
-                />
-              </div>
-            )}
             <div className="flex gap-3 pt-4">
               <Button variant="outline" onClick={() => setCreateDialogOpen(false)} className="flex-1">
                 Cancel
@@ -469,31 +456,21 @@ export function CalendarTab({ leadId, leadName }: CalendarTabProps) {
                 rows={3}
               />
             </div>
+            <div className="space-y-2">
+              <Label>Date *</Label>
+              <Input
+                type="date"
+                value={newEvent.start_date}
+                onChange={(e) => setNewEvent({ ...newEvent, start_date: e.target.value })}
+              />
+            </div>
             <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label>Start Date *</Label>
-                <Input
-                  type="date"
-                  value={newEvent.start_date}
-                  onChange={(e) => setNewEvent({ ...newEvent, start_date: e.target.value })}
-                />
-              </div>
               <div className="space-y-2">
                 <Label>Start Time</Label>
                 <Input
                   type="time"
                   value={newEvent.start_time}
                   onChange={(e) => setNewEvent({ ...newEvent, start_time: e.target.value })}
-                />
-              </div>
-            </div>
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label>End Date</Label>
-                <Input
-                  type="date"
-                  value={newEvent.end_date}
-                  onChange={(e) => setNewEvent({ ...newEvent, end_date: e.target.value })}
                 />
               </div>
               <div className="space-y-2">
@@ -505,15 +482,6 @@ export function CalendarTab({ leadId, leadName }: CalendarTabProps) {
                 />
               </div>
             </div>
-            {newEvent.event_type === "viewing" && (
-              <div className="space-y-2">
-                <Label>Location</Label>
-                <Input
-                  value={newEvent.location}
-                  onChange={(e) => setNewEvent({ ...newEvent, location: e.target.value })}
-                />
-              </div>
-            )}
             <div className="flex gap-3 pt-4">
               <Button variant="outline" onClick={() => setEditDialogOpen(false)} className="flex-1">
                 Cancel

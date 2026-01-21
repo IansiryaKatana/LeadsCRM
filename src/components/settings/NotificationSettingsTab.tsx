@@ -31,6 +31,7 @@ export function NotificationSettingsTab() {
         exception_requested: true,
         exception_approved: true,
         exception_rejected: true,
+        event_reminder: true,
         daily_summary: false,
         email_enabled: true,
         push_enabled: true,
@@ -128,6 +129,11 @@ export function NotificationSettingsTab() {
       key: "exception_rejected",
       label: "Exception Rejected",
       description: "Notifications when your exception request is rejected",
+    },
+    {
+      key: "event_reminder",
+      label: "Event Reminders",
+      description: "Get notified 6 hours before scheduled viewings, callbacks, and tasks",
     },
     {
       key: "daily_summary",

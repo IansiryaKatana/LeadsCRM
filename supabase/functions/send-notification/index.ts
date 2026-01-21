@@ -10,18 +10,21 @@ const corsHeaders = {
 
 interface NotificationRequest {
   leadId?: string;
-  type: "new_lead" | "lead_assigned" | "status_change" | "email";
+  userId?: string;
+  type: "new_lead" | "lead_assigned" | "status_change" | "email" | "event_reminder";
   assignedTo?: string;
   newStatus?: string;
   // For direct email sending
   to?: string;
   subject?: string;
+  message?: string;
   bodyHtml?: string;
   bodyText?: string;
   // For template-based email sending
   templateId?: string;
   templateName?: string;
   placeholders?: Record<string, string>;
+  metadata?: Record<string, any>;
 }
 
 serve(async (req) => {
@@ -40,14 +43,17 @@ serve(async (req) => {
     const { leadId, type, assignedTo, newStatus, to, subject, bodyHtml, bodyText, templateId, templateName, placeholders }: NotificationRequest = await req.json();
     console.log("Notification request:", { leadId, type, assignedTo, newStatus, to, templateId, templateName });
 
-    // Get email from address from system settings
-    const { data: emailFromSetting } = await supabase
+    // Fetch all relevant settings at once
+    const { data: settingsData } = await supabase
       .from("system_settings")
-      .select("setting_value")
-      .eq("setting_key", "email_from_address")
-      .single();
+      .select("setting_key, setting_value")
+      .in("setting_key", ["system_name", "currency", "email_from_address"]);
+
+    const settingsMap = new Map(settingsData?.map(s => [s.setting_key, s.setting_value]));
     
-    const fromAddress = emailFromSetting?.setting_value as string || "ISKA CRM <noreply@send.portal.urbanhub.uk>";
+    const systemName = settingsMap.get("system_name") as string || "Urban Hub Students Accommodations";
+    const currency = settingsMap.get("currency") as { code: string, symbol: string } || { code: "KES", symbol: "KES" };
+    const fromAddress = settingsMap.get("email_from_address") as string || `${systemName} <noreply@send.portal.urbanhub.uk>`;
 
     // Handle direct email sending (with optional template support)
     if (type === "email" && to) {
@@ -118,6 +124,70 @@ serve(async (req) => {
       });
 
       console.log("Email sent successfully:", emailResponse);
+
+      return new Response(JSON.stringify({ success: true, data: emailResponse }), {
+        status: 200,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    // Handle event_reminder type (doesn't require leadId)
+    if (type === "event_reminder" && userId && subject && message) {
+      // Get user email
+      const { data: userProfile } = await supabase
+        .from("profiles")
+        .select("email, full_name")
+        .eq("user_id", userId)
+        .single();
+
+      if (!userProfile || !userProfile.email) {
+        return new Response(JSON.stringify({ error: "User email not found" }), {
+          status: 404,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+
+      // Check if RESEND_API_KEY is configured
+      const resendApiKey = Deno.env.get("RESEND_API_KEY");
+      if (!resendApiKey) {
+        console.error("RESEND_API_KEY is not configured");
+        return new Response(JSON.stringify({ error: "Email service is not configured. Please set RESEND_API_KEY secret." }), {
+          status: 500,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+
+      const resendClient = new Resend(resendApiKey);
+
+      // Create HTML email for event reminder
+      const htmlContent = `
+        <div style="font-family: 'Inter Tight', Helvetica, Arial, sans-serif; max-width: 600px; margin: 0 auto; background: #ffffff; border-radius: 16px; overflow: hidden; border: 1px solid #e5e7eb; box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);">
+          <div style="background: linear-gradient(135deg, #51A6FF 0%, #3b82f6 100%); padding: 30px 20px; text-align: center; color: #ffffff;">
+            <h1 style="margin: 0; font-size: 24px; font-weight: 800; letter-spacing: 0.05em; text-transform: uppercase;">${systemName}</h1>
+          </div>
+          <div style="height: 6px; background: #FFD700;"></div>
+          <div style="padding: 30px; line-height: 1.6; color: #374151;">
+            <h2 style="color: #111827; font-size: 20px; margin-top: 0; font-weight: 700; text-transform: uppercase; border-bottom: 2px solid #eff6ff; padding-bottom: 10px; margin-bottom: 20px;">Event Reminder</h2>
+            <div style="background: #f9fafb; border: 1px solid #f3f4f6; border-radius: 12px; padding: 20px; margin: 20px 0;">
+              <p style="margin: 0; font-size: 16px; color: #374151;">${message}</p>
+            </div>
+            <p style="margin-top: 20px; font-size: 14px; color: #6b7280;">This is an automated reminder. Please check your calendar for details.</p>
+          </div>
+          <div style="background: #f9fafb; padding: 20px; text-align: center; border-top: 1px solid #f3f4f6; color: #6b7280; font-size: 12px;">
+            <p style="margin: 0;">This email was sent from ${systemName}</p>
+          </div>
+        </div>
+      `;
+
+      const emailResponse = await resendClient.emails.send({
+        from: fromAddress,
+        to: [userProfile.email],
+        subject: subject,
+        html: htmlContent,
+        text: message,
+      });
+
+      console.log("Event reminder email sent successfully:", emailResponse);
 
       return new Response(JSON.stringify({ success: true, data: emailResponse }), {
         status: 200,
@@ -196,7 +266,7 @@ serve(async (req) => {
         htmlContent = `
           ${emailStyle}
           <div class="email-container">
-            <div class="header"><h1>ISKA CRM</h1></div>
+            <div class="header"><h1>${systemName}</h1></div>
             <div class="accent-bar"></div>
             <div class="content">
               <h2>New Lead Received!</h2>
@@ -207,14 +277,14 @@ serve(async (req) => {
                 <div class="info-item"><strong>Phone:</strong> ${lead.phone}</div>
                 <div class="info-item"><strong>Room Choice:</strong> ${lead.room_choice}</div>
                 <div class="info-item"><strong>Stay Duration:</strong> ${lead.stay_duration}</div>
-                <div class="info-item"><strong>Potential Revenue:</strong> GBP ${lead.potential_revenue.toLocaleString()}</div>
+                <div class="info-item"><strong>Potential Revenue:</strong> ${currency.code} ${lead.potential_revenue.toLocaleString()}</div>
               </div>
               <p>Log in to the CRM to follow up with this lead as soon as possible.</p>
               <div style="text-align: center;">
                 <a href="${Deno.env.get("SUPABASE_URL")?.replace(".supabase.co", ".supabase.in")}" class="button">View Lead in CRM</a>
               </div>
             </div>
-            <div class="footer"><p>&copy; 2026 ISKA CRM System</p></div>
+            <div class="footer"><p>&copy; 2026 ${systemName}</p></div>
           </div>
         `;
         break;
@@ -231,7 +301,7 @@ serve(async (req) => {
         htmlContent = `
           ${emailStyle}
           <div class="email-container">
-            <div class="header"><h1>ISKA CRM</h1></div>
+            <div class="header"><h1>${systemName}</h1></div>
             <div class="accent-bar"></div>
             <div class="content">
               <h2>Lead Assignment Update</h2>
@@ -243,7 +313,7 @@ serve(async (req) => {
                 <div class="info-item"><strong>Phone:</strong> ${lead.phone}</div>
               </div>
             </div>
-            <div class="footer"><p>&copy; 2026 ISKA CRM System</p></div>
+            <div class="footer"><p>&copy; 2026 ${systemName}</p></div>
           </div>
         `;
 
@@ -257,7 +327,7 @@ serve(async (req) => {
             html: `
               ${emailStyle}
               <div class="email-container">
-                <div class="header"><h1>ISKA CRM</h1></div>
+                <div class="header"><h1>${systemName}</h1></div>
                 <div class="accent-bar"></div>
                 <div class="content">
                   <h2>You Have a New Lead!</h2>
@@ -267,14 +337,14 @@ serve(async (req) => {
                     <div class="info-item"><strong>Email:</strong> ${lead.email}</div>
                     <div class="info-item"><strong>Phone:</strong> ${lead.phone}</div>
                     <div class="info-item"><strong>Room Choice:</strong> ${lead.room_choice}</div>
-                    <div class="info-item"><strong>Potential Revenue:</strong> GBP ${lead.potential_revenue.toLocaleString()}</div>
+                    <div class="info-item"><strong>Potential Revenue:</strong> ${currency.code} ${lead.potential_revenue.toLocaleString()}</div>
                   </div>
                   <p>Please reach out to this lead as soon as possible to maximize conversion chance!</p>
                   <div style="text-align: center;">
                     <a href="${Deno.env.get("SUPABASE_URL")?.replace(".supabase.co", ".supabase.in")}" class="button">Go to Lead</a>
                   </div>
                 </div>
-                <div class="footer"><p>&copy; 2026 ISKA CRM System</p></div>
+                <div class="footer"><p>&copy; 2026 ${systemName}</p></div>
               </div>
             `,
           });
@@ -286,7 +356,7 @@ serve(async (req) => {
         htmlContent = `
           ${emailStyle}
           <div class="email-container">
-            <div class="header"><h1>ISKA CRM</h1></div>
+            <div class="header"><h1>${systemName}</h1></div>
             <div class="accent-bar"></div>
             <div class="content">
               <h2>Lead Status Changed</h2>
@@ -297,7 +367,7 @@ serve(async (req) => {
                 <div class="info-item"><strong>Email:</strong> ${lead.email}</div>
               </div>
             </div>
-            <div class="footer"><p>&copy; 2026 ISKA CRM System</p></div>
+            <div class="footer"><p>&copy; 2026 ${systemName}</p></div>
           </div>
         `;
         break;

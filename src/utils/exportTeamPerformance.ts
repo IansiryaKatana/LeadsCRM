@@ -12,7 +12,7 @@ export function exportTeamPerformanceToCSV(data: TeamPerformanceExportData) {
   const date = new Date().toLocaleDateString("en-GB");
   const time = new Date().toLocaleTimeString("en-GB");
   
-  let csv = `ISKA Leads CRM - Team Performance Report\n`;
+  let csv = `Urban Hub Students Accommodations - Team Performance Report\n`;
   csv += `Generated: ${date} at ${time}\n`;
   if (academicYear) csv += `Academic Year: ${academicYear}\n`;
   if (dateRange) csv += `Date Range: ${dateRange}\n`;
@@ -69,7 +69,7 @@ export function exportTeamPerformanceToCSV(data: TeamPerformanceExportData) {
   const link = document.createElement("a");
   const url = URL.createObjectURL(blob);
   link.setAttribute("href", url);
-  link.setAttribute("download", `ISKA_Team_Performance_${date.replace(/\//g, "-")}.csv`);
+  link.setAttribute("download", `Urban_Hub_Team_Performance_${date.replace(/\//g, "-")}.csv`);
   link.style.visibility = "hidden";
   document.body.appendChild(link);
   link.click();
@@ -80,7 +80,7 @@ export function exportTeamPerformanceToCSV(data: TeamPerformanceExportData) {
 export async function exportTeamPerformanceToExcel(data: TeamPerformanceExportData) {
   const ExcelJS = (await import("exceljs")).default;
   const workbook = new ExcelJS.Workbook();
-  workbook.creator = "ISKA Leads CRM";
+  workbook.creator = "Urban Hub Students Accommodations";
   workbook.created = new Date();
   
   const { teamMetrics, academicYear, dateRange, currencySymbol = "" } = data;
@@ -165,7 +165,7 @@ export async function exportTeamPerformanceToExcel(data: TeamPerformanceExportDa
   let rowIndex = 1;
   
   // Header
-  const headerRow = worksheet.addRow(["ISKA Leads CRM - Team Performance Report"]);
+  const headerRow = worksheet.addRow(["Urban Hub Students Accommodations - Team Performance Report"]);
   headerRow.height = 30;
   worksheet.mergeCells(`A${rowIndex}:I${rowIndex}`);
   headerRow.getCell(1).style = headerStyle;
@@ -280,7 +280,7 @@ export async function exportTeamPerformanceToExcel(data: TeamPerformanceExportDa
   const link = document.createElement("a");
   const url = URL.createObjectURL(blob);
   link.setAttribute("href", url);
-  link.setAttribute("download", `ISKA_Team_Performance_${date.replace(/\//g, "-")}.xlsx`);
+  link.setAttribute("download", `Urban_Hub_Team_Performance_${date.replace(/\//g, "-")}.xlsx`);
   link.style.visibility = "hidden";
   document.body.appendChild(link);
   link.click();
@@ -344,7 +344,7 @@ export async function exportTeamPerformanceToPDF(data: TeamPerformanceExportData
   doc.setTextColor(255, 255, 255);
   doc.setFontSize(28);
   doc.setFont("helvetica", "bold");
-  doc.text("ISKA Leads CRM", margin, 25);
+  doc.text("Urban Hub Students Accommodations", margin, 25);
   
   doc.setFontSize(14);
   doc.setFont("helvetica", "normal");
@@ -473,13 +473,13 @@ export async function exportTeamPerformanceToPDF(data: TeamPerformanceExportData
       { align: "center" }
     );
     doc.text(
-      "ISKA Leads CRM - Confidential",
+      "Urban Hub Students Accommodations - Confidential",
       pageWidth / 2,
       pageHeight - 5,
       { align: "center" }
     );
   }
   
-  doc.save(`ISKA_Team_Performance_${date.replace(/\//g, "-")}.pdf`);
+  doc.save(`Urban_Hub_Team_Performance_${date.replace(/\//g, "-")}.pdf`);
 }
 

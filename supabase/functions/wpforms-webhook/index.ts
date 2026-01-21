@@ -14,133 +14,155 @@ interface WPFormsPayload {
   room_choice?: string;
   stay_duration?: string;
   source?: string;
+  form_name?: string;
+  preferred_date?: string;
+  preferred_time?: string;
+  [key: string]: unknown;
 }
 
 serve(async (req) => {
-  // Handle CORS preflight
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
   }
 
   try {
-    console.log("WPForms webhook received");
-
+    console.time("webhook-total");
     const supabase = createClient(
       Deno.env.get("SUPABASE_URL") ?? "",
       Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? ""
     );
 
-    const payload: WPFormsPayload = await req.json();
-    console.log("Payload received:", JSON.stringify(payload));
+    const rawPayload = await req.json();
+    console.log("WPForms payload received:", JSON.stringify(rawPayload));
 
-    // Map WPForms fields to database fields
-    const leadData = {
-      full_name: payload.full_name || payload.name || "Unknown",
-      email: payload.email,
-      phone: payload.phone || "",
-      source: mapSource(payload.source),
-      room_choice: mapRoomChoice(payload.room_choice),
-      stay_duration: mapStayDuration(payload.stay_duration),
-      lead_status: "new" as const,
-      potential_revenue: calculateRevenue(payload.room_choice, payload.stay_duration),
+    // Support both direct fields and WPForms nested fields format
+    const payload: WPFormsPayload = {
+      full_name: rawPayload.full_name || rawPayload.name || rawPayload["Name"] || "Unknown",
+      email: rawPayload.email || rawPayload["Email"],
+      phone: rawPayload.phone || rawPayload["Phone"] || "",
+      room_choice: rawPayload.room_choice || rawPayload["Choose Studio Type"] || rawPayload["Room Choice"],
+      stay_duration: rawPayload.stay_duration || rawPayload["Stay Duration"],
+      source: rawPayload.source,
+      form_name: rawPayload.form_name || "WPForms Submission",
+      preferred_date: rawPayload.preferred_date || rawPayload["Choose Date"] || rawPayload["Preferred Date"],
+      preferred_time: rawPayload.preferred_time || rawPayload["Pick a Time"] || rawPayload["Preferred Time"],
     };
 
-    console.log("Inserting lead:", JSON.stringify(leadData));
-
-    const { data: lead, error } = await supabase
-      .from("leads")
-      .insert(leadData)
-      .select()
-      .single();
-
-    if (error) {
-      console.error("Error inserting lead:", error);
-      return new Response(JSON.stringify({ error: error.message }), {
+    if (!payload.email) {
+      return new Response(JSON.stringify({ error: "Email is required" }), {
         status: 400,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
 
-    console.log("Lead created successfully:", lead.id);
+    // Determine form type and source
+    const formNameLower = (payload.form_name || "").toLowerCase();
+    const isBooking = formNameLower.includes("book") || formNameLower.includes("viewing");
+    const isCallback = formNameLower.includes("callback");
+    const formType = isBooking ? "booking" : isCallback ? "callback" : "contact";
 
-    // Trigger email notification
-    try {
-      await supabase.functions.invoke("send-notification", {
-        body: { leadId: lead.id, type: "new_lead" },
-      });
-    } catch (emailError) {
-      console.error("Email notification failed:", emailError);
+    // 1. Fetch necessary settings in parallel
+    console.time("fetch-settings");
+    const { data: settings } = await supabase
+      .from("system_settings")
+      .select("setting_key, setting_value")
+      .in("setting_key", ["default_academic_year", "currency"]);
+    console.timeEnd("fetch-settings");
+
+    const settingsMap = new Map(settings?.map(s => [s.setting_key, s.setting_value]));
+    const academicYear = settingsMap.get("default_academic_year") as string || "2024/2025";
+    const currency = settingsMap.get("currency") as { code: string, symbol: string } || { code: "KES", symbol: "KES" };
+
+    // 2. Insert Lead
+    console.time("insert-lead");
+    const leadData = {
+      full_name: payload.full_name,
+      email: payload.email,
+      phone: payload.phone,
+      source: "web_booking", // Defaulting to web_booking for WPForms
+      room_choice: mapRoomChoice(payload.room_choice as string) || "silver",
+      stay_duration: mapStayDuration(payload.stay_duration as string) || "51_weeks",
+      lead_status: "new",
+      academic_year: academicYear,
+    };
+
+    const { data: lead, error: leadError } = await supabase
+      .from("leads")
+      .insert(leadData)
+      .select()
+      .single();
+
+    if (leadError) throw leadError;
+    console.timeEnd("insert-lead");
+
+    // 3. Execute secondary tasks in parallel (Notes, Calendar, Notifications)
+    console.time("parallel-tasks");
+    const secondaryTasks = [];
+
+    // Add note
+    secondaryTasks.push(
+      supabase.from("lead_notes").insert({
+        lead_id: lead.id,
+        note: `WPForms Submission (${payload.form_name})\nPreferred Date: ${payload.preferred_date || 'N/A'}\nPreferred Time: ${payload.preferred_time || 'N/A'}`,
+      })
+    );
+
+    // Create Calendar Event if booking/callback
+    if ((isBooking || isCallback) && payload.preferred_date) {
+      const startDateTime = payload.preferred_time 
+        ? `${payload.preferred_date}T${payload.preferred_time.includes(":") ? payload.preferred_time : payload.preferred_time + ":00"}`
+        : `${payload.preferred_date}T12:00:00`;
+
+      secondaryTasks.push(
+        supabase.from("calendar_events").insert({
+          lead_id: lead.id,
+          event_type: isBooking ? "viewing" : "callback",
+          title: `${isBooking ? "Viewing" : "Callback"}: ${lead.full_name}`,
+          description: `Automatically created from ${payload.form_name}`,
+          start_date: startDateTime,
+          location: "Urban Hub",
+        })
+      );
     }
+
+    // Trigger notification
+    secondaryTasks.push(
+      supabase.functions.invoke("send-notification", {
+        body: { leadId: lead.id, type: "new_lead" },
+      })
+    );
+
+    await Promise.allSettled(secondaryTasks);
+    console.timeEnd("parallel-tasks");
+    console.timeEnd("webhook-total");
 
     return new Response(JSON.stringify({ success: true, leadId: lead.id }), {
       status: 200,
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
-  } catch (error: unknown) {
+
+  } catch (error) {
     console.error("Webhook error:", error);
-    const errorMessage = error instanceof Error ? error.message : "Unknown error";
-    return new Response(JSON.stringify({ error: errorMessage }), {
+    return new Response(JSON.stringify({ error: error.message }), {
       status: 500,
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   }
 });
 
-function mapSource(source?: string): "tiktok" | "meta" | "google_ads" | "website" | "whatsapp" | "email" | "referral" {
-  const sourceMap: Record<string, "tiktok" | "meta" | "google_ads" | "website" | "whatsapp" | "email" | "referral"> = {
-    tiktok: "tiktok",
-    meta: "meta",
-    facebook: "meta",
-    instagram: "meta",
-    google: "google_ads",
-    google_ads: "google_ads",
-    website: "website",
-    whatsapp: "whatsapp",
-    email: "email",
-    referral: "referral",
-  };
-  return sourceMap[source?.toLowerCase() || ""] || "website";
+function mapRoomChoice(room?: string): string | null {
+  if (!room) return null;
+  const r = room.toLowerCase();
+  if (r.includes("platinum")) return "platinum";
+  if (r.includes("gold")) return "gold";
+  if (r.includes("silver")) return "silver";
+  if (r.includes("bronze")) return "bronze";
+  return "standard";
 }
 
-function mapRoomChoice(room?: string): "platinum" | "gold" | "silver" | "bronze" | "standard" {
-  const roomMap: Record<string, "platinum" | "gold" | "silver" | "bronze" | "standard"> = {
-    platinum: "platinum",
-    gold: "gold",
-    silver: "silver",
-    bronze: "bronze",
-    standard: "standard",
-  };
-  return roomMap[room?.toLowerCase() || ""] || "silver";
-}
-
-function mapStayDuration(duration?: string): "51_weeks" | "45_weeks" | "short_stay" {
-  const durationMap: Record<string, "51_weeks" | "45_weeks" | "short_stay"> = {
-    "51_weeks": "51_weeks",
-    "51": "51_weeks",
-    "45_weeks": "45_weeks",
-    "45": "45_weeks",
-    short_stay: "short_stay",
-    short: "short_stay",
-  };
-  return durationMap[duration?.toLowerCase() || ""] || "51_weeks";
-}
-
-function calculateRevenue(room?: string, duration?: string): number {
-  const roomPrices: Record<string, number> = {
-    platinum: 850000,
-    gold: 650000,
-    silver: 450000,
-    bronze: 350000,
-    standard: 250000,
-  };
-  const durationMultipliers: Record<string, number> = {
-    "51_weeks": 1,
-    "45_weeks": 0.88,
-    short_stay: 0.5,
-  };
-  
-  const basePrice = roomPrices[room?.toLowerCase() || "silver"] || 450000;
-  const multiplier = durationMultipliers[mapStayDuration(duration)] || 1;
-  
-  return Math.round(basePrice * multiplier);
+function mapStayDuration(duration?: string): string | null {
+  if (!duration) return null;
+  if (duration.includes("51")) return "51_weeks";
+  if (duration.includes("45")) return "45_weeks";
+  return "short_stay";
 }

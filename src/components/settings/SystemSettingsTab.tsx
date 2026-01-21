@@ -30,8 +30,8 @@ export function SystemSettingsTab() {
     setRoomLabels(settings.room_labels);
     setLogoUrl(settings.branding.logo_url || "");
     setFaviconUrl(settings.branding.favicon_url || "");
-    setSystemName(settings.system_name || "ISKA Leads CRM");
-    setEmailFromAddress(settings.email_from_address || "ISKA CRM <noreply@send.portal.urbanhub.uk>");
+    setSystemName(settings.system_name || "Urban Hub Students Accommodations");
+    setEmailFromAddress(settings.email_from_address || "Urban Hub <noreply@send.portal.urbanhub.uk>");
     setAcademicYears(settings.academic_years || []);
     setDefaultAcademicYear(settings.default_academic_year || "");
   }, [settings]);

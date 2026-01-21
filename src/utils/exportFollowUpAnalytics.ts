@@ -23,7 +23,7 @@ export function exportFollowUpAnalyticsToCSV(data: FollowUpExportData) {
   const date = new Date().toLocaleDateString("en-GB");
   const time = new Date().toLocaleTimeString("en-GB");
   
-  let csv = `ISKA Leads CRM - Follow-Up Analytics Report\n`;
+  let csv = `Urban Hub Students Accommodations - Follow-Up Analytics Report\n`;
   csv += `Generated: ${date} at ${time}\n`;
   if (academicYear) csv += `Academic Year: ${academicYear}\n`;
   if (dateRange) csv += `Date Range: ${dateRange}\n`;
@@ -71,7 +71,7 @@ export function exportFollowUpAnalyticsToCSV(data: FollowUpExportData) {
   const link = document.createElement("a");
   const url = URL.createObjectURL(blob);
   link.setAttribute("href", url);
-  link.setAttribute("download", `ISKA_FollowUp_Analytics_${date.replace(/\//g, "-")}.csv`);
+  link.setAttribute("download", `Urban_Hub_FollowUp_Analytics_${date.replace(/\//g, "-")}.csv`);
   link.style.visibility = "hidden";
   document.body.appendChild(link);
   link.click();
@@ -82,7 +82,7 @@ export function exportFollowUpAnalyticsToCSV(data: FollowUpExportData) {
 export async function exportFollowUpAnalyticsToExcel(data: FollowUpExportData) {
   const ExcelJS = (await import("exceljs")).default;
   const workbook = new ExcelJS.Workbook();
-  workbook.creator = "ISKA Leads CRM";
+  workbook.creator = "Urban Hub Students Accommodations";
   workbook.created = new Date();
   
   const { analytics, academicYear, dateRange } = data;
@@ -137,7 +137,7 @@ export async function exportFollowUpAnalyticsToExcel(data: FollowUpExportData) {
   let rowIndex = 1;
   
   // Header
-  const headerRow = worksheet.addRow(["ISKA Leads CRM - Follow-Up Analytics Report"]);
+  const headerRow = worksheet.addRow(["Urban Hub Students Accommodations - Follow-Up Analytics Report"]);
   headerRow.height = 30;
   worksheet.mergeCells(`A${rowIndex}:B${rowIndex}`);
   headerRow.getCell(1).style = headerStyle;
@@ -235,7 +235,7 @@ export async function exportFollowUpAnalyticsToExcel(data: FollowUpExportData) {
   const link = document.createElement("a");
   const url = URL.createObjectURL(blob);
   link.setAttribute("href", url);
-  link.setAttribute("download", `ISKA_FollowUp_Analytics_${date.replace(/\//g, "-")}.xlsx`);
+  link.setAttribute("download", `Urban_Hub_FollowUp_Analytics_${date.replace(/\//g, "-")}.xlsx`);
   link.style.visibility = "hidden";
   document.body.appendChild(link);
   link.click();
@@ -279,7 +279,7 @@ export async function exportFollowUpAnalyticsToPDF(data: FollowUpExportData) {
   doc.setTextColor(255, 255, 255);
   doc.setFontSize(28);
   doc.setFont("helvetica", "bold");
-  doc.text("ISKA Leads CRM", margin, 25);
+  doc.text("Urban Hub Students Accommodations", margin, 25);
   
   doc.setFontSize(14);
   doc.setFont("helvetica", "normal");
@@ -400,13 +400,13 @@ export async function exportFollowUpAnalyticsToPDF(data: FollowUpExportData) {
       { align: "center" }
     );
     doc.text(
-      "ISKA Leads CRM - Confidential",
+      "Urban Hub Students Accommodations - Confidential",
       pageWidth / 2,
       pageHeight - 5,
       { align: "center" }
     );
   }
   
-  doc.save(`ISKA_FollowUp_Analytics_${date.replace(/\//g, "-")}.pdf`);
+  doc.save(`Urban_Hub_FollowUp_Analytics_${date.replace(/\//g, "-")}.pdf`);
 }
 

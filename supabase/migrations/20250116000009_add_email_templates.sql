@@ -114,36 +114,36 @@ CREATE TRIGGER update_email_templates_updated_at
 INSERT INTO public.email_templates (name, subject, body_html, category, variables) VALUES
 (
   'Welcome Email',
-  'Welcome to ISKA Student Accommodation - {{lead_name}}',
-  '<h2>Hello {{lead_name}},</h2><p>Thank you for your interest in ISKA Student Accommodation!</p><p>We received your inquiry about our {{room_choice}} room option and we''re excited to help you find the perfect accommodation.</p><p>Our team will be in touch with you shortly to discuss your requirements and answer any questions you may have.</p><p>Best regards,<br>ISKA Team</p>',
+  'Welcome to Urban Hub Students Accommodations - {{lead_name}}',
+  '<h2>Hello {{lead_name}},</h2><p>Thank you for your interest in Urban Hub Students Accommodations!</p><p>We received your inquiry about our {{room_choice}} room option and we''re excited to help you find the perfect accommodation.</p><p>Our team will be in touch with you shortly to discuss your requirements and answer any questions you may have.</p><p>Best regards,<br>Urban Hub team</p>',
   'welcome',
   '["{{lead_name}}", "{{room_choice}}", "{{email}}", "{{phone}}"]'::JSONB
 ),
 (
   'Follow-up #1',
   'Following up on your accommodation inquiry - {{lead_name}}',
-  '<h2>Hello {{lead_name}},</h2><p>We wanted to follow up on your recent inquiry about our {{room_choice}} accommodation.</p><p>Have you had a chance to review our options? We''d love to answer any questions you might have and help you find the perfect room.</p><p>Please feel free to reply to this email or give us a call at your convenience.</p><p>Best regards,<br>ISKA Team</p>',
+  '<h2>Hello {{lead_name}},</h2><p>We wanted to follow up on your recent inquiry about our {{room_choice}} accommodation.</p><p>Have you had a chance to review our options? We''d love to answer any questions you might have and help you find the perfect room.</p><p>Please feel free to reply to this email or give us a call at your convenience.</p><p>Best regards,<br>Urban Hub team</p>',
   'followup_1',
   '["{{lead_name}}", "{{room_choice}}", "{{email}}", "{{phone}}"]'::JSONB
 ),
 (
   'Follow-up #2',
   'Still interested in ISKA accommodation? - {{lead_name}}',
-  '<h2>Hello {{lead_name}},</h2><p>We haven''t heard from you in a while and wanted to check if you''re still interested in our {{room_choice}} accommodation.</p><p>We have limited availability, so we''d love to help you secure your preferred room before it''s taken.</p><p>If you have any questions or concerns, please don''t hesitate to reach out.</p><p>Best regards,<br>ISKA Team</p>',
+  '<h2>Hello {{lead_name}},</h2><p>We haven''t heard from you in a while and wanted to check if you''re still interested in our {{room_choice}} accommodation.</p><p>We have limited availability, so we''d love to help you secure your preferred room before it''s taken.</p><p>If you have any questions or concerns, please don''t hesitate to reach out.</p><p>Best regards,<br>Urban Hub team</p>',
   'followup_2',
   '["{{lead_name}}", "{{room_choice}}", "{{email}}", "{{phone}}"]'::JSONB
 ),
 (
   'Follow-up #3',
-  'Last chance - ISKA Accommodation availability - {{lead_name}}',
-  '<h2>Hello {{lead_name}},</h2><p>This is our final follow-up regarding your interest in our {{room_choice}} accommodation.</p><p>We understand you may be considering your options, and we''re here to help make your decision easier. If you''d like to discuss your requirements or schedule a viewing, please let us know.</p><p>If you''re no longer interested, we''d appreciate a quick reply so we can update our records.</p><p>Best regards,<br>ISKA Team</p>',
+  'Last chance - Urban Hub Accommodation availability - {{lead_name}}',
+  '<h2>Hello {{lead_name}},</h2><p>This is our final follow-up regarding your interest in our {{room_choice}} accommodation.</p><p>We understand you may be considering your options, and we''re here to help make your decision easier. If you''d like to discuss your requirements or schedule a viewing, please let us know.</p><p>If you''re no longer interested, we''d appreciate a quick reply so we can update our records.</p><p>Best regards,<br>Urban Hub team</p>',
   'followup_3',
   '["{{lead_name}}", "{{room_choice}}", "{{email}}", "{{phone}}"]'::JSONB
 ),
 (
   'Conversion Confirmation',
   'Congratulations! Your booking is confirmed - {{lead_name}}',
-  '<h2>Congratulations {{lead_name}}!</h2><p>We''re thrilled to confirm your booking for our {{room_choice}} accommodation.</p><p>Your booking details:</p><ul><li>Room: {{room_choice}}</li><li>Stay Duration: {{stay_duration}}</li><li>Total: {{revenue}}</li></ul><p>Our team will be in touch shortly with next steps and additional information.</p><p>Welcome to ISKA!</p><p>Best regards,<br>ISKA Team</p>',
+  '<h2>Congratulations {{lead_name}}!</h2><p>We''re thrilled to confirm your booking for our {{room_choice}} accommodation.</p><p>Your booking details:</p><ul><li>Room: {{room_choice}}</li><li>Stay Duration: {{stay_duration}}</li><li>Total: {{revenue}}</li></ul><p>Our team will be in touch shortly with next steps and additional information.</p><p>Welcome to Urban Hub!</p><p>Best regards,<br>Urban Hub team</p>',
   'conversion',
   '["{{lead_name}}", "{{room_choice}}", "{{stay_duration}}", "{{revenue}}", "{{email}}"]'::JSONB
 )
