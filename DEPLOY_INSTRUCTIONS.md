@@ -8,7 +8,7 @@
 
 ```powershell
 # Navigate to project directory
-cd "C:\Users\User\Videos\iskaleadscrm-main"
+cd "C:\Users\User\Videos\urbanhubleadscrm-main"
 
 # Login to Supabase (if not already logged in)
 supabase login

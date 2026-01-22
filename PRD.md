@@ -1,4 +1,4 @@
-# ISKA Leads CRM - Product Requirements Document (PRD)
+# Urban Hub Leads CRM - Product Requirements Document (PRD)
 
 **Version:** 2.0  
 **Last Updated:** 2025-01-16  
@@ -23,7 +23,7 @@
 
 ## Executive Summary
 
-**ISKA Leads CRM** is a comprehensive Customer Relationship Management system designed specifically for managing student accommodation leads. The system enables sales teams to track leads from initial inquiry through conversion, manage bulk data imports, generate analytics reports, and maintain a complete audit trail of all activities.
+**Urban Hub Leads CRM** is a comprehensive Customer Relationship Management system designed specifically for managing student accommodation leads. The system enables sales teams to track leads from initial inquiry through conversion, manage bulk data imports, generate analytics reports, and maintain a complete audit trail of all activities.
 
 ### Key Objectives
 - Streamline lead management and tracking
@@ -81,7 +81,7 @@
 ### Project Structure
 
 ```
-iskaleadscrm-main/
+urbanhubleadscrm-main/
 ├── src/
 │   ├── components/          # React components
 │   │   ├── analytics/       # Analytics components (FollowUpAnalytics)
@@ -1590,8 +1590,8 @@ None currently.
 
 ## Contact & Support
 
-**Project:** ISKA Leads CRM  
-**Repository:** iskaleadscrm-main  
+**Project:** Urban Hub Leads CRM  
+**Repository:** urbanhubleadscrm-main  
 **Framework:** React + TypeScript + Supabase  
 **Last Major Update:** January 16, 2025
 

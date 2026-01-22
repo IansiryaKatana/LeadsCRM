@@ -34,7 +34,7 @@ supabase functions deploy process-followup-reminders
 
 ```bash
 # Navigate to project root
-cd /path/to/iskaleadscrm-main
+cd /path/to/urbanhubleadscrm-main
 
 # Deploy the function
 supabase functions deploy process-followup-reminders --project-ref btbsslznsexidjnzizre

@@ -1,4 +1,4 @@
-# Email Setup Guide for ISKA Leads CRM
+# Email Setup Guide for Urban Hub Leads CRM
 
 ## Issue: 400/404 Errors When Sending Emails
 
@@ -15,7 +15,7 @@ The email function requires a **Resend API Key** to send emails.
 2. **Get your API Key**:
    - Go to: https://resend.com/api-keys
    - Click "Create API Key"
-   - Name it (e.g., "ISKA CRM")
+   - Name it (e.g., "Urban Hub CRM")
    - Copy the API key (starts with `re_`)
 
 3. **Add the Secret to Supabase**:
@@ -51,7 +51,7 @@ For production, you should verify your domain in Resend:
 4. Wait for verification
 5. Update the `from` address in the function to use your domain
 
-**Current default:** `ISKA CRM <onboarding@resend.dev>` (works for testing)
+**Current default:** `Urban Hub CRM <onboarding@resend.dev>` (works for testing)
 
 ### Step 4: Test Email Sending
 

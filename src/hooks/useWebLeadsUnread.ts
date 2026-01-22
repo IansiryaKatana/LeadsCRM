@@ -2,7 +2,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 
-const STORAGE_KEY_PREFIX = "iska_web_leads_viewed_";
+const STORAGE_KEY_PREFIX = "urban_hub_web_leads_viewed_";
 
 function getStorageKey(userId?: string | null) {
   return `${STORAGE_KEY_PREFIX}${userId ?? "anonymous"}`;

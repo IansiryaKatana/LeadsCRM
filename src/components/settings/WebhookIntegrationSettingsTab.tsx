@@ -13,7 +13,7 @@ export function WebhookIntegrationSettingsTab() {
       <CardHeader>
         <CardTitle className="font-display">Webhooks & Website Forms</CardTitle>
         <CardDescription>
-          Connect your WordPress forms (WPForms, Elementor) to ISKA Leads CRM using the Supabase
+          Connect your WordPress forms (WPForms, Elementor) to Urban Hub Leads CRM using the Supabase
           Edge Function webhook.
         </CardDescription>
       </CardHeader>

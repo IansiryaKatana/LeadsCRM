@@ -1,4 +1,4 @@
-# ISKA Leads CRM - Comprehensive System Assessment
+# Urban Hub Leads CRM - Comprehensive System Assessment
 
 **Date:** January 16, 2025  
 **Assessment Type:** Full Feature Gap Analysis  
@@ -8,7 +8,7 @@
 
 ## Executive Summary
 
-This assessment evaluates the current ISKA Leads CRM system against its intended use case (student accommodation lead management with mandatory 3-follow-up process) and identifies gaps, missing features, and recommendations for completion.
+This assessment evaluates the current Urban Hub Leads CRM system against its intended use case (student accommodation lead management with mandatory 3-follow-up process) and identifies gaps, missing features, and recommendations for completion.
 
 **Overall System Status:** ~70% Complete  
 **Core Functionality:** ✅ Implemented  
@@ -490,7 +490,7 @@ To measure system completeness:
 
 ## 📝 Conclusion
 
-The ISKA Leads CRM system has a **solid foundation** with core lead management, follow-up tracking, and reporting capabilities. However, **critical automation features** are missing, particularly:
+The Urban Hub Leads CRM system has a **solid foundation** with core lead management, follow-up tracking, and reporting capabilities. However, **critical automation features** are missing, particularly:
 
 1. **Follow-up reminders** (highest priority)
 2. **Exception workflow** (high priority)

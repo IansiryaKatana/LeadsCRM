@@ -1,6 +1,6 @@
 # WordPress Forms Integration Guide
 
-This guide explains how to integrate your WordPress website forms (Elementor Forms and WP Forms) with the ISKA Leads CRM.
+This guide explains how to integrate your WordPress website forms (Elementor Forms and WP Forms) with the Urban Hub Leads CRM.
 
 ## Overview
 

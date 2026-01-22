@@ -342,7 +342,7 @@ export function SystemSettingsTab() {
             <Label htmlFor="system-name">System Name</Label>
             <Input 
               id="system-name" 
-              placeholder="ISKA Leads CRM"
+              placeholder="Urban Hub Leads CRM"
               value={systemName}
               onChange={(e) => setSystemName(e.target.value)}
             />
@@ -373,7 +373,7 @@ export function SystemSettingsTab() {
             <Label htmlFor="email-from-address">From Address</Label>
             <Input 
               id="email-from-address" 
-              placeholder="ISKA CRM <noreply@send.portal.urbanhub.uk>"
+              placeholder="Urban Hub CRM <noreply@send.portal.urbanhub.uk>"
               value={emailFromAddress}
               onChange={(e) => setEmailFromAddress(e.target.value)}
             />

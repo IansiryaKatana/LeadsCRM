@@ -2,7 +2,7 @@
 
 ## Executive Summary
 
-This document outlines the complete user journey for qualifying leads in the ISKA Leads CRM system, with a mandatory 3-follow-up process requirement. The journey maps how leads progress from initial entry through various qualification stages to final conversion or closure.
+This document outlines the complete user journey for qualifying leads in the Urban Hub Leads CRM system, with a mandatory 3-follow-up process requirement. The journey maps how leads progress from initial entry through various qualification stages to final conversion or closure.
 
 ---
 

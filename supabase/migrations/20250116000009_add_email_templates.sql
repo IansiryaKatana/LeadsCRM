@@ -128,7 +128,7 @@ INSERT INTO public.email_templates (name, subject, body_html, category, variable
 ),
 (
   'Follow-up #2',
-  'Still interested in ISKA accommodation? - {{lead_name}}',
+  'Still interested in Urban Hub accommodation? - {{lead_name}}',
   '<h2>Hello {{lead_name}},</h2><p>We haven''t heard from you in a while and wanted to check if you''re still interested in our {{room_choice}} accommodation.</p><p>We have limited availability, so we''d love to help you secure your preferred room before it''s taken.</p><p>If you have any questions or concerns, please don''t hesitate to reach out.</p><p>Best regards,<br>Urban Hub team</p>',
   'followup_2',
   '["{{lead_name}}", "{{room_choice}}", "{{email}}", "{{phone}}"]'::JSONB
