@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -7,7 +7,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Separator } from "@/components/ui/separator";
 import { useSystemSettings, CURRENCY_OPTIONS, RoomPrices, RoomLabels } from "@/hooks/useSystemSettings";
 import { toast } from "@/hooks/use-toast";
-import { Loader2, Upload, Image, DollarSign, Tag, Calendar, Plus, X, Building2, Mail } from "lucide-react";
+import { Loader2, Upload, Image, DollarSign, Tag, Calendar, Plus, X, Building2, Mail, Bell } from "lucide-react";
+import { supabase } from "@/integrations/supabase/client";
 
 export function SystemSettingsTab() {
   const { settings, isLoading, updateSetting } = useSystemSettings();
@@ -19,10 +20,17 @@ export function SystemSettingsTab() {
   const [faviconUrl, setFaviconUrl] = useState(settings.branding.favicon_url || "");
   const [systemName, setSystemName] = useState(settings.system_name || "Urban Hub Students Accommodations");
   const [emailFromAddress, setEmailFromAddress] = useState(settings.email_from_address || "Urban Hub <noreply@send.portal.urbanhub.uk>");
+  const [notificationEmails, setNotificationEmails] = useState<string[]>(settings.notification_emails || []);
+  const [newNotificationEmail, setNewNotificationEmail] = useState("");
   const [academicYears, setAcademicYears] = useState<string[]>(settings.academic_years || []);
   const [defaultAcademicYear, setDefaultAcademicYear] = useState(settings.default_academic_year || "");
   const [newYearInput, setNewYearInput] = useState("");
   const [saving, setSaving] = useState(false);
+  const [uploadingLogo, setUploadingLogo] = useState(false);
+  const [uploadingFavicon, setUploadingFavicon] = useState(false);
+
+  const logoInputRef = useRef<HTMLInputElement>(null);
+  const faviconInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     setCurrency(settings.currency.code);
@@ -32,9 +40,62 @@ export function SystemSettingsTab() {
     setFaviconUrl(settings.branding.favicon_url || "");
     setSystemName(settings.system_name || "Urban Hub Students Accommodations");
     setEmailFromAddress(settings.email_from_address || "Urban Hub <noreply@send.portal.urbanhub.uk>");
+    setNotificationEmails(settings.notification_emails || []);
     setAcademicYears(settings.academic_years || []);
     setDefaultAcademicYear(settings.default_academic_year || "");
   }, [settings]);
+
+  const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>, type: 'logo' | 'favicon') => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    // Validate file type
+    const allowedTypes = type === 'logo' ? ['image/png', 'image/jpeg', 'image/svg+xml'] : ['image/x-icon', 'image/png', 'image/vnd.microsoft.icon'];
+    if (!allowedTypes.includes(file.type)) {
+      toast({
+        title: "Invalid file type",
+        description: type === 'logo' ? "Please upload a PNG, JPEG or SVG image." : "Please upload an ICO or PNG image.",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    if (type === 'logo') setUploadingLogo(true);
+    else setUploadingFavicon(true);
+
+    try {
+      const fileExt = file.name.split('.').pop();
+      const fileName = `${type}-${Math.random()}.${fileExt}`;
+      const filePath = `${fileName}`;
+
+      const { error: uploadError } = await supabase.storage
+        .from('branding')
+        .upload(filePath, file);
+
+      if (uploadError) throw uploadError;
+
+      const { data: { publicUrl } } = supabase.storage
+        .from('branding')
+        .getPublicUrl(filePath);
+
+      if (type === 'logo') setLogoUrl(publicUrl);
+      else setFaviconUrl(publicUrl);
+
+      toast({
+        title: "Success",
+        description: `${type === 'logo' ? 'Logo' : 'Favicon'} uploaded successfully. Don't forget to save changes.`,
+      });
+    } catch (error: any) {
+      toast({
+        title: "Upload failed",
+        description: error.message,
+        variant: "destructive"
+      });
+    } finally {
+      if (type === 'logo') setUploadingLogo(false);
+      else setUploadingFavicon(false);
+    }
+  };
 
   const handleSaveCurrency = async () => {
     setSaving(true);
@@ -105,6 +166,44 @@ export function SystemSettingsTab() {
       toast({ title: "Email From Address Updated", description: "Email from address saved successfully" });
     } catch (error) {
       toast({ title: "Error", description: "Failed to update email from address", variant: "destructive" });
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleAddNotificationEmail = () => {
+    const email = newNotificationEmail.trim().toLowerCase();
+    if (!email) return;
+    
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(email)) {
+      toast({ title: "Invalid email", description: "Please enter a valid email address", variant: "destructive" });
+      return;
+    }
+
+    if (notificationEmails.includes(email)) {
+      toast({ title: "Already exists", description: "This email is already in the list", variant: "destructive" });
+      return;
+    }
+
+    setNotificationEmails([...notificationEmails, email]);
+    setNewNotificationEmail("");
+  };
+
+  const handleRemoveNotificationEmail = (email: string) => {
+    setNotificationEmails(notificationEmails.filter(e => e !== email));
+  };
+
+  const handleSaveNotificationEmails = async () => {
+    setSaving(true);
+    try {
+      await updateSetting.mutateAsync({ 
+        key: "notification_emails", 
+        value: notificationEmails 
+      });
+      toast({ title: "Notification Emails Updated", description: "Email list saved successfully" });
+    } catch (error) {
+      toast({ title: "Error", description: "Failed to update notification emails", variant: "destructive" });
     } finally {
       setSaving(false);
     }
@@ -257,30 +356,68 @@ export function SystemSettingsTab() {
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <div className="space-y-2">
-              <Label htmlFor="logo-url">Logo URL</Label>
-              <Input 
-                id="logo-url" 
-                placeholder="https://example.com/logo.png"
-                value={logoUrl}
-                onChange={(e) => setLogoUrl(e.target.value)}
-              />
+            <div className="space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="logo-url">Logo URL</Label>
+                <div className="flex gap-2">
+                  <Input 
+                    id="logo-url" 
+                    placeholder="https://example.com/logo.png"
+                    value={logoUrl}
+                    onChange={(e) => setLogoUrl(e.target.value)}
+                  />
+                  <input
+                    type="file"
+                    ref={logoInputRef}
+                    className="hidden"
+                    accept="image/*"
+                    onChange={(e) => handleFileUpload(e, 'logo')}
+                  />
+                  <Button 
+                    variant="outline" 
+                    type="button"
+                    onClick={() => logoInputRef.current?.click()}
+                    disabled={uploadingLogo}
+                  >
+                    {uploadingLogo ? <Loader2 className="h-4 w-4 animate-spin" /> : <Upload className="h-4 w-4" />}
+                  </Button>
+                </div>
+              </div>
               {logoUrl && (
-                <div className="mt-2 p-4 border rounded-lg bg-muted/50">
+                <div className="p-4 border rounded-lg bg-muted/50">
                   <img src={logoUrl} alt="Logo preview" className="max-h-16 object-contain" />
                 </div>
               )}
             </div>
-            <div className="space-y-2">
-              <Label htmlFor="favicon-url">Favicon URL</Label>
-              <Input 
-                id="favicon-url" 
-                placeholder="https://example.com/favicon.ico"
-                value={faviconUrl}
-                onChange={(e) => setFaviconUrl(e.target.value)}
-              />
+            <div className="space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="favicon-url">Favicon URL</Label>
+                <div className="flex gap-2">
+                  <Input 
+                    id="favicon-url" 
+                    placeholder="https://example.com/favicon.ico"
+                    value={faviconUrl}
+                    onChange={(e) => setFaviconUrl(e.target.value)}
+                  />
+                  <input
+                    type="file"
+                    ref={faviconInputRef}
+                    className="hidden"
+                    accept=".ico,.png,image/x-icon,image/png"
+                    onChange={(e) => handleFileUpload(e, 'favicon')}
+                  />
+                  <Button 
+                    variant="outline" 
+                    type="button"
+                    onClick={() => faviconInputRef.current?.click()}
+                    disabled={uploadingFavicon}
+                  >
+                    {uploadingFavicon ? <Loader2 className="h-4 w-4 animate-spin" /> : <Upload className="h-4 w-4" />}
+                  </Button>
+                </div>
+              </div>
               {faviconUrl && (
-                <div className="mt-2 p-4 border rounded-lg bg-muted/50">
+                <div className="p-4 border rounded-lg bg-muted/50">
                   <img src={faviconUrl} alt="Favicon preview" className="max-h-8 object-contain" />
                 </div>
               )}
@@ -290,6 +427,73 @@ export function SystemSettingsTab() {
             <Button onClick={handleSaveBranding} disabled={saving}>
               {saving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
               Save Branding
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Lead Notifications Settings */}
+      <Card className="shadow-card">
+        <CardHeader>
+          <CardTitle className="font-display flex items-center gap-2">
+            <Bell className="h-5 w-5" />
+            Lead Notifications
+          </CardTitle>
+          <CardDescription>Manage who receives email notifications when a new lead is added</CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="new-notification-email">Add Recipient Email</Label>
+              <div className="flex gap-2">
+                <Input
+                  id="new-notification-email"
+                  placeholder="admin@example.com"
+                  value={newNotificationEmail}
+                  onChange={(e) => setNewNotificationEmail(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") {
+                      e.preventDefault();
+                      handleAddNotificationEmail();
+                    }
+                  }}
+                />
+                <Button type="button" onClick={handleAddNotificationEmail} variant="outline">
+                  <Plus className="h-4 w-4" />
+                </Button>
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              <Label>Notification Recipients</Label>
+              <div className="space-y-2">
+                {notificationEmails.length === 0 ? (
+                  <p className="text-sm text-muted-foreground italic p-3 border rounded-lg border-dashed">
+                    No recipients configured. All admins/managers will receive notifications by default (legacy behavior).
+                  </p>
+                ) : (
+                  notificationEmails.map((email) => (
+                    <div key={email} className="flex items-center justify-between p-3 border rounded-lg bg-muted/30">
+                      <span className="text-sm font-medium">{email}</span>
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => handleRemoveNotificationEmail(email)}
+                        className="h-8 w-8 p-0 text-destructive hover:text-destructive"
+                      >
+                        <X className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  ))
+                )}
+              </div>
+            </div>
+          </div>
+          <div className="flex justify-end">
+            <Button onClick={handleSaveNotificationEmails} disabled={saving}>
+              {saving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+              Save Notification Emails
             </Button>
           </div>
         </CardContent>

@@ -52,7 +52,8 @@ https://btbsslznsexidjnzizre.supabase.co/functions/v1/wordpress-webhook
   "form_name": "Book a Viewing",
   "preferred_date": "[field id=\"date\"]",
   "preferred_time": "[field id=\"time\"]",
-  "studio_type": "[field id=\"studio_type\"]"
+  "studio_type": "[field id=\"studio_type\"]",
+  "landing_page": "Book_Viewing_LP"
 }
 ```
 
@@ -95,7 +96,8 @@ https://btbsslznsexidjnzizre.supabase.co/functions/v1/wordpress-webhook
   "form_type": "callback",
   "form_name": "Schedule Callback",
   "studio_type": "[field id=\"studio_type\"]",
-  "duration": "[field id=\"duration\"]"
+  "duration": "[field id=\"duration\"]",
+  "landing_page": "Callback_LP"
 }
 ```
 

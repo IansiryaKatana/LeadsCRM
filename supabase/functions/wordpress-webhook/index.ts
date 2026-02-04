@@ -23,6 +23,8 @@ interface WordPressFormPayload {
   date?: string;
   time?: string;
   deposit_amount?: number | string;
+  landing_page?: string;
+  campaign?: string;
   [key: string]: unknown;
 }
 
@@ -96,6 +98,7 @@ serve(async (req) => {
       stay_duration: mapStayDuration(payload.stay_duration || payload.duration || (payload as any)["Stay Duration"]) || "51_weeks",
       lead_status: isDeposit ? "converted" : "new",
       academic_year: academicYear,
+      landing_page: payload.landing_page || payload.campaign || payload.lp || payload.lp_campaign || (payload as any)["Landing Page"] || (payload as any)["Campaign"] || (payload as any)["LP"] || "",
       is_hot: isDeposit
     };
 
@@ -115,10 +118,11 @@ serve(async (req) => {
     // Note creation
     const preferredDate = payload.preferred_date || payload.date || (payload as any)["Choose Date"];
     const preferredTime = payload.preferred_time || payload.time || (payload as any)["Pick a Time"];
+    const message = payload.message || (payload as any)["Message"] || (payload as any)["Comments"] || "";
     
     tasks.push(supabase.from("lead_notes").insert({
       lead_id: lead.id,
-      note: `Form: ${payload.form_name || formType}\nPreferred: ${preferredDate || 'N/A'} ${preferredTime || ''}`
+      note: `Form: ${payload.form_name || formType}${message ? `\nMessage: ${message}` : ''}${preferredDate ? `\nPreferred: ${preferredDate} ${preferredTime || ''}` : ''}`
     }));
 
     // Calendar creation

@@ -38,6 +38,7 @@ export interface SystemSettings {
   default_academic_year?: string;
   system_name?: string;
   email_from_address?: string;
+  notification_emails?: string[];
 }
 
 const DEFAULT_SETTINGS: SystemSettings = {
@@ -61,6 +62,7 @@ const DEFAULT_SETTINGS: SystemSettings = {
   default_academic_year: "2025/2026",
   system_name: "Urban Hub Students Accommodations",
   email_from_address: "Urban Hub <noreply@send.portal.urbanhub.uk>",
+  notification_emails: [],
 };
 
 export const CURRENCY_OPTIONS: CurrencySettings[] = [

@@ -47,13 +47,14 @@ serve(async (req) => {
     const { data: settingsData } = await supabase
       .from("system_settings")
       .select("setting_key, setting_value")
-      .in("setting_key", ["system_name", "currency", "email_from_address"]);
+      .in("setting_key", ["system_name", "currency", "email_from_address", "notification_emails"]);
 
     const settingsMap = new Map(settingsData?.map(s => [s.setting_key, s.setting_value]));
     
     const systemName = settingsMap.get("system_name") as string || "Urban Hub Students Accommodations";
     const currency = settingsMap.get("currency") as { code: string, symbol: string } || { code: "KES", symbol: "KES" };
     const fromAddress = settingsMap.get("email_from_address") as string || `${systemName} <noreply@send.portal.urbanhub.uk>`;
+    const configuredNotificationEmails = settingsMap.get("notification_emails") as string[] || [];
 
     // Handle direct email sending (with optional template support)
     if (type === "email" && to) {
@@ -218,23 +219,32 @@ serve(async (req) => {
       });
     }
 
-    // Get admin emails for notifications
-    const { data: adminRoles } = await supabase
-      .from("user_roles")
-      .select("user_id")
-      .in("role", ["super_admin", "admin", "manager"]);
+    // Determine recipients
+    let recipients: string[] = [];
 
-    const adminUserIds = adminRoles?.map(r => r.user_id) || [];
+    if (configuredNotificationEmails.length > 0) {
+      recipients = configuredNotificationEmails;
+      console.log("Using configured notification emails:", recipients);
+    } else {
+      // Fallback: Get admin emails for notifications
+      const { data: adminRoles } = await supabase
+        .from("user_roles")
+        .select("user_id")
+        .in("role", ["super_admin", "admin", "manager"]);
 
-    const { data: adminProfiles } = await supabase
-      .from("profiles")
-      .select("email, full_name")
-      .in("user_id", adminUserIds);
+      const adminUserIds = adminRoles?.map(r => r.user_id) || [];
 
-    const adminEmails = adminProfiles?.map(p => p.email) || [];
+      const { data: adminProfiles } = await supabase
+        .from("profiles")
+        .select("email")
+        .in("user_id", adminUserIds);
 
-    if (adminEmails.length === 0) {
-      console.log("No admin emails found for notification");
+      recipients = adminProfiles?.map(p => p.email).filter(Boolean) as string[] || [];
+      console.log("Using fallback admin emails:", recipients);
+    }
+
+    if (recipients.length === 0) {
+      console.log("No recipients found for notification");
       return new Response(JSON.stringify({ success: true, message: "No recipients" }), {
         status: 200,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
@@ -373,13 +383,13 @@ serve(async (req) => {
         break;
     }
 
-    console.log("Sending email to:", adminEmails);
+    console.log("Sending email to:", recipients);
 
     const resendClient = new Resend(Deno.env.get("RESEND_API_KEY") ?? "");
 
     const emailResponse = await resendClient.emails.send({
       from: fromAddress,
-      to: adminEmails,
+      to: recipients,
       subject: notificationSubject,
       html: htmlContent,
     });
