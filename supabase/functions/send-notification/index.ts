@@ -1,5 +1,5 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.3";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { Resend } from "https://esm.sh/resend@2.0.0";
 
 const corsHeaders = {
@@ -44,10 +44,16 @@ serve(async (req) => {
     console.log("Notification request:", { leadId, type, assignedTo, newStatus, to, templateId, templateName });
 
     // Fetch all relevant settings at once
-    const { data: settingsData } = await supabase
+    const { data: settingsData, error: settingsError } = await supabase
       .from("system_settings")
       .select("setting_key, setting_value")
       .in("setting_key", ["system_name", "currency", "email_from_address", "notification_emails"]);
+
+    if (settingsError) {
+      console.error("Error fetching system settings:", settingsError);
+    }
+
+    console.log("Settings fetched:", settingsData);
 
     const settingsMap = new Map(settingsData?.map(s => [s.setting_key, s.setting_value]));
     
@@ -255,20 +261,25 @@ serve(async (req) => {
     let htmlContent = "";
 
     const emailStyle = `
+      <link rel="preconnect" href="https://fonts.googleapis.com">
+      <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+      <link href="https://fonts.googleapis.com/css2?family=Big+Shoulders+Display:wght@100..900&family=Inter+Tight:ital,wght@0,100..900;1,100..900&display=swap" rel="stylesheet">
       <style>
         .email-container { font-family: 'Inter Tight', Helvetica, Arial, sans-serif; max-width: 600px; margin: 0 auto; background: #ffffff; border-radius: 16px; overflow: hidden; border: 1px solid #e5e7eb; box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1); }
         .header { background: linear-gradient(135deg, #51A6FF 0%, #3b82f6 100%); padding: 30px 20px; text-align: center; color: #ffffff; }
-        .header h1 { margin: 0; font-size: 24px; font-weight: 800; letter-spacing: 0.05em; text-transform: uppercase; }
+        .header h1 { margin: 0; font-family: 'Big Shoulders Display', sans-serif; font-size: 32px; font-weight: 800; letter-spacing: 0.05em; text-transform: uppercase; }
         .accent-bar { height: 6px; background: #FFD700; }
-        .content { padding: 30px; line-height: 1.6; color: #374151; }
-        .content h2 { color: #111827; font-size: 20px; margin-top: 0; font-weight: 700; text-transform: uppercase; border-bottom: 2px solid #eff6ff; padding-bottom: 10px; margin-bottom: 20px; }
+        .content { padding: 30px; line-height: 1.6; color: #374151; font-family: 'Inter Tight', sans-serif; }
+        .content h2 { font-family: 'Big Shoulders Display', sans-serif; color: #111827; font-size: 24px; margin-top: 0; font-weight: 700; text-transform: uppercase; border-bottom: 2px solid #eff6ff; padding-bottom: 10px; margin-bottom: 20px; }
         .info-card { background: #f9fafb; border: 1px solid #f3f4f6; border-radius: 12px; padding: 20px; margin: 20px 0; }
         .info-item { margin-bottom: 10px; font-size: 14px; }
         .info-item strong { color: #3b82f6; width: 140px; display: inline-block; }
-        .footer { background: #f9fafb; padding: 20px; text-align: center; border-top: 1px solid #f3f4f6; color: #6b7280; font-size: 12px; }
-        .button { display: inline-block; background: #51A6FF; color: #ffffff; padding: 10px 20px; border-radius: 8px; text-decoration: none; font-weight: 600; margin-top: 15px; }
+        .footer { background: #f9fafb; padding: 20px; text-align: center; border-top: 1px solid #f3f4f6; color: #6b7280; font-size: 12px; font-family: 'Inter Tight', sans-serif; }
+        .button { display: inline-block; background: #51A6FF; color: #ffffff; padding: 12px 24px; border-radius: 8px; text-decoration: none; font-weight: 600; margin-top: 15px; font-family: 'Inter Tight', sans-serif; text-transform: uppercase; letter-spacing: 0.05em; }
       </style>
     `;
+
+    const crmUrl = "https://Leads.urbanhub.uk";
 
     switch (type) {
       case "new_lead":
@@ -288,10 +299,11 @@ serve(async (req) => {
                 <div class="info-item"><strong>Room Choice:</strong> ${lead.room_choice}</div>
                 <div class="info-item"><strong>Stay Duration:</strong> ${lead.stay_duration}</div>
                 <div class="info-item"><strong>Potential Revenue:</strong> ${currency.code} ${lead.potential_revenue.toLocaleString()}</div>
+                ${lead.contact_message ? `<div class="info-item" style="margin-top: 15px; padding-top: 15px; border-top: 1px solid #e5e7eb;"><strong>Message:</strong><br/><span style="color: #4b5563; font-style: italic;">${lead.contact_message}</span></div>` : ''}
               </div>
               <p>Log in to the CRM to follow up with this lead as soon as possible.</p>
               <div style="text-align: center;">
-                <a href="${Deno.env.get("SUPABASE_URL")?.replace(".supabase.co", ".supabase.in")}" class="button">View Lead in CRM</a>
+                <a href="${crmUrl}" class="button">View Lead in CRM</a>
               </div>
             </div>
             <div class="footer"><p>&copy; 2026 ${systemName}</p></div>
@@ -322,6 +334,9 @@ serve(async (req) => {
                 <div class="info-item"><strong>Email:</strong> ${lead.email}</div>
                 <div class="info-item"><strong>Phone:</strong> ${lead.phone}</div>
               </div>
+              <div style="text-align: center;">
+                <a href="${crmUrl}" class="button">Go to Lead</a>
+              </div>
             </div>
             <div class="footer"><p>&copy; 2026 ${systemName}</p></div>
           </div>
@@ -351,7 +366,7 @@ serve(async (req) => {
                   </div>
                   <p>Please reach out to this lead as soon as possible to maximize conversion chance!</p>
                   <div style="text-align: center;">
-                    <a href="${Deno.env.get("SUPABASE_URL")?.replace(".supabase.co", ".supabase.in")}" class="button">Go to Lead</a>
+                    <a href="${crmUrl}" class="button">Go to Lead</a>
                   </div>
                 </div>
                 <div class="footer"><p>&copy; 2026 ${systemName}</p></div>
@@ -375,6 +390,9 @@ serve(async (req) => {
                 <div class="info-item"><strong>Lead Name:</strong> ${lead.full_name}</div>
                 <div class="info-item"><strong>New Status:</strong> ${newStatus || lead.lead_status}</div>
                 <div class="info-item"><strong>Email:</strong> ${lead.email}</div>
+              </div>
+              <div style="text-align: center;">
+                <a href="${crmUrl}" class="button">Go to Lead</a>
               </div>
             </div>
             <div class="footer"><p>&copy; 2026 ${systemName}</p></div>
