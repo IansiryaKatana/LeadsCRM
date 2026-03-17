@@ -69,7 +69,7 @@ function UnreadCountBadgeForSource({ sourceSlug }: { sourceSlug: string }) {
   
   return (
     <span className="inline-flex items-center justify-center rounded-full bg-warning text-warning-foreground text-xs font-semibold px-2 py-0.5 min-w-[1.5rem]">
-      {count > 9 ? "9+" : count}
+      {count > 99 ? "99+" : count}
     </span>
   );
 }
@@ -262,7 +262,7 @@ export function Sidebar() {
                             <span className="font-medium flex-1">{item.name}</span>
                             {unreadWebLeads > 0 && (
                               <span className="inline-flex items-center justify-center rounded-full bg-warning text-warning-foreground text-xs font-semibold px-2 py-0.5 min-w-[1.5rem]">
-                                {unreadWebLeads > 9 ? "9+" : unreadWebLeads}
+                                {unreadWebLeads > 99 ? "99+" : unreadWebLeads}
                               </span>
                             )}
                             {activeSources.length > 0 && (

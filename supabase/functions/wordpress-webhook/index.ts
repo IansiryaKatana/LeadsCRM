@@ -1,5 +1,5 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.3";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -11,7 +11,7 @@ interface WordPressFormPayload {
   name?: string;
   email: string;
   phone?: string;
-  form_type?: "contact" | "booking" | "callback" | "deposit" | "keyworkers";
+  form_type?: string;
   form_name?: string;
   room_choice?: string;
   studio_type?: string;
@@ -25,6 +25,27 @@ interface WordPressFormPayload {
   deposit_amount?: number | string;
   landing_page?: string;
   campaign?: string;
+  // Short term stay fields
+  guest_type?: string;
+  rooms_count?: number | string;
+  start_date?: string;
+  end_date?: string;
+  // Content creator fields
+  city_university?: string;
+  instagram?: string;
+  tiktok?: string;
+  snapchat?: string;
+  youtube?: string;
+  total_followers?: string;
+  content_type?: string;
+  content_type_other?: string;
+  content_style_summary?: string;
+  example_links?: string;
+  worked_with_brands?: string;
+  urbanhub_content_idea?: string;
+  can_visit_preston?: string;
+  collaboration_format?: string;
+  additional_info?: string;
   [key: string]: unknown;
 }
 
@@ -85,22 +106,46 @@ serve(async (req) => {
 
     // 3. Insert lead
     console.time("insert-lead");
-    const formType = payload.form_type || detectFormType(payload.form_name || "");
-    const source = mapFormTypeToSource(formType);
-    const isDeposit = formType === "deposit";
+    const incomingFormType = payload.form_type || detectFormType(payload.form_name || "");
+    const source = mapFormTypeToSource(incomingFormType);
+    const isPaymentForm = incomingFormType === "deposit" || incomingFormType === "secure_booking" || incomingFormType === "refer_friend";
 
-    const leadData = {
+    // Capture all metadata
+    const metadata: Record<string, any> = {};
+    const metadataFields = [
+      "city_university", "instagram", "tiktok", "snapchat", "youtube", 
+      "total_followers", "content_type", "content_type_other", 
+      "content_style_summary", "example_links", "worked_with_brands", 
+      "urbanhub_content_idea", "can_visit_preston", "collaboration_format", 
+      "additional_info", "rooms_count", "start_date", "end_date", "guest_type",
+      "preferred_date", "preferred_time",
+      "payment_intent_id", "amount_pence", "studio_preference", "friend_name", "friend_studio_number"
+    ];
+
+    for (const field of metadataFields) {
+      if (payload[field]) metadata[field] = payload[field];
+    }
+
+    const leadData: any = {
       full_name: fullName,
       email: email,
       phone: payload.phone || (payload as any)["Phone"] || "",
       source: source,
-      room_choice: mapRoomChoice(payload.room_choice || payload.studio_type || (payload as any)["Choose Studio Type"]) || "silver",
+      room_choice: mapRoomChoice(payload.room_choice || payload.studio_type || payload.studio_preference || (payload as any)["Choose Studio Type"]) || "silver",
       stay_duration: mapStayDuration(payload.stay_duration || payload.duration || (payload as any)["Stay Duration"]) || "51_weeks",
-      lead_status: isDeposit ? "converted" : "new",
+      lead_status: isPaymentForm ? "converted" : "new",
       academic_year: academicYear,
       landing_page: payload.landing_page || payload.campaign || payload.lp || payload.lp_campaign || (payload as any)["Landing Page"] || (payload as any)["Campaign"] || (payload as any)["LP"] || "",
-      is_hot: isDeposit
+      is_hot: isPaymentForm,
+      metadata: metadata
     };
+
+    // Add contact form specific fields if present
+    const message = payload.message || (payload as any)["Message"] || (payload as any)["Comments"] || "";
+    if (message) {
+      leadData.contact_message = message;
+      leadData.contact_reason = payload.reason || payload.form_name || incomingFormType;
+    }
 
     const { data: lead, error: leadError } = await supabase
       .from("leads")
@@ -115,26 +160,37 @@ serve(async (req) => {
     console.time("parallel-tasks");
     const tasks = [];
 
-    // Note creation
-    const preferredDate = payload.preferred_date || payload.date || (payload as any)["Choose Date"];
-    const preferredTime = payload.preferred_time || payload.time || (payload as any)["Pick a Time"];
-    const message = payload.message || (payload as any)["Message"] || (payload as any)["Comments"] || "";
+    // Note creation with all fields
+    let noteContent = `Form: ${payload.form_name || incomingFormType}`;
+    if (message) noteContent += `\nMessage: ${message}`;
+    
+    // Add metadata to note for easy viewing in timeline
+    if (Object.keys(metadata).length > 0) {
+      noteContent += `\n\n--- Submission Details ---`;
+      for (const [key, value] of Object.entries(metadata)) {
+        const label = key.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
+        noteContent += `\n${label}: ${value}`;
+      }
+    }
     
     tasks.push(supabase.from("lead_notes").insert({
       lead_id: lead.id,
-      note: `Form: ${payload.form_name || formType}${message ? `\nMessage: ${message}` : ''}${preferredDate ? `\nPreferred: ${preferredDate} ${preferredTime || ''}` : ''}`
+      note: noteContent
     }));
 
     // Calendar creation
-    if ((formType === "booking" || formType === "callback") && preferredDate) {
+    const preferredDate = payload.preferred_date || payload.date || (payload as any)["Choose Date"] || payload.start_date;
+    const preferredTime = payload.preferred_time || payload.time || (payload as any)["Pick a Time"];
+    
+    if ((incomingFormType === "booking" || incomingFormType === "callback" || incomingFormType === "viewing") && preferredDate) {
       const start = preferredTime 
         ? `${preferredDate}T${preferredTime.includes(":") ? preferredTime : preferredTime + ":00"}`
         : `${preferredDate}T12:00:00`;
       
       tasks.push(supabase.from("calendar_events").insert({
         lead_id: lead.id,
-        event_type: formType === "booking" ? "viewing" : "callback",
-        title: `${formType === "booking" ? "Viewing" : "Callback"}: ${lead.full_name}`,
+        event_type: (incomingFormType === "booking" || incomingFormType === "viewing") ? "viewing" : "callback",
+        title: `${(incomingFormType === "booking" || incomingFormType === "viewing") ? "Viewing" : "Callback"}: ${lead.full_name}`,
         start_date: start,
         location: "Urban Hub"
       }));
@@ -162,16 +218,35 @@ serve(async (req) => {
   }
 });
 
-function detectFormType(name: string): any {
+function detectFormType(name: string): string {
   const n = name.toLowerCase();
   if (n.includes("book") || n.includes("viewing")) return "booking";
   if (n.includes("callback")) return "callback";
   if (n.includes("deposit")) return "deposit";
+  if (n.includes("tourist")) return "tourist_inquiry";
+  if (n.includes("keyworker")) return "keyworker_inquiry";
+  if (n.includes("creator")) return "content_creator";
+  if (n.includes("support")) return "resident_support";
+  if (n.includes("secure")) return "secure_booking";
+  if (n.includes("refer")) return "refer_friend";
   return "contact";
 }
 
 function mapFormTypeToSource(type: string): string {
-  const map: any = { booking: "web_booking", callback: "web_callback", deposit: "web_deposit", contact: "web_contact" };
+  const map: Record<string, string> = { 
+    booking: "web_booking", 
+    viewing: "web_booking",
+    callback: "web_callback", 
+    deposit: "web_deposit", 
+    contact: "web_contact",
+    inquiry: "web_contact",
+    resident_support: "web_contact",
+    tourist_inquiry: "web_tourist",
+    keyworker_inquiry: "web_keyworker",
+    content_creator: "web_creator",
+    secure_booking: "web_secure_booking",
+    refer_friend: "web_refer_friend"
+  };
   return map[type] || "web_contact";
 }
 

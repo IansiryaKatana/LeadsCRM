@@ -84,8 +84,12 @@ export function LeadDetailDialog({ lead, onClose }: LeadDetailDialogProps) {
   if (!leadData) return null;
 
   const isWebContact = leadData.source === "web_contact";
-  const isWebKeyworkers = leadData.source === "web_keyworkers";
-  const isWebSimpleDialog = isWebContact || isWebKeyworkers;
+  const isWebKeyworkers = leadData.source === "web_keyworkers" || leadData.source === "web_keyworker";
+  const isWebTourist = leadData.source === "web_tourist";
+  const isWebCreator = leadData.source === "web_creator";
+  const isWebSecureBooking = leadData.source === "web_secure_booking";
+  const isWebReferFriend = leadData.source === "web_refer_friend";
+  const isWebSimpleDialog = isWebContact || isWebKeyworkers || isWebTourist || isWebCreator || isWebSecureBooking || isWebReferFriend;
   const followUpCount = leadData.followup_count || 0;
   const lastFollowUpDate = leadData.last_followup_date ? new Date(leadData.last_followup_date) : null;
   const nextFollowUpDate = leadData.next_followup_date ? new Date(leadData.next_followup_date) : null;
@@ -179,6 +183,14 @@ export function LeadDetailDialog({ lead, onClose }: LeadDetailDialogProps) {
               <TabsTrigger value="contact-message">Message</TabsTrigger>
             ) : isWebKeyworkers ? (
               <TabsTrigger value="keyworkers-details">Keyworker Details</TabsTrigger>
+            ) : isWebTourist ? (
+              <TabsTrigger value="tourist-details">Stay Details</TabsTrigger>
+            ) : isWebCreator ? (
+              <TabsTrigger value="creator-details">Creator App</TabsTrigger>
+            ) : isWebSecureBooking ? (
+              <TabsTrigger value="secure-booking">Booking Info</TabsTrigger>
+            ) : isWebReferFriend ? (
+              <TabsTrigger value="refer-friend">Referral Info</TabsTrigger>
             ) : (
               <>
                 <TabsTrigger value="followups">
@@ -482,14 +494,174 @@ export function LeadDetailDialog({ lead, onClose }: LeadDetailDialogProps) {
                 <div className="p-4 rounded-xl bg-muted/50">
                   <h3 className="font-semibold mb-2">Length of Stay</h3>
                   <p className="text-sm text-muted-foreground whitespace-pre-wrap">
-                    {leadData.keyworker_length_of_stay || "Not provided"}
+                    {leadData.keyworker_length_of_stay || (leadData.metadata as any)?.stay_duration || "Not provided"}
                   </p>
                 </div>
                 <div className="p-4 rounded-xl bg-muted/50">
                   <h3 className="font-semibold mb-2">Preferred Date</h3>
                   <p className="text-sm text-muted-foreground whitespace-pre-wrap">
-                    {leadData.keyworker_preferred_date || "Not provided"}
+                    {leadData.keyworker_preferred_date || (leadData.metadata as any)?.start_date || "Not provided"}
                   </p>
+                </div>
+                {(leadData.metadata as any)?.rooms_count && (
+                  <div className="p-4 rounded-xl bg-muted/50">
+                    <h3 className="font-semibold mb-2">Rooms Requested</h3>
+                    <p className="text-sm text-muted-foreground">
+                      {(leadData.metadata as any).rooms_count}
+                    </p>
+                  </div>
+                )}
+              </div>
+            </TabsContent>
+          )}
+
+          {/* Tourist Details Tab (Web Tourist only) */}
+          {isWebTourist && (
+            <TabsContent value="tourist-details" className="mt-4 space-y-4 overflow-y-auto max-h-[60vh] pr-2 scrollbar-thin scrollbar-thumb-muted scrollbar-track-transparent">
+              <div className="space-y-4">
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="p-4 rounded-xl bg-muted/50">
+                    <h3 className="font-semibold mb-2 text-xs uppercase text-muted-foreground">Start Date</h3>
+                    <p className="text-sm">{(leadData.metadata as any)?.start_date || "Not provided"}</p>
+                  </div>
+                  <div className="p-4 rounded-xl bg-muted/50">
+                    <h3 className="font-semibold mb-2 text-xs uppercase text-muted-foreground">End Date</h3>
+                    <p className="text-sm">{(leadData.metadata as any)?.end_date || "Not provided"}</p>
+                  </div>
+                </div>
+                <div className="p-4 rounded-xl bg-muted/50">
+                  <h3 className="font-semibold mb-2 text-xs uppercase text-muted-foreground">Rooms Requested</h3>
+                  <p className="text-sm">{(leadData.metadata as any)?.rooms_count || "Not provided"}</p>
+                </div>
+              </div>
+            </TabsContent>
+          )}
+
+          {/* Content Creator Details Tab */}
+          {isWebCreator && (
+            <TabsContent value="creator-details" className="mt-4 space-y-4 overflow-y-auto max-h-[60vh] pr-2 scrollbar-thin scrollbar-thumb-muted scrollbar-track-transparent">
+              <div className="space-y-4">
+                <div className="p-4 rounded-xl bg-muted/50">
+                  <h3 className="font-semibold mb-2 text-xs uppercase text-muted-foreground">City / University</h3>
+                  <p className="text-sm">{(leadData.metadata as any)?.city_university || "Not provided"}</p>
+                </div>
+                
+                <div className="grid grid-cols-2 gap-4">
+                  {['instagram', 'tiktok', 'snapchat', 'youtube'].map(social => (
+                    (leadData.metadata as any)?.[social] && (
+                      <div key={social} className="p-4 rounded-xl bg-muted/50">
+                        <h3 className="font-semibold mb-1 text-xs uppercase text-muted-foreground capitalize">{social}</h3>
+                        <p className="text-sm truncate">{(leadData.metadata as any)[social]}</p>
+                      </div>
+                    )
+                  ))}
+                </div>
+
+                <div className="p-4 rounded-xl bg-muted/50">
+                  <h3 className="font-semibold mb-2 text-xs uppercase text-muted-foreground">Collaboration Details</h3>
+                  <div className="space-y-3">
+                    <div>
+                      <p className="text-xs text-muted-foreground">Followers</p>
+                      <p className="text-sm">{(leadData.metadata as any)?.total_followers || "N/A"}</p>
+                    </div>
+                    <div>
+                      <p className="text-xs text-muted-foreground">Content Type</p>
+                      <p className="text-sm">
+                        {(leadData.metadata as any)?.content_type} 
+                        {(leadData.metadata as any)?.content_type_other && ` (${(leadData.metadata as any).content_type_other})`}
+                      </p>
+                    </div>
+                    <div>
+                      <p className="text-xs text-muted-foreground">Format</p>
+                      <p className="text-sm">{(leadData.metadata as any)?.collaboration_format || "N/A"}</p>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="p-4 rounded-xl bg-muted/50">
+                  <h3 className="font-semibold mb-2 text-xs uppercase text-muted-foreground">Content Idea</h3>
+                  <p className="text-sm italic">"{(leadData.metadata as any)?.urbanhub_content_idea || "No idea provided"}"</p>
+                </div>
+
+                <div className="p-4 rounded-xl bg-muted/50">
+                  <h3 className="font-semibold mb-2 text-xs uppercase text-muted-foreground">Example Links</h3>
+                  <p className="text-sm whitespace-pre-wrap">{(leadData.metadata as any)?.example_links || "None provided"}</p>
+                </div>
+              </div>
+            </TabsContent>
+          )}
+
+          {/* Secure Booking Details Tab */}
+          {isWebSecureBooking && (
+            <TabsContent value="secure-booking" className="mt-4 space-y-4 overflow-y-auto max-h-[60vh] pr-2 scrollbar-thin scrollbar-thumb-muted scrollbar-track-transparent">
+              <div className="space-y-4">
+                <div className="p-4 rounded-xl bg-primary/10 border border-primary/20">
+                  <h3 className="font-semibold mb-2 text-xs uppercase text-primary">Payment Details</h3>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <p className="text-xs text-muted-foreground">Amount Paid</p>
+                      <p className="text-lg font-bold">
+                        {formatCurrency((leadData.metadata as any)?.amount_pence / 100 || 0)}
+                      </p>
+                    </div>
+                    <div>
+                      <p className="text-xs text-muted-foreground">Status</p>
+                      <p className="text-sm font-semibold text-success flex items-center gap-1">
+                        <CheckSquare className="h-3 w-3" /> Paid
+                      </p>
+                    </div>
+                  </div>
+                  <div className="mt-3">
+                    <p className="text-[10px] text-muted-foreground uppercase font-medium">Stripe ID</p>
+                    <p className="text-[10px] font-mono break-all">{(leadData.metadata as any)?.payment_intent_id}</p>
+                  </div>
+                </div>
+                
+                <div className="p-4 rounded-xl bg-muted/50">
+                  <h3 className="font-semibold mb-2 text-xs uppercase text-muted-foreground">Room Preference</h3>
+                  <p className="text-sm font-semibold">{getRoomLabel(leadData.room_choice)}</p>
+                </div>
+              </div>
+            </TabsContent>
+          )}
+
+          {/* Refer a Friend Details Tab */}
+          {isWebReferFriend && (
+            <TabsContent value="refer-friend" className="mt-4 space-y-4 overflow-y-auto max-h-[60vh] pr-2 scrollbar-thin scrollbar-thumb-muted scrollbar-track-transparent">
+              <div className="space-y-4">
+                <div className="p-4 rounded-xl bg-primary/10 border border-primary/20">
+                  <h3 className="font-semibold mb-2 text-xs uppercase text-primary">Referral Payment</h3>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <p className="text-xs text-muted-foreground">Amount Paid</p>
+                      <p className="text-lg font-bold">
+                        {formatCurrency((leadData.metadata as any)?.amount_pence / 100 || 0)}
+                      </p>
+                    </div>
+                    <div>
+                      <p className="text-[10px] text-muted-foreground uppercase font-medium">Stripe ID</p>
+                      <p className="text-[10px] font-mono break-all truncate">{(leadData.metadata as any)?.payment_intent_id}</p>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="p-4 rounded-xl bg-muted/50 border-l-4 border-l-blue-500">
+                  <h3 className="font-semibold mb-3 text-xs uppercase text-muted-foreground">Friend's Information</h3>
+                  <div className="space-y-3">
+                    <div>
+                      <p className="text-xs text-muted-foreground">Name</p>
+                      <p className="text-sm font-semibold">{(leadData.metadata as any)?.friend_name || "Not provided"}</p>
+                    </div>
+                    <div>
+                      <p className="text-xs text-muted-foreground">Studio / Room Number</p>
+                      <p className="text-sm font-semibold">{(leadData.metadata as any)?.friend_studio_number || "Not provided"}</p>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="p-4 rounded-xl bg-muted/50">
+                  <h3 className="font-semibold mb-2 text-xs uppercase text-muted-foreground">Referrer's Studio Preference</h3>
+                  <p className="text-sm font-semibold">{getRoomLabel(leadData.room_choice)}</p>
                 </div>
               </div>
             </TabsContent>
