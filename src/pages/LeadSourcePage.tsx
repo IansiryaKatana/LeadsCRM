@@ -219,7 +219,7 @@ export default function LeadSourcePage() {
                   viewMode={
                     sourceSlug === "web_contact"
                       ? "web_contact"
-                      : sourceSlug === "web_keyworkers"
+                      : (sourceSlug === "web_keyworkers" || sourceSlug === "web_keyworker")
                         ? "web_keyworkers"
                         : "default"
                   }

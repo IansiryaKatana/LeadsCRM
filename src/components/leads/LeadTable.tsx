@@ -51,6 +51,18 @@ type Lead = Database["public"]["Tables"]["leads"]["Row"];
 type LeadStatus = Database["public"]["Enums"]["lead_status"];
 
 type LeadTableViewMode = "default" | "web_contact" | "web_keyworkers";
+const WEB_LEAD_SOURCES = [
+  "web_contact",
+  "web_booking",
+  "web_callback",
+  "web_deposit",
+  "web_keyworker",
+  "web_keyworkers",
+  "web_tourist",
+  "web_creator",
+  "web_secure_booking",
+  "web_refer_friend",
+];
 
 interface LeadTableProps {
   leads: Lead[];
@@ -342,9 +354,8 @@ export function LeadTable({ leads, onViewLead, viewMode = "default", allLeadIds 
         : Array.from(selectedLeads);
 
     // Filter to only web leads
-    const webLeadSources = ["web_contact", "web_booking", "web_callback", "web_deposit", "web_keyworkers"];
     const webLeads = leads.filter(lead => 
-      idsToProcess.includes(lead.id) && webLeadSources.includes(lead.source)
+      idsToProcess.includes(lead.id) && WEB_LEAD_SOURCES.includes(lead.source)
     );
     
     if (webLeads.length === 0) {

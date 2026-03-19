@@ -42,6 +42,19 @@ import {
 import { ChevronDown, ChevronRight } from "lucide-react";
 import { getSourceIcon } from "@/utils/sourceIcons";
 
+const WEB_SOURCE_SLUGS = [
+  "web_contact",
+  "web_booking",
+  "web_callback",
+  "web_deposit",
+  "web_keyworker",
+  "web_keyworkers",
+  "web_tourist",
+  "web_creator",
+  "web_secure_booking",
+  "web_refer_friend",
+];
+
 const navigation = [
   { name: "Dashboard", href: "/", icon: LayoutDashboard },
   { name: "All Leads", href: "/leads", icon: Users },
@@ -283,7 +296,7 @@ export function Sidebar() {
                             {activeSources.map((source) => {
                               const isActive = location.pathname === `/leads/source/${source.slug}`;
                               const IconComponent = getSourceIcon(source.slug);
-                              const isWebSource = ["web_contact", "web_booking", "web_callback", "web_deposit", "web_keyworkers"].includes(source.slug);
+                              const isWebSource = WEB_SOURCE_SLUGS.includes(source.slug);
                               
                               return (
                                 <SourceNavItem

@@ -607,7 +607,7 @@ export function LeadDetailDialog({ lead, onClose }: LeadDetailDialogProps) {
                     <div>
                       <p className="text-xs text-muted-foreground">Status</p>
                       <p className="text-sm font-semibold text-success flex items-center gap-1">
-                        <CheckSquare className="h-3 w-3" /> Paid
+                        <CheckSquare className="h-3 w-3" /> {(leadData.metadata as any)?.payment_status || "Paid"}
                       </p>
                     </div>
                   </div>
@@ -615,11 +615,28 @@ export function LeadDetailDialog({ lead, onClose }: LeadDetailDialogProps) {
                     <p className="text-[10px] text-muted-foreground uppercase font-medium">Stripe ID</p>
                     <p className="text-[10px] font-mono break-all">{(leadData.metadata as any)?.payment_intent_id}</p>
                   </div>
+                  {(leadData.metadata as any)?.payment_description && (
+                    <div className="mt-3">
+                      <p className="text-[10px] text-muted-foreground uppercase font-medium">Payment Description</p>
+                      <p className="text-xs">{(leadData.metadata as any)?.payment_description}</p>
+                    </div>
+                  )}
                 </div>
                 
                 <div className="p-4 rounded-xl bg-muted/50">
                   <h3 className="font-semibold mb-2 text-xs uppercase text-muted-foreground">Room Preference</h3>
-                  <p className="text-sm font-semibold">{getRoomLabel(leadData.room_choice)}</p>
+                  <p className="text-sm font-semibold">
+                    {(leadData.metadata as any)?.studio_preference || getRoomLabel(leadData.room_choice)}
+                  </p>
+                </div>
+
+                <div className="p-4 rounded-xl bg-muted/50">
+                  <h3 className="font-semibold mb-2 text-xs uppercase text-muted-foreground">Attribution</h3>
+                  <div className="space-y-2 text-sm">
+                    <p><span className="text-muted-foreground">Form type:</span> {(leadData.metadata as any)?.form_type_raw || "Not provided"}</p>
+                    <p><span className="text-muted-foreground">Submission type:</span> {(leadData.metadata as any)?.submission_type || "Not provided"}</p>
+                    <p><span className="text-muted-foreground">Template key:</span> {(leadData.metadata as any)?.email_template || "Not provided"}</p>
+                  </div>
                 </div>
               </div>
             </TabsContent>

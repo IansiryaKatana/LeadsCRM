@@ -3,6 +3,18 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 
 const STORAGE_KEY_PREFIX = "urban_hub_web_leads_viewed_";
+const WEB_SOURCES = [
+  "web_contact",
+  "web_booking",
+  "web_callback",
+  "web_deposit",
+  "web_keyworker",
+  "web_keyworkers",
+  "web_tourist",
+  "web_creator",
+  "web_secure_booking",
+  "web_refer_friend",
+];
 
 function getStorageKey(userId?: string | null) {
   return `${STORAGE_KEY_PREFIX}${userId ?? "anonymous"}`;
@@ -38,7 +50,7 @@ export function useUnreadWebLeadsCount(academicYear?: string) {
       let query = supabase
         .from("leads")
         .select("id, source")
-        .in("source", ["web_contact", "web_booking", "web_callback", "web_deposit", "web_keyworkers"]);
+        .in("source", WEB_SOURCES);
 
       if (academicYear && academicYear.trim() !== "") {
         query = query.eq("academic_year", academicYear);
@@ -82,7 +94,7 @@ export function useUnreadWebLeadsCountBySource(sourceSlug: string, academicYear?
       const unreadCount = data.filter((lead) => !viewed.has(lead.id as string)).length;
       return unreadCount;
     },
-    enabled: !!user && ["web_contact", "web_booking", "web_callback", "web_deposit", "web_keyworkers"].includes(sourceSlug),
+    enabled: !!user && WEB_SOURCES.includes(sourceSlug),
     refetchInterval: 30000,
   });
 }
@@ -102,7 +114,7 @@ export function useWebLeadReadManager() {
   };
 
   const isLeadUnread = (leadId: string, source: string) => {
-    const isWebSource = ["web_contact", "web_booking", "web_callback", "web_deposit", "web_keyworkers"].includes(source);
+    const isWebSource = WEB_SOURCES.includes(source);
     if (!isWebSource) return false;
     const viewed = getViewedSet(user?.id);
     return !viewed.has(leadId);

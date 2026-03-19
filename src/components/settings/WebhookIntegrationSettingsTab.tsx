@@ -41,10 +41,10 @@ export function WebhookIntegrationSettingsTab() {
                   from your website and automatically creates leads in the CRM.
                 </p>
                 <ul className="list-disc pl-5 space-y-1">
-                  <li>Supported forms: Web - Contact, Web - Book Viewing, Web - Schedule Callback, Web - Deposit Payment.</li>
+                  <li>Supported forms: Booking, Callback, Inquiry, Resident Support, Tourist/Keyworker Short Stay, Refer a Friend, Secure Booking (Pay Deposit), and Content Creator.</li>
                   <li>
                     Each form sends a <span className="font-mono">form_type</span> value so the CRM knows if it&apos;s a
-                    contact, booking, callback, or deposit lead.
+                    contact, booking, callback, short-stay, referral, creator, or payment lead.
                   </li>
                   <li>
                     Landing page and campaign metadata are stored in the new{" "}
