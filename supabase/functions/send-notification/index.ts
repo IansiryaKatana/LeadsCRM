@@ -27,6 +27,51 @@ interface NotificationRequest {
   metadata?: Record<string, any>;
 }
 
+function toTitleWords(value: string): string {
+  return value
+    .replace(/[_-]+/g, " ")
+    .trim()
+    .replace(/\s+/g, " ")
+    .replace(/\b\w/g, (char) => char.toUpperCase());
+}
+
+function resolveLeadSubjectType(lead: any): string {
+  const normalizedLeadType = String(lead?.metadata?.lead_type_normalized || "").trim().toLowerCase();
+  const source = String(lead?.source || "").trim().toLowerCase();
+  const isDeposit = normalizedLeadType === "pay_deposit"
+    || source === "web_secure_booking"
+    || Boolean(lead?.metadata?.is_payment_lead);
+
+  if (isDeposit) return "Deposit Received";
+
+  const leadTypeLabels: Record<string, string> = {
+    viewing: "Book a Viewing",
+    callback_request: "Callback Request",
+    general_inquiry: "General Inquiry",
+    resident_support: "Resident Support",
+    short_stay_tourist: "Short Stay Tourist",
+    short_stay_keyworker: "Short Stay Keyworker",
+    refer_friend_deposit: "Refer a Friend",
+    content_creator_application: "Content Creator Application",
+  };
+  if (leadTypeLabels[normalizedLeadType]) return leadTypeLabels[normalizedLeadType];
+
+  const sourceLabels: Record<string, string> = {
+    web_booking: "Book a Viewing",
+    web_callback: "Callback Request",
+    web_contact: "General Inquiry",
+    web_deposit: "Deposit Received",
+    web_secure_booking: "Deposit Received",
+    web_tourist: "Short Stay Tourist",
+    web_keyworker: "Short Stay Keyworker",
+    web_creator: "Content Creator Application",
+    web_refer_friend: "Refer a Friend",
+  };
+  if (sourceLabels[source]) return sourceLabels[source];
+
+  return toTitleWords(source || "Lead");
+}
+
 serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
@@ -283,14 +328,15 @@ serve(async (req) => {
 
     switch (type) {
       case "new_lead":
-        notificationSubject = `🔔 New Lead: ${lead.full_name}`;
+        const leadSubjectType = resolveLeadSubjectType(lead);
+        notificationSubject = `🔔 New ${leadSubjectType} Lead: ${lead.full_name}`;
         htmlContent = `
           ${emailStyle}
           <div class="email-container">
             <div class="header"><h1>${systemName}</h1></div>
             <div class="accent-bar"></div>
             <div class="content">
-              <h2>New Lead Received!</h2>
+              <h2>New ${leadSubjectType} Lead Received!</h2>
               <p>A new lead has just entered the system from <strong>${lead.source}</strong>.</p>
               <div class="info-card">
                 <div class="info-item"><strong>Name:</strong> ${lead.full_name}</div>

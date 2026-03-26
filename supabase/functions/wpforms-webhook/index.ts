@@ -59,7 +59,34 @@ serve(async (req) => {
     const formNameLower = (payload.form_name || "").toLowerCase();
     const isBooking = formNameLower.includes("book") || formNameLower.includes("viewing");
     const isCallback = formNameLower.includes("callback");
-    const formType = isBooking ? "booking" : isCallback ? "callback" : "contact";
+    const isDeposit = formNameLower.includes("deposit");
+    const isSecureBooking = formNameLower.includes("secure");
+    const formType = isSecureBooking
+      ? "pay_deposit"
+      : isDeposit
+      ? "deposit"
+      : isBooking
+      ? "booking"
+      : isCallback
+      ? "callback"
+      : "contact";
+    const sourceByFormType: Record<string, string> = {
+      booking: "web_booking",
+      callback: "web_callback",
+      contact: "web_contact",
+      deposit: "web_deposit",
+      pay_deposit: "web_secure_booking",
+    };
+    const source = sourceByFormType[formType] || "web_contact";
+    const normalizedLeadTypeByFormType: Record<string, string> = {
+      booking: "viewing",
+      callback: "callback_request",
+      contact: "general_inquiry",
+      deposit: "pay_deposit",
+      pay_deposit: "pay_deposit",
+    };
+    const normalizedLeadType = normalizedLeadTypeByFormType[formType] || "general_inquiry";
+    const isPaymentLead = formType === "deposit" || formType === "pay_deposit";
 
     // 1. Fetch necessary settings in parallel
     console.time("fetch-settings");
@@ -79,11 +106,18 @@ serve(async (req) => {
       full_name: payload.full_name,
       email: payload.email,
       phone: payload.phone,
-      source: "web_booking", // Defaulting to web_booking for WPForms
+      source,
       room_choice: mapRoomChoice(payload.room_choice as string) || "silver",
       stay_duration: mapStayDuration(payload.stay_duration as string) || "51_weeks",
-      lead_status: "new",
+      lead_status: isPaymentLead ? "converted" : "new",
       academic_year: academicYear,
+      is_hot: isPaymentLead,
+      metadata: {
+        form_type_raw: formType,
+        lead_type_normalized: normalizedLeadType,
+        is_payment_lead: isPaymentLead,
+        source: source,
+      },
     };
 
     const { data: lead, error: leadError } = await supabase

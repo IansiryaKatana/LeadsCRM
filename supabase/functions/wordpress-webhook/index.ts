@@ -255,12 +255,10 @@ serve(async (req) => {
       }));
     }
 
-    // Notification
-    if (!isPaymentLead) {
-      tasks.push(supabase.functions.invoke("send-notification", {
-        body: { leadId: lead.id, type: "new_lead" }
-      }));
-    }
+    // Notification: always trigger for every source, including payment/deposit leads.
+    tasks.push(supabase.functions.invoke("send-notification", {
+      body: { leadId: lead.id, type: "new_lead" }
+    }));
 
     // Auto-response email for contactable leads
     if (incomingEmail) {
