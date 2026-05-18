@@ -34,14 +34,16 @@ import {
   TableRow,
 } from "@/components/ui/table";
 
+import { CHART_COLORS, chartTickStyle, chartTooltipStyle } from "@/constants/chartTheme";
+
 interface TeamPerformanceAnalyticsProps {
   academicYear?: string;
+  startDate?: Date | null;
+  endDate?: Date | null;
 }
 
-const COLORS = ["#51A6FF", "#33C3F0", "#4ADE80", "#F59E0B", "#EF4444", "#A855F7"];
-
-export function TeamPerformanceAnalytics({ academicYear }: TeamPerformanceAnalyticsProps) {
-  const { data: teamMetrics, isLoading } = useTeamPerformance(academicYear);
+export function TeamPerformanceAnalytics({ academicYear, startDate, endDate }: TeamPerformanceAnalyticsProps) {
+  const { data: teamMetrics, isLoading } = useTeamPerformance(academicYear, startDate ?? undefined, endDate ?? undefined);
   const { formatCurrency } = useSystemSettingsContext();
   const [sortBy, setSortBy] = useState<"revenue" | "conversions" | "compliance">("revenue");
 
@@ -210,15 +212,15 @@ export function TeamPerformanceAnalytics({ academicYear }: TeamPerformanceAnalyt
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
         <Card className="shadow-card">
           <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Trophy className="h-5 w-5 text-yellow-500" />
+            <CardTitle className="font-display flex items-center gap-2">
+              <Trophy className="h-5 w-5 text-accent" />
               Top Revenue Generator
             </CardTitle>
           </CardHeader>
           <CardContent>
             {topRevenue ? (
               <div>
-                <p className="text-2xl font-bold">{topRevenue.full_name}</p>
+                <p className="text-2xl font-display font-bold">{topRevenue.full_name}</p>
                 <p className="text-muted-foreground text-sm mt-1">
                   {formatCurrency(topRevenue.total_revenue)}
                 </p>
@@ -234,15 +236,15 @@ export function TeamPerformanceAnalytics({ academicYear }: TeamPerformanceAnalyt
 
         <Card className="shadow-card">
           <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Award className="h-5 w-5 text-blue-500" />
+            <CardTitle className="font-display flex items-center gap-2">
+              <Award className="h-5 w-5 text-primary" />
               Most Conversions
             </CardTitle>
           </CardHeader>
           <CardContent>
             {topConversions ? (
               <div>
-                <p className="text-2xl font-bold">{topConversions.full_name}</p>
+                <p className="text-2xl font-display font-bold">{topConversions.full_name}</p>
                 <p className="text-muted-foreground text-sm mt-1">
                   {topConversions.total_conversions} conversions
                 </p>
@@ -258,15 +260,15 @@ export function TeamPerformanceAnalytics({ academicYear }: TeamPerformanceAnalyt
 
         <Card className="shadow-card">
           <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <CheckCircle2 className="h-5 w-5 text-green-500" />
+            <CardTitle className="font-display flex items-center gap-2">
+              <CheckCircle2 className="h-5 w-5 text-success" />
               Most Compliant
             </CardTitle>
           </CardHeader>
           <CardContent>
             {topCompliance ? (
               <div>
-                <p className="text-2xl font-bold">{topCompliance.full_name}</p>
+                <p className="text-2xl font-display font-bold">{topCompliance.full_name}</p>
                 <p className="text-muted-foreground text-sm mt-1">
                   {topCompliance.followup_compliance_rate.toFixed(1)}% compliance
                 </p>
@@ -285,19 +287,20 @@ export function TeamPerformanceAnalytics({ academicYear }: TeamPerformanceAnalyt
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <Card className="shadow-card">
           <CardHeader>
-            <CardTitle>Revenue by Team Member</CardTitle>
+            <CardTitle className="font-display">Revenue by Team Member</CardTitle>
           </CardHeader>
           <CardContent>
             <ResponsiveContainer width="100%" height={300}>
               <BarChart data={revenueChartData}>
-                <CartesianGrid strokeDasharray="3 3" />
-                <XAxis dataKey="name" />
-                <YAxis />
+                <CartesianGrid strokeDasharray="3 3" stroke="hsl(210, 20%, 92%)" vertical={false} />
+                <XAxis dataKey="name" tick={chartTickStyle} />
+                <YAxis tick={chartTickStyle} />
                 <Tooltip
+                  contentStyle={chartTooltipStyle}
                   formatter={(value: number) => formatCurrency(value)}
                 />
-                <Legend />
-                <Bar dataKey="revenue" fill="#51A6FF" name="Revenue" />
+                <Legend wrapperStyle={{ fontFamily: chartTickStyle.fontFamily, fontSize: 12 }} />
+                <Bar dataKey="revenue" fill={CHART_COLORS.primary} name="Revenue" radius={[6, 6, 0, 0]} />
               </BarChart>
             </ResponsiveContainer>
           </CardContent>
@@ -305,18 +308,19 @@ export function TeamPerformanceAnalytics({ academicYear }: TeamPerformanceAnalyt
 
         <Card className="shadow-card">
           <CardHeader>
-            <CardTitle>Conversion Rate by Team Member</CardTitle>
+            <CardTitle className="font-display">Conversion Rate by Team Member</CardTitle>
           </CardHeader>
           <CardContent>
             <ResponsiveContainer width="100%" height={300}>
               <BarChart data={conversionChartData}>
-                <CartesianGrid strokeDasharray="3 3" />
-                <XAxis dataKey="name" />
-                <YAxis />
+                <CartesianGrid strokeDasharray="3 3" stroke="hsl(210, 20%, 92%)" vertical={false} />
+                <XAxis dataKey="name" tick={chartTickStyle} />
+                <YAxis tick={chartTickStyle} />
                 <Tooltip
+                  contentStyle={chartTooltipStyle}
                   formatter={(value: number) => `${value.toFixed(1)}%`}
                 />
-                <Bar dataKey="rate" fill="#4ADE80" name="Conversion Rate %" />
+                <Bar dataKey="rate" fill={CHART_COLORS.success} name="Conversion Rate %" radius={[6, 6, 0, 0]} />
               </BarChart>
             </ResponsiveContainer>
           </CardContent>
@@ -327,7 +331,7 @@ export function TeamPerformanceAnalytics({ academicYear }: TeamPerformanceAnalyt
       <Card className="shadow-card">
         <CardHeader>
           <div className="flex items-center justify-between">
-            <CardTitle>Team Performance Details</CardTitle>
+            <CardTitle className="font-display">Team Performance Details</CardTitle>
             <div className="flex gap-2">
               <button
                 onClick={() => setSortBy("revenue")}

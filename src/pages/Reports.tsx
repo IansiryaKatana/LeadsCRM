@@ -1,8 +1,10 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { AppLayout } from "@/components/layout/AppLayout";
+import { StatCard } from "@/components/dashboard/StatCard";
+import { ChannelPerformanceChart } from "@/components/dashboard/ChannelPerformance";
 import { SkeletonChart, SkeletonCard } from "@/components/ui/skeleton-loader";
-import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
 import {
   Select,
   SelectContent,
@@ -10,7 +12,14 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { FileSpreadsheet, FileText, Loader2, Calendar, BarChart3, Users, TrendingUp } from "lucide-react";
+import {
+  Calendar,
+  BarChart3,
+  Users,
+  TrendingUp,
+  Target,
+  DollarSign,
+} from "lucide-react";
 import {
   BarChart,
   Bar,
@@ -22,11 +31,13 @@ import {
   PieChart,
   Pie,
   Cell,
+  Legend,
 } from "recharts";
 import { LEAD_STATUS_CONFIG, ROOM_CHOICE_CONFIG } from "@/types/crm";
-import { useDashboardStats } from "@/hooks/useDashboardStats";
+import { useDashboardStats, useChannelPerformance } from "@/hooks/useDashboardStats";
 import { useMonthlyLeadData, useRoomDistribution, useStatusDistribution } from "@/hooks/useMonthlyData";
 import { exportToCSV, exportToPDF, exportToExcel } from "@/utils/exportReports";
+import { ExportFormatBar } from "@/components/dashboard/ExportFormatBar";
 import { exportFollowUpAnalyticsToCSV, exportFollowUpAnalyticsToExcel, exportFollowUpAnalyticsToPDF } from "@/utils/exportFollowUpAnalytics";
 import { exportTeamPerformanceToCSV, exportTeamPerformanceToExcel, exportTeamPerformanceToPDF } from "@/utils/exportTeamPerformance";
 import { toast } from "@/hooks/use-toast";
@@ -37,69 +48,86 @@ import { TeamPerformanceAnalytics } from "@/components/analytics/TeamPerformance
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useFollowUpAnalytics } from "@/hooks/useFollowUpAnalytics";
 import { useTeamPerformance } from "@/hooks/useTeamPerformance";
+import {
+  getReportDateBounds,
+  type ReportDateRangeKey,
+} from "@/utils/reportDateRange";
+import {
+  CHART_COLORS,
+  CHART_PALETTE,
+  chartTickStyle,
+  chartTooltipStyle,
+} from "@/constants/chartTheme";
 
-const COLORS = [
-  "hsl(211, 100%, 66%)",
-  "hsl(47, 100%, 50%)",
-  "hsl(166, 58%, 47%)",
-  "hsl(0, 100%, 47%)",
-  "hsl(280, 70%, 50%)",
-];
+const STATUS_CHART_COLORS: Record<string, string> = {
+  new: CHART_COLORS.primary,
+  awaiting_outreach: "hsl(211, 70%, 78%)",
+  low_engagement: CHART_COLORS.mutedForeground,
+  high_interest: CHART_COLORS.accent,
+  converted: CHART_COLORS.success,
+  closed: CHART_COLORS.destructive,
+};
 
 export default function Reports() {
-  const [dateRange, setDateRange] = useState("30d");
+  const [dateRange, setDateRange] = useState<ReportDateRangeKey>("30d");
   const [activeTab, setActiveTab] = useState("analytics");
-  
-  // Export states for each tab
+
   const [exportingAnalyticsExcel, setExportingAnalyticsExcel] = useState(false);
   const [exportingAnalyticsPDF, setExportingAnalyticsPDF] = useState(false);
   const [exportingFollowUpExcel, setExportingFollowUpExcel] = useState(false);
   const [exportingFollowUpPDF, setExportingFollowUpPDF] = useState(false);
   const [exportingTeamExcel, setExportingTeamExcel] = useState(false);
   const [exportingTeamPDF, setExportingTeamPDF] = useState(false);
-  
-  const { currency, academicYears, defaultAcademicYear } = useSystemSettingsContext();
+
+  const { currency, academicYears, defaultAcademicYear, formatCurrency } = useSystemSettingsContext();
   const [selectedYear, setSelectedYear] = useState<string>(defaultAcademicYear || "");
   const { data: sources = [] } = useLeadSources();
-  
-  // Analytics tab data
-  const { data: stats, isLoading: statsLoading } = useDashboardStats(selectedYear || undefined);
-  const { data: monthlyData, isLoading: monthlyLoading } = useMonthlyLeadData(selectedYear || undefined);
-  const { data: roomData, isLoading: roomLoading } = useRoomDistribution(selectedYear || undefined);
-  const { data: statusData, isLoading: statusLoading } = useStatusDistribution(selectedYear || undefined);
-  
-  // Follow-Up Analytics data
-  const { data: followUpAnalytics, isLoading: followUpLoading } = useFollowUpAnalytics(selectedYear || undefined);
-  
-  // Team Performance data
-  const { data: teamMetrics, isLoading: teamLoading } = useTeamPerformance(selectedYear || undefined);
 
-  const analyticsLoading = statsLoading || monthlyLoading || roomLoading || statusLoading;
+  const { startDate, endDate, label: dateRangeLabel } = useMemo(
+    () => getReportDateBounds(dateRange),
+    [dateRange]
+  );
 
-  // Calculate room distribution from real data
+  const yearFilter = selectedYear || undefined;
+
+  const { data: stats, isLoading: statsLoading } = useDashboardStats(yearFilter, startDate, endDate);
+  const { data: channels = [], isLoading: channelsLoading } = useChannelPerformance(yearFilter, startDate, endDate);
+  const { data: monthlyData, isLoading: monthlyLoading } = useMonthlyLeadData(yearFilter, startDate, endDate);
+  const { data: roomData, isLoading: roomLoading } = useRoomDistribution(yearFilter, startDate, endDate);
+  const { data: statusData, isLoading: statusLoading } = useStatusDistribution(yearFilter, startDate, endDate);
+  const { data: followUpAnalytics, isLoading: followUpLoading } = useFollowUpAnalytics(yearFilter, startDate, endDate);
+  const { data: teamMetrics, isLoading: teamLoading } = useTeamPerformance(
+    yearFilter,
+    startDate ?? undefined,
+    endDate
+  );
+
+  const analyticsLoading = statsLoading || monthlyLoading || roomLoading || statusLoading || channelsLoading;
+
   const roomDistribution = Object.entries(ROOM_CHOICE_CONFIG).map(([key, config]) => ({
     name: config.label,
     value: roomData?.[key] || 0,
   }));
 
-  // Calculate status distribution from real data
   const statusDistribution = Object.entries(LEAD_STATUS_CONFIG).map(([key, config]) => ({
     name: config.label,
     value: statusData?.[key] || 0,
-    fill: key === "converted" ? COLORS[2] : key === "high_interest" ? COLORS[0] : COLORS[4],
+    fill: STATUS_CHART_COLORS[key] ?? CHART_PALETTE[4],
   }));
 
-  // Analytics tab export handlers
+  const filterSummary = [
+    dateRangeLabel,
+    selectedYear ? `AY ${selectedYear}` : "All academic years",
+  ].join(" · ");
+
+  const formatCompactCurrency = (value: number) =>
+    `${currency.symbol}${(value / 1000).toFixed(0)}K`;
+
   const handleAnalyticsExcelExport = async () => {
     if (!stats || !monthlyData || !roomDistribution || !statusDistribution) {
-      toast({
-        title: "Export Failed",
-        description: "Please wait for data to load before exporting",
-        variant: "destructive",
-      });
+      toast({ title: "Export Failed", description: "Please wait for data to load", variant: "destructive" });
       return;
     }
-
     setExportingAnalyticsExcel(true);
     try {
       await exportToExcel({
@@ -107,20 +135,14 @@ export default function Reports() {
         monthlyData,
         roomDistribution,
         statusDistribution,
-        dateRange,
+        dateRange: filterSummary,
         currencySymbol: currency.symbol,
-        sources: sources.map(s => ({ slug: s.slug, name: s.name, icon: s.icon })),
+        sources: sources.map((s) => ({ slug: s.slug, name: s.name, icon: s.icon })),
       });
-      toast({
-        title: "Export Successful",
-        description: "Analytics Excel report has been downloaded",
-      });
-    } catch (error: any) {
-      toast({
-        title: "Export Failed",
-        description: error.message || "Failed to export Excel",
-        variant: "destructive",
-      });
+      toast({ title: "Export Successful", description: "Analytics Excel report has been downloaded" });
+    } catch (error: unknown) {
+      const message = error instanceof Error ? error.message : "Failed to export Excel";
+      toast({ title: "Export Failed", description: message, variant: "destructive" });
     } finally {
       setExportingAnalyticsExcel(false);
     }
@@ -128,14 +150,9 @@ export default function Reports() {
 
   const handleAnalyticsPDFExport = async () => {
     if (!stats || !monthlyData || !roomDistribution || !statusDistribution) {
-      toast({
-        title: "Export Failed",
-        description: "Please wait for data to load before exporting",
-        variant: "destructive",
-      });
+      toast({ title: "Export Failed", description: "Please wait for data to load", variant: "destructive" });
       return;
     }
-
     setExportingAnalyticsPDF(true);
     try {
       await exportToPDF({
@@ -143,82 +160,45 @@ export default function Reports() {
         monthlyData,
         roomDistribution,
         statusDistribution,
-        dateRange,
+        dateRange: filterSummary,
         currencySymbol: currency.symbol,
-        sources: sources.map(s => ({ slug: s.slug, name: s.name, icon: s.icon })),
+        sources: sources.map((s) => ({ slug: s.slug, name: s.name, icon: s.icon })),
       });
-      toast({
-        title: "Export Successful",
-        description: "Analytics PDF report has been downloaded",
-      });
-    } catch (error: any) {
-      toast({
-        title: "Export Failed",
-        description: error.message || "Failed to export PDF",
-        variant: "destructive",
-      });
+      toast({ title: "Export Successful", description: "Analytics PDF report has been downloaded" });
+    } catch (error: unknown) {
+      const message = error instanceof Error ? error.message : "Failed to export PDF";
+      toast({ title: "Export Failed", description: message, variant: "destructive" });
     } finally {
       setExportingAnalyticsPDF(false);
     }
   };
 
-  // Follow-Up Analytics export handlers
   const handleFollowUpCSVExport = () => {
     if (!followUpAnalytics) {
-      toast({
-        title: "Export Failed",
-        description: "Please wait for data to load before exporting",
-        variant: "destructive",
-      });
+      toast({ title: "Export Failed", description: "Please wait for data to load", variant: "destructive" });
       return;
     }
-
     try {
-      exportFollowUpAnalyticsToCSV({
-        analytics: followUpAnalytics,
-        academicYear: selectedYear || undefined,
-        dateRange,
-      });
-      toast({
-        title: "Export Successful",
-        description: "Follow-Up Analytics CSV report has been downloaded",
-      });
-    } catch (error: any) {
-      toast({
-        title: "Export Failed",
-        description: error.message || "Failed to export CSV",
-        variant: "destructive",
-      });
+      exportFollowUpAnalyticsToCSV({ analytics: followUpAnalytics, academicYear: yearFilter, dateRange: filterSummary });
+      toast({ title: "Export Successful", description: "Follow-Up Analytics CSV downloaded" });
+    } catch (error: unknown) {
+      const message = error instanceof Error ? error.message : "Failed to export CSV";
+      toast({ title: "Export Failed", description: message, variant: "destructive" });
     }
   };
 
   const handleFollowUpExcelExport = async () => {
     if (!followUpAnalytics) {
-      toast({
-        title: "Export Failed",
-        description: "Please wait for data to load before exporting",
-        variant: "destructive",
-      });
+      toast({ title: "Export Failed", description: "Please wait for data to load", variant: "destructive" });
       return;
     }
-
     setExportingFollowUpExcel(true);
     try {
-      await exportFollowUpAnalyticsToExcel({
-        analytics: followUpAnalytics,
-        academicYear: selectedYear || undefined,
-        dateRange,
-      });
-      toast({
-        title: "Export Successful",
-        description: "Follow-Up Analytics Excel report has been downloaded",
-      });
-    } catch (error: any) {
-      toast({
-        title: "Export Failed",
-        description: error.message || "Failed to export Excel",
-        variant: "destructive",
-      });
+      await exportFollowUpAnalyticsToExcel({ analytics: followUpAnalytics, academicYear: yearFilter, dateRange: filterSummary });
+      toast({ title: "Export Successful", description: "Follow-Up Analytics Excel downloaded" });
+    } catch (error: unknown) {
+      const message = error instanceof Error ? error.message : "Failed to export Excel";
+      toast({ title: "Export Failed", description: message, variant: "destructive" });
     } finally {
       setExportingFollowUpExcel(false);
     }
@@ -226,511 +206,338 @@ export default function Reports() {
 
   const handleFollowUpPDFExport = async () => {
     if (!followUpAnalytics) {
-      toast({
-        title: "Export Failed",
-        description: "Please wait for data to load before exporting",
-        variant: "destructive",
-      });
+      toast({ title: "Export Failed", description: "Please wait for data to load", variant: "destructive" });
       return;
     }
-
     setExportingFollowUpPDF(true);
     try {
-      await exportFollowUpAnalyticsToPDF({
-        analytics: followUpAnalytics,
-        academicYear: selectedYear || undefined,
-        dateRange,
-      });
-      toast({
-        title: "Export Successful",
-        description: "Follow-Up Analytics PDF report has been downloaded",
-      });
-    } catch (error: any) {
-      toast({
-        title: "Export Failed",
-        description: error.message || "Failed to export PDF",
-        variant: "destructive",
-      });
+      await exportFollowUpAnalyticsToPDF({ analytics: followUpAnalytics, academicYear: yearFilter, dateRange: filterSummary });
+      toast({ title: "Export Successful", description: "Follow-Up Analytics PDF downloaded" });
+    } catch (error: unknown) {
+      const message = error instanceof Error ? error.message : "Failed to export PDF";
+      toast({ title: "Export Failed", description: message, variant: "destructive" });
     } finally {
       setExportingFollowUpPDF(false);
     }
   };
 
-  // Team Performance export handlers
   const handleTeamCSVExport = () => {
-    if (!teamMetrics || teamMetrics.length === 0) {
-      toast({
-        title: "Export Failed",
-        description: "Please wait for data to load before exporting",
-        variant: "destructive",
-      });
+    if (!teamMetrics?.length) {
+      toast({ title: "Export Failed", description: "Please wait for data to load", variant: "destructive" });
       return;
     }
-
     try {
-      exportTeamPerformanceToCSV({
-        teamMetrics,
-        academicYear: selectedYear || undefined,
-        dateRange,
-        currencySymbol: currency.symbol,
-      });
-      toast({
-        title: "Export Successful",
-        description: "Team Performance CSV report has been downloaded",
-      });
-    } catch (error: any) {
-      toast({
-        title: "Export Failed",
-        description: error.message || "Failed to export CSV",
-        variant: "destructive",
-      });
+      exportTeamPerformanceToCSV({ teamMetrics, academicYear: yearFilter, dateRange: filterSummary, currencySymbol: currency.symbol });
+      toast({ title: "Export Successful", description: "Team Performance CSV downloaded" });
+    } catch (error: unknown) {
+      const message = error instanceof Error ? error.message : "Failed to export CSV";
+      toast({ title: "Export Failed", description: message, variant: "destructive" });
     }
   };
 
   const handleTeamExcelExport = async () => {
-    if (!teamMetrics || teamMetrics.length === 0) {
-      toast({
-        title: "Export Failed",
-        description: "Please wait for data to load before exporting",
-        variant: "destructive",
-      });
+    if (!teamMetrics?.length) {
+      toast({ title: "Export Failed", description: "Please wait for data to load", variant: "destructive" });
       return;
     }
-
     setExportingTeamExcel(true);
     try {
-      await exportTeamPerformanceToExcel({
-        teamMetrics,
-        academicYear: selectedYear || undefined,
-        dateRange,
-        currencySymbol: currency.symbol,
-      });
-      toast({
-        title: "Export Successful",
-        description: "Team Performance Excel report has been downloaded",
-      });
-    } catch (error: any) {
-      toast({
-        title: "Export Failed",
-        description: error.message || "Failed to export Excel",
-        variant: "destructive",
-      });
+      await exportTeamPerformanceToExcel({ teamMetrics, academicYear: yearFilter, dateRange: filterSummary, currencySymbol: currency.symbol });
+      toast({ title: "Export Successful", description: "Team Performance Excel downloaded" });
+    } catch (error: unknown) {
+      const message = error instanceof Error ? error.message : "Failed to export Excel";
+      toast({ title: "Export Failed", description: message, variant: "destructive" });
     } finally {
       setExportingTeamExcel(false);
     }
   };
 
   const handleTeamPDFExport = async () => {
-    if (!teamMetrics || teamMetrics.length === 0) {
-      toast({
-        title: "Export Failed",
-        description: "Please wait for data to load before exporting",
-        variant: "destructive",
-      });
+    if (!teamMetrics?.length) {
+      toast({ title: "Export Failed", description: "Please wait for data to load", variant: "destructive" });
       return;
     }
-
     setExportingTeamPDF(true);
     try {
-      await exportTeamPerformanceToPDF({
-        teamMetrics,
-        academicYear: selectedYear || undefined,
-        dateRange,
-        currencySymbol: currency.symbol,
-      });
-      toast({
-        title: "Export Successful",
-        description: "Team Performance PDF report has been downloaded",
-      });
-    } catch (error: any) {
-      toast({
-        title: "Export Failed",
-        description: error.message || "Failed to export PDF",
-        variant: "destructive",
-      });
+      await exportTeamPerformanceToPDF({ teamMetrics, academicYear: yearFilter, dateRange: filterSummary, currencySymbol: currency.symbol });
+      toast({ title: "Export Successful", description: "Team Performance PDF downloaded" });
+    } catch (error: unknown) {
+      const message = error instanceof Error ? error.message : "Failed to export PDF";
+      toast({ title: "Export Failed", description: message, variant: "destructive" });
     } finally {
       setExportingTeamPDF(false);
     }
   };
 
-  const isLoading = analyticsLoading || followUpLoading || teamLoading;
-
   return (
     <AppLayout>
-      <div className="space-y-6 animate-fade-in">
+      <div className="space-y-8 animate-fade-in">
         {/* Header */}
-        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-          <div>
-            <h1 className="font-display text-3xl sm:text-4xl font-bold">Reports</h1>
-            <p className="text-muted-foreground mt-1">
-              Analytics and performance insights
-            </p>
-          </div>
-          <div className="flex gap-3 flex-wrap items-center">
-            <div className="flex items-center gap-2">
-              <Calendar className="h-4 w-4 text-muted-foreground" />
-              <Select value={selectedYear || undefined} onValueChange={(value) => setSelectedYear(value === "all" ? "" : value)}>
-                <SelectTrigger className="w-[140px]">
-                  <SelectValue placeholder="Academic Year" />
+        <div className="flex flex-col gap-4">
+          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+            <div>
+              <h1 className="font-display text-3xl sm:text-4xl font-bold tracking-tight">Reports</h1>
+              <p className="text-muted-foreground mt-1 font-body">
+                Live analytics from your CRM — filtered by period and academic year
+              </p>
+            </div>
+            <div className="flex flex-wrap gap-2 sm:gap-3 items-center w-full sm:w-auto">
+              <div className="flex items-center gap-2 flex-1 sm:flex-initial min-w-[140px]">
+                <Calendar className="h-4 w-4 text-muted-foreground shrink-0" />
+                <Select
+                  value={selectedYear || "all"}
+                  onValueChange={(value) => setSelectedYear(value === "all" ? "" : value)}
+                >
+                  <SelectTrigger className="w-full sm:w-[150px]">
+                    <SelectValue placeholder="Academic Year" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All Years</SelectItem>
+                    {academicYears.map((year) => (
+                      <SelectItem key={year} value={year}>
+                        {year}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <Select value={dateRange} onValueChange={(v) => setDateRange(v as ReportDateRangeKey)}>
+                <SelectTrigger className="w-full sm:w-[150px]">
+                  <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="all">All Years</SelectItem>
-                  {academicYears.map((year) => (
-                    <SelectItem key={year} value={year}>
-                      {year}
-                    </SelectItem>
-                  ))}
+                  <SelectItem value="7d">Last 7 days</SelectItem>
+                  <SelectItem value="30d">Last 30 days</SelectItem>
+                  <SelectItem value="90d">Last 90 days</SelectItem>
+                  <SelectItem value="year">This year</SelectItem>
+                  <SelectItem value="all">All time</SelectItem>
                 </SelectContent>
               </Select>
             </div>
-            <Select value={dateRange} onValueChange={setDateRange}>
-              <SelectTrigger className="w-40">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="7d">Last 7 days</SelectItem>
-                <SelectItem value="30d">Last 30 days</SelectItem>
-                <SelectItem value="90d">Last 90 days</SelectItem>
-                <SelectItem value="year">This year</SelectItem>
-              </SelectContent>
-            </Select>
           </div>
+          <Badge variant="secondary" className="w-fit font-body text-xs font-medium px-3 py-1">
+            {filterSummary}
+          </Badge>
         </div>
 
         <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-          {/* Tabs and Export Buttons Row - Same row on desktop */}
           <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-            <TabsList className="bg-muted/50 p-1 w-full md:w-auto">
-              <TabsTrigger value="analytics" className="gap-2 shrink-0">
+            <TabsList className="bg-muted/50 p-1 w-full md:w-auto h-auto flex-wrap">
+              <TabsTrigger value="analytics" className="gap-2 shrink-0 font-body">
                 <TrendingUp className="h-4 w-4 shrink-0" />
                 Analytics
               </TabsTrigger>
-              <TabsTrigger value="followups" className="gap-2 shrink-0">
+              <TabsTrigger value="followups" className="gap-2 shrink-0 font-body">
                 <BarChart3 className="h-4 w-4 shrink-0" />
                 Follow-Ups
               </TabsTrigger>
-              <TabsTrigger value="team" className="gap-2 shrink-0">
+              <TabsTrigger value="team" className="gap-2 shrink-0 font-body">
                 <Users className="h-4 w-4 shrink-0" />
-                Team Performance
+                Team
               </TabsTrigger>
             </TabsList>
 
-            {/* Export Buttons - Conditionally rendered based on active tab */}
-            <div className="flex justify-end gap-2">
-              {activeTab === "analytics" && (
-                <>
-                  <Button 
-                    variant="outline" 
-                    size="sm"
-                    className="gap-2" 
-                    onClick={() => exportToCSV({
-                      stats: stats!,
-                      monthlyData: monthlyData || [],
-                      roomDistribution,
-                      statusDistribution,
-                      dateRange,
-                      currencySymbol: currency.symbol,
-                      sources: sources.map(s => ({ slug: s.slug, name: s.name, icon: s.icon })),
-                    })}
-                    disabled={analyticsLoading || !stats}
-                  >
-                    <FileText className="h-4 w-4" />
-                    CSV
-                  </Button>
-                  <Button 
-                    variant="outline" 
-                    size="sm"
-                    className="gap-2" 
-                    onClick={handleAnalyticsExcelExport}
-                    disabled={exportingAnalyticsExcel || analyticsLoading || !stats}
-                  >
-                    {exportingAnalyticsExcel ? (
-                      <Loader2 className="h-4 w-4 animate-spin" />
-                    ) : (
-                      <FileSpreadsheet className="h-4 w-4" />
-                    )}
-                    Excel
-                  </Button>
-                  <Button 
-                    variant="outline" 
-                    size="sm"
-                    className="gap-2" 
-                    onClick={handleAnalyticsPDFExport}
-                    disabled={exportingAnalyticsPDF || analyticsLoading || !stats}
-                  >
-                    {exportingAnalyticsPDF ? (
-                      <Loader2 className="h-4 w-4 animate-spin" />
-                    ) : (
-                      <FileText className="h-4 w-4" />
-                    )}
-                    PDF
-                  </Button>
-                </>
-              )}
-              {activeTab === "followups" && (
-                <>
-                  <Button 
-                    variant="outline" 
-                    size="sm"
-                    className="gap-2" 
-                    onClick={handleFollowUpCSVExport}
-                    disabled={followUpLoading || !followUpAnalytics}
-                  >
-                    <FileText className="h-4 w-4" />
-                    CSV
-                  </Button>
-                  <Button 
-                    variant="outline" 
-                    size="sm"
-                    className="gap-2" 
-                    onClick={handleFollowUpExcelExport}
-                    disabled={exportingFollowUpExcel || followUpLoading || !followUpAnalytics}
-                  >
-                    {exportingFollowUpExcel ? (
-                      <Loader2 className="h-4 w-4 animate-spin" />
-                    ) : (
-                      <FileSpreadsheet className="h-4 w-4" />
-                    )}
-                    Excel
-                  </Button>
-                  <Button 
-                    variant="outline" 
-                    size="sm"
-                    className="gap-2" 
-                    onClick={handleFollowUpPDFExport}
-                    disabled={exportingFollowUpPDF || followUpLoading || !followUpAnalytics}
-                  >
-                    {exportingFollowUpPDF ? (
-                      <Loader2 className="h-4 w-4 animate-spin" />
-                    ) : (
-                      <FileText className="h-4 w-4" />
-                    )}
-                    PDF
-                  </Button>
-                </>
-              )}
-              {activeTab === "team" && (
-                <>
-                  <Button 
-                    variant="outline" 
-                    size="sm"
-                    className="gap-2" 
-                    onClick={handleTeamCSVExport}
-                    disabled={teamLoading || !teamMetrics || teamMetrics.length === 0}
-                  >
-                    <FileText className="h-4 w-4" />
-                    CSV
-                  </Button>
-                  <Button 
-                    variant="outline" 
-                    size="sm"
-                    className="gap-2" 
-                    onClick={handleTeamExcelExport}
-                    disabled={exportingTeamExcel || teamLoading || !teamMetrics || teamMetrics.length === 0}
-                  >
-                    {exportingTeamExcel ? (
-                      <Loader2 className="h-4 w-4 animate-spin" />
-                    ) : (
-                      <FileSpreadsheet className="h-4 w-4" />
-                    )}
-                    Excel
-                  </Button>
-                  <Button 
-                    variant="outline" 
-                    size="sm"
-                    className="gap-2" 
-                    onClick={handleTeamPDFExport}
-                    disabled={exportingTeamPDF || teamLoading || !teamMetrics || teamMetrics.length === 0}
-                  >
-                    {exportingTeamPDF ? (
-                      <Loader2 className="h-4 w-4 animate-spin" />
-                    ) : (
-                      <FileText className="h-4 w-4" />
-                    )}
-                    PDF
-                  </Button>
-                </>
-              )}
-            </div>
+            <ExportFormatBar
+              disabled={
+                (activeTab === "analytics" && (analyticsLoading || !stats)) ||
+                (activeTab === "followups" && (followUpLoading || !followUpAnalytics)) ||
+                (activeTab === "team" && (teamLoading || !teamMetrics?.length))
+              }
+              loadingExcel={
+                (activeTab === "analytics" && exportingAnalyticsExcel) ||
+                (activeTab === "followups" && exportingFollowUpExcel) ||
+                (activeTab === "team" && exportingTeamExcel)
+              }
+              loadingPdf={
+                (activeTab === "analytics" && exportingAnalyticsPDF) ||
+                (activeTab === "followups" && exportingFollowUpPDF) ||
+                (activeTab === "team" && exportingTeamPDF)
+              }
+              onCsv={
+                activeTab === "analytics"
+                  ? () =>
+                      stats &&
+                      exportToCSV({
+                        stats,
+                        monthlyData: monthlyData || [],
+                        roomDistribution,
+                        statusDistribution,
+                        dateRange: filterSummary,
+                        currencySymbol: currency.symbol,
+                        sources: sources.map((s) => ({ slug: s.slug, name: s.name, icon: s.icon })),
+                        reportTitle: "Analytics Report",
+                      })
+                  : activeTab === "followups"
+                    ? handleFollowUpCSVExport
+                    : handleTeamCSVExport
+              }
+              onExcel={
+                activeTab === "analytics"
+                  ? handleAnalyticsExcelExport
+                  : activeTab === "followups"
+                    ? handleFollowUpExcelExport
+                    : handleTeamExcelExport
+              }
+              onPdf={
+                activeTab === "analytics"
+                  ? handleAnalyticsPDFExport
+                  : activeTab === "followups"
+                    ? handleFollowUpPDFExport
+                    : handleTeamPDFExport
+              }
+            />
           </div>
 
-          {/* Analytics Tab */}
-          <TabsContent value="analytics" className="space-y-6">
-
-            {/* Summary Stats */}
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-              <Card className="shadow-card">
-                <CardContent className="pt-6">
-                  <p className="text-sm text-muted-foreground">Total Leads</p>
-                  <p className="text-3xl font-display font-bold">{stats?.totalLeads || 0}</p>
-                  <p className="text-sm text-muted-foreground mt-1">All time</p>
-                </CardContent>
-              </Card>
-              <Card className="shadow-card">
-                <CardContent className="pt-6">
-                  <p className="text-sm text-muted-foreground">Conversion Rate</p>
-                  <p className="text-3xl font-display font-bold">
-                    {(stats?.conversionRate || 0).toFixed(1)}%
-                  </p>
-                  <p className="text-sm text-muted-foreground mt-1">Based on converted leads</p>
-                </CardContent>
-              </Card>
-              <Card className="shadow-card">
-                <CardContent className="pt-6">
-                  <p className="text-sm text-muted-foreground">Revenue Generated</p>
-                  <p className="text-3xl font-display font-bold">
-                    {currency.symbol}{((stats?.totalRevenue || 0) / 1000).toFixed(0)}K
-                  </p>
-                  <p className="text-sm text-muted-foreground mt-1">From converted leads</p>
-                </CardContent>
-              </Card>
-            </div>
-
-            {/* Charts */}
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-              {/* Monthly Performance */}
-              <Card className="shadow-card">
-                <CardHeader>
-                  <CardTitle className="font-display">Monthly Performance</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="h-72">
-                    {!monthlyData || monthlyData.length === 0 ? (
-                      <div className="h-full flex items-center justify-center text-muted-foreground">
-                        No data available yet
-                      </div>
-                    ) : (
-                      <ResponsiveContainer width="100%" height="100%">
-                        <BarChart
-                          data={monthlyData}
-                          margin={{ top: 10, right: 10, left: 0, bottom: 0 }}
-                          barCategoryGap="24%"
-                          barGap={8}
-                        >
-                          <CartesianGrid
-                            vertical={false}
-                            stroke="hsl(210, 20%, 92%)"
-                            strokeDasharray="4 4"
-                          />
-                          <XAxis
-                            dataKey="month"
-                            tick={{ fill: "hsl(210, 10%, 40%)", fontSize: 11 }}
-                            axisLine={false}
-                            tickLine={false}
-                          />
-                          <YAxis
-                            tick={{ fill: "hsl(210, 10%, 40%)", fontSize: 11 }}
-                            axisLine={false}
-                            tickLine={false}
-                          />
-                          <Tooltip
-                            cursor={{ fill: "hsl(210, 20%, 95%)" }}
-                            contentStyle={{
-                              backgroundColor: "white",
-                              border: "1px solid hsl(210, 20%, 90%)",
-                              borderRadius: 12,
-                              boxShadow: "0 10px 30px rgba(15, 23, 42, 0.08)",
-                            }}
-                            labelStyle={{ fontWeight: 600, marginBottom: 4 }}
-                          />
-                          {/* Total leads bar (primary, teal like reference) */}
-                          <Bar
-                            dataKey="leads"
-                            name="Leads"
-                            fill="hsl(188, 80%, 35%)"
-                            radius={[6, 6, 0, 0]}
-                          />
-                          {/* Converted overlay with lighter shade to subtly show performance */}
-                          <Bar
-                            dataKey="converted"
-                            name="Converted"
-                            fill="hsl(188, 70%, 60%)"
-                            radius={[6, 6, 0, 0]}
-                          />
-                        </BarChart>
-                      </ResponsiveContainer>
-                    )}
-                  </div>
-                </CardContent>
-              </Card>
-
-              {/* Room Distribution */}
-              <Card className="shadow-card">
-                <CardHeader>
-                  <CardTitle className="font-display">Room Distribution</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="h-72 flex items-center justify-center">
-                    {roomDistribution.every(r => r.value === 0) ? (
-                      <div className="text-muted-foreground">No data available yet</div>
-                    ) : (
-                      <ResponsiveContainer width="100%" height="100%">
-                        <PieChart>
-                          <Pie
-                            data={roomDistribution.filter(r => r.value > 0)}
-                            cx="50%"
-                            cy="50%"
-                            innerRadius={60}
-                            outerRadius={100}
-                            paddingAngle={5}
-                            dataKey="value"
-                            label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
-                          >
-                            {roomDistribution.map((_, index) => (
-                              <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-                            ))}
-                          </Pie>
-                          <Tooltip />
-                        </PieChart>
-                      </ResponsiveContainer>
-                    )}
-                  </div>
-                </CardContent>
-              </Card>
-            </div>
-
-            {/* Lead Status Breakdown */}
-            <Card className="shadow-card">
-              <CardHeader>
-                <CardTitle className="font-display">Lead Status Breakdown</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="h-64">
-                  {statusDistribution.every(s => s.value === 0) ? (
-                    <div className="h-full flex items-center justify-center text-muted-foreground">
-                      No data available yet
-                    </div>
-                  ) : (
-                    <ResponsiveContainer width="100%" height="100%">
-                      <BarChart data={statusDistribution.filter(s => s.value > 0)} layout="vertical">
-                        <CartesianGrid strokeDasharray="3 3" stroke="hsl(0, 0%, 88%)" horizontal={true} vertical={false} />
-                        <XAxis type="number" tick={{ fill: "hsl(0, 0%, 40%)", fontSize: 12 }} />
-                        <YAxis type="category" dataKey="name" width={120} tick={{ fill: "hsl(0, 0%, 40%)", fontSize: 12 }} />
-                        <Tooltip />
-                        <Bar dataKey="value" radius={[0, 8, 8, 0]} barSize={24}>
-                          {statusDistribution.filter(s => s.value > 0).map((entry, index) => (
-                            <Cell key={`cell-${index}`} fill={entry.fill} />
-                          ))}
-                        </Bar>
-                      </BarChart>
-                    </ResponsiveContainer>
-                  )}
+          <TabsContent value="analytics" className="space-y-6 mt-0">
+            {analyticsLoading ? (
+              <>
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                  {[1, 2, 3].map((i) => (
+                    <SkeletonCard key={i} />
+                  ))}
                 </div>
-              </CardContent>
-            </Card>
+                <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
+                  <SkeletonChart />
+                  <SkeletonChart />
+                </div>
+              </>
+            ) : (
+              <>
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                  <StatCard
+                    title="Total Leads"
+                    value={stats?.totalLeads || 0}
+                    subtitle={dateRangeLabel}
+                    icon={Users}
+                  />
+                  <StatCard
+                    title="Conversion Rate"
+                    value={`${(stats?.conversionRate || 0).toFixed(1)}%`}
+                    subtitle={`${stats?.converted || 0} converted`}
+                    icon={Target}
+                    variant="success"
+                  />
+                  <StatCard
+                    title="Revenue"
+                    value={formatCompactCurrency(stats?.totalRevenue || 0)}
+                    subtitle={formatCurrency(stats?.totalRevenue || 0)}
+                    icon={DollarSign}
+                    variant="primary"
+                    className="sm:col-span-2 lg:col-span-1"
+                  />
+                </div>
+
+                <div className="grid grid-cols-1 xl:grid-cols-2 gap-6 items-stretch">
+                  <Card className="shadow-card rounded-2xl border-0 h-full">
+                      <CardHeader className="pb-2">
+                        <CardTitle className="font-display text-xl">Lead Volume</CardTitle>
+                        <p className="text-sm text-muted-foreground font-body">Leads vs conversions by month</p>
+                      </CardHeader>
+                      <CardContent>
+                        <div className="h-72">
+                          {!monthlyData?.length ? (
+                            <div className="h-full flex items-center justify-center text-muted-foreground font-body">
+                              No leads in this period
+                            </div>
+                          ) : (
+                            <ResponsiveContainer width="100%" height="100%">
+                              <BarChart data={monthlyData} margin={{ top: 10, right: 10, left: 0, bottom: 0 }} barCategoryGap="24%" barGap={8}>
+                                <CartesianGrid vertical={false} stroke={CHART_COLORS.grid} strokeDasharray="4 4" />
+                                <XAxis dataKey="month" tick={chartTickStyle} axisLine={false} tickLine={false} />
+                                <YAxis tick={chartTickStyle} axisLine={false} tickLine={false} />
+                                <Tooltip cursor={{ fill: "hsl(210, 20%, 95%)" }} contentStyle={chartTooltipStyle} labelStyle={{ fontWeight: 600, fontFamily: chartTickStyle.fontFamily }} />
+                                <Legend wrapperStyle={{ fontFamily: chartTickStyle.fontFamily, fontSize: 12 }} />
+                                <Bar dataKey="leads" name="Leads" fill={CHART_COLORS.primary} radius={[6, 6, 0, 0]} />
+                                <Bar dataKey="converted" name="Converted" fill={CHART_COLORS.successMuted} radius={[6, 6, 0, 0]} />
+                              </BarChart>
+                            </ResponsiveContainer>
+                          )}
+                        </div>
+                      </CardContent>
+                  </Card>
+                  <ChannelPerformanceChart data={channels} className="h-full" />
+                </div>
+
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                  <Card className="shadow-card rounded-2xl border-0">
+                    <CardHeader className="pb-2">
+                      <CardTitle className="font-display text-xl">Room Distribution</CardTitle>
+                      <p className="text-sm text-muted-foreground font-body">Preference mix in selected period</p>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="h-72 flex items-center justify-center">
+                        {roomDistribution.every((r) => r.value === 0) ? (
+                          <p className="text-muted-foreground font-body">No room data in this period</p>
+                        ) : (
+                          <ResponsiveContainer width="100%" height="100%">
+                            <PieChart>
+                              <Pie
+                                data={roomDistribution.filter((r) => r.value > 0)}
+                                cx="50%"
+                                cy="50%"
+                                innerRadius={56}
+                                outerRadius={96}
+                                paddingAngle={4}
+                                dataKey="value"
+                                label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
+                                style={{ fontFamily: chartTickStyle.fontFamily, fontSize: 11 }}
+                              >
+                                {roomDistribution.map((_, index) => (
+                                  <Cell key={`room-${index}`} fill={CHART_PALETTE[index % CHART_PALETTE.length]} />
+                                ))}
+                              </Pie>
+                              <Tooltip contentStyle={chartTooltipStyle} />
+                            </PieChart>
+                          </ResponsiveContainer>
+                        )}
+                      </div>
+                    </CardContent>
+                  </Card>
+
+                  <Card className="shadow-card rounded-2xl border-0">
+                    <CardHeader className="pb-2">
+                      <CardTitle className="font-display text-xl">Pipeline Status</CardTitle>
+                      <p className="text-sm text-muted-foreground font-body">Lead status breakdown</p>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="h-72">
+                        {statusDistribution.every((s) => s.value === 0) ? (
+                          <div className="h-full flex items-center justify-center text-muted-foreground font-body">
+                            No status data in this period
+                          </div>
+                        ) : (
+                          <ResponsiveContainer width="100%" height="100%">
+                            <BarChart data={statusDistribution.filter((s) => s.value > 0)} layout="vertical" margin={{ left: 8, right: 16 }}>
+                              <CartesianGrid strokeDasharray="3 3" stroke={CHART_COLORS.grid} horizontal vertical={false} />
+                              <XAxis type="number" tick={chartTickStyle} />
+                              <YAxis type="category" dataKey="name" width={118} tick={chartTickStyle} />
+                              <Tooltip contentStyle={chartTooltipStyle} />
+                              <Bar dataKey="value" name="Leads" radius={[0, 8, 8, 0]} barSize={22}>
+                                {statusDistribution.filter((s) => s.value > 0).map((entry, index) => (
+                                  <Cell key={`status-${index}`} fill={entry.fill} />
+                                ))}
+                              </Bar>
+                            </BarChart>
+                          </ResponsiveContainer>
+                        )}
+                      </div>
+                    </CardContent>
+                  </Card>
+                </div>
+              </>
+            )}
           </TabsContent>
 
-          {/* Follow-Up Analytics Tab */}
-          <TabsContent value="followups" className="space-y-6">
-            <FollowUpAnalytics academicYear={selectedYear || undefined} />
+          <TabsContent value="followups" className="space-y-6 mt-0">
+            <FollowUpAnalytics academicYear={yearFilter} startDate={startDate} endDate={endDate} />
           </TabsContent>
 
-          {/* Team Performance Tab */}
-          <TabsContent value="team" className="space-y-6">
-            <TeamPerformanceAnalytics academicYear={selectedYear || undefined} />
+          <TabsContent value="team" className="space-y-6 mt-0">
+            <TeamPerformanceAnalytics academicYear={yearFilter} startDate={startDate} endDate={endDate} />
           </TabsContent>
         </Tabs>
       </div>
     </AppLayout>
   );
 }
+

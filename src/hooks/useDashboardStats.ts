@@ -22,19 +22,38 @@ export interface ChannelPerformance {
   revenue: number;
 }
 
-export function useDashboardStats(academicYear?: string) {
+function applyLeadDateFilters<T extends { gte: (col: string, val: string) => T; lte: (col: string, val: string) => T }>(
+  query: T,
+  startDate?: Date | null,
+  endDate?: Date | null
+): T {
+  if (startDate) {
+    query = query.gte("created_at", startDate.toISOString());
+  }
+  if (endDate) {
+    query = query.lte("created_at", endDate.toISOString());
+  }
+  return query;
+}
+
+export function useDashboardStats(
+  academicYear?: string,
+  startDate?: Date | null,
+  endDate?: Date | null
+) {
   const { user } = useAuth();
 
   return useQuery({
-    queryKey: ["dashboard-stats", academicYear],
+    queryKey: ["dashboard-stats", academicYear, startDate?.toISOString(), endDate?.toISOString()],
     queryFn: async (): Promise<DashboardStats> => {
       let query = supabase
         .from("leads")
-        .select("lead_status, potential_revenue, is_hot, academic_year");
+        .select("lead_status, potential_revenue, is_hot, academic_year, created_at");
 
       if (academicYear && academicYear.trim() !== "") {
         query = query.eq("academic_year", academicYear);
       }
+      query = applyLeadDateFilters(query, startDate, endDate);
 
       const { data: leads, error } = await query;
 
@@ -75,19 +94,24 @@ export function useDashboardStats(academicYear?: string) {
   });
 }
 
-export function useChannelPerformance(academicYear?: string) {
+export function useChannelPerformance(
+  academicYear?: string,
+  startDate?: Date | null,
+  endDate?: Date | null
+) {
   const { user } = useAuth();
 
   return useQuery({
-    queryKey: ["channel-performance", academicYear],
+    queryKey: ["channel-performance", academicYear, startDate?.toISOString(), endDate?.toISOString()],
     queryFn: async (): Promise<ChannelPerformance[]> => {
       let query = supabase
         .from("leads")
-        .select("source, lead_status, potential_revenue, academic_year");
+        .select("source, lead_status, potential_revenue, academic_year, created_at");
 
       if (academicYear && academicYear.trim() !== "") {
         query = query.eq("academic_year", academicYear);
       }
+      query = applyLeadDateFilters(query, startDate, endDate);
 
       const { data: leads, error } = await query;
 

@@ -1,7 +1,5 @@
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
   Dialog,
@@ -20,11 +18,13 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
-import { Plus, Calendar, MapPin, Clock, Trash2, Edit, Loader2, Phone, CheckSquare } from "lucide-react";
+import { Plus, Calendar, Trash2, Edit, Loader2 } from "lucide-react";
 import { useCalendarEvents, useCreateCalendarEvent, useUpdateCalendarEvent, useDeleteCalendarEvent, type CalendarEvent } from "@/hooks/useCalendarEvents";
+import { CalendarEventCard } from "@/components/calendar/CalendarEventCard";
+import { CalendarEventOutcomeForm, type OutcomeAction } from "@/components/calendar/CalendarEventOutcomeForm";
+import { Sheet, SheetContent } from "@/components/ui/sheet";
 import { useAuth } from "@/hooks/useAuth";
-import { formatDistanceToNow, format } from "date-fns";
-import { cn } from "@/lib/utils";
+import { format } from "date-fns";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -46,6 +46,8 @@ export function CalendarTab({ leadId, leadName }: CalendarTabProps) {
   const [editDialogOpen, setEditDialogOpen] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [selectedEvent, setSelectedEvent] = useState<CalendarEvent | null>(null);
+  const [outcomeEvent, setOutcomeEvent] = useState<CalendarEvent | null>(null);
+  const [outcomeAction, setOutcomeAction] = useState<OutcomeAction | null>(null);
   const [newEvent, setNewEvent] = useState({
     event_type: "viewing" as "viewing" | "callback" | "followup" | "task",
     title: "",
@@ -67,36 +69,6 @@ export function CalendarTab({ leadId, leadName }: CalendarTabProps) {
   const pastEvents = events.filter(e => new Date(e.start_date) < new Date()).sort((a, b) => 
     new Date(b.start_date).getTime() - new Date(a.start_date).getTime()
   );
-
-  const getEventIcon = (type: string) => {
-    switch (type) {
-      case "viewing":
-        return <Calendar className="h-4 w-4" />;
-      case "callback":
-        return <Clock className="h-4 w-4" />;
-      case "followup":
-        return <Phone className="h-4 w-4" />;
-      case "task":
-        return <CheckSquare className="h-4 w-4" />;
-      default:
-        return <Calendar className="h-4 w-4" />;
-    }
-  };
-
-  const getEventColor = (type: string) => {
-    switch (type) {
-      case "viewing":
-        return "bg-success/10 text-success border-success/20";
-      case "callback":
-        return "bg-warning/10 text-warning border-warning/20";
-      case "followup":
-        return "bg-primary/10 text-primary border-primary/20";
-      case "task":
-        return "bg-muted text-muted-foreground border-border";
-      default:
-        return "bg-muted text-muted-foreground border-border";
-    }
-  };
 
   const handleCreate = () => {
     if (!newEvent.start_date) {
@@ -225,86 +197,55 @@ export function CalendarTab({ leadId, leadName }: CalendarTabProps) {
         </Button>
       </div>
 
-      {/* Upcoming Events */}
       {upcomingEvents.length > 0 && (
         <div className="space-y-3">
           <h4 className="text-sm font-medium text-muted-foreground">Upcoming Events</h4>
           {upcomingEvents.map((event) => (
-            <Card key={event.id} className="p-4">
-              <div className="flex items-start justify-between gap-3">
-                <div className="flex items-start gap-3 flex-1">
-                  <div className={cn("p-2 rounded-lg", getEventColor(event.event_type))}>
-                    {getEventIcon(event.event_type)}
-                  </div>
-                  <div className="flex-1 space-y-1">
-                    <div className="flex items-center gap-2">
-                      <p className="font-medium">{event.title}</p>
-                      <Badge variant="outline" className={getEventColor(event.event_type)}>
-                        {event.event_type}
-                      </Badge>
-                    </div>
-                    <div className="flex items-center gap-4 text-xs text-muted-foreground">
-                      <div className="flex items-center gap-1">
-                        <Calendar className="h-3 w-3" />
-                        <span>{format(new Date(event.start_date), "MMM d, yyyy 'at' h:mm a")}</span>
-                      </div>
-                      {event.location && (
-                        <div className="flex items-center gap-1">
-                          <MapPin className="h-3 w-3" />
-                          <span>{event.location}</span>
-                        </div>
-                      )}
-                    </div>
-                    {event.description && (
-                      <p className="text-sm text-muted-foreground mt-1">{event.description}</p>
-                    )}
-                  </div>
-                </div>
-                <div className="flex items-center gap-2">
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    className="h-8 w-8"
-                    onClick={() => handleEdit(event)}
-                  >
-                    <Edit className="h-4 w-4" />
-                  </Button>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    className="h-8 w-8 text-destructive"
-                    onClick={() => {
-                      setSelectedEvent(event);
-                      setDeleteDialogOpen(true);
-                    }}
-                  >
-                    <Trash2 className="h-4 w-4" />
-                  </Button>
-                </div>
+            <div key={event.id} className="space-y-2">
+              <CalendarEventCard
+                event={event}
+                compact
+                onAction={(e, action) => {
+                  setOutcomeEvent(e);
+                  setOutcomeAction(action);
+                }}
+              />
+              <div className="flex justify-end gap-2 px-1">
+                <Button variant="ghost" size="sm" onClick={() => handleEdit(event)}>
+                  <Edit className="h-4 w-4 mr-1" />
+                  Edit
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="text-destructive"
+                  onClick={() => {
+                    setSelectedEvent(event);
+                    setDeleteDialogOpen(true);
+                  }}
+                >
+                  <Trash2 className="h-4 w-4 mr-1" />
+                  Delete
+                </Button>
               </div>
-            </Card>
+            </div>
           ))}
         </div>
       )}
 
-      {/* Past Events */}
       {pastEvents.length > 0 && (
         <div className="space-y-3">
           <h4 className="text-sm font-medium text-muted-foreground">Past Events</h4>
           {pastEvents.map((event) => (
-            <Card key={event.id} className="p-4 opacity-60">
-              <div className="flex items-start gap-3">
-                <div className={cn("p-2 rounded-lg", getEventColor(event.event_type))}>
-                  {getEventIcon(event.event_type)}
-                </div>
-                <div className="flex-1">
-                  <p className="font-medium">{event.title}</p>
-                  <p className="text-xs text-muted-foreground mt-1">
-                    {format(new Date(event.start_date), "MMM d, yyyy 'at' h:mm a")}
-                  </p>
-                </div>
-              </div>
-            </Card>
+            <CalendarEventCard
+              key={event.id}
+              event={event}
+              compact={event.status !== "scheduled"}
+              onAction={(e, action) => {
+                setOutcomeEvent(e);
+                setOutcomeAction(action);
+              }}
+            />
           ))}
         </div>
       )}
@@ -498,6 +439,34 @@ export function CalendarTab({ leadId, leadName }: CalendarTabProps) {
           </div>
         </DialogContent>
       </Dialog>
+
+
+      <Sheet
+        open={!!outcomeEvent && !!outcomeAction}
+        onOpenChange={(open) => {
+          if (!open) {
+            setOutcomeEvent(null);
+            setOutcomeAction(null);
+          }
+        }}
+      >
+        <SheetContent side="bottom" className="h-auto max-h-[90vh] rounded-t-xl p-6 mb-0">
+          {outcomeEvent && outcomeAction && (
+            <CalendarEventOutcomeForm
+              event={outcomeEvent}
+              action={outcomeAction}
+              onBack={() => {
+                setOutcomeEvent(null);
+                setOutcomeAction(null);
+              }}
+              onSuccess={() => {
+                setOutcomeEvent(null);
+                setOutcomeAction(null);
+              }}
+            />
+          )}
+        </SheetContent>
+      </Sheet>
 
       {/* Delete Confirmation */}
       <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>

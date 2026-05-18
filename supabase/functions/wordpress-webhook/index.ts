@@ -34,6 +34,9 @@ interface WordPressFormPayload {
   payment_intent_id?: string;
   amount_pence?: number | string;
   amount_gbp?: number | string;
+  payment_type?: string;
+  payment_type_key?: string;
+  currency?: string;
   friend_name?: string;
   friend_studio_number?: string;
   landing_page?: string;
@@ -146,6 +149,7 @@ serve(async (req) => {
       "additional_info", "rooms_count", "start_date", "end_date", "guest_type",
       "preferred_date", "preferred_time",
       "payment_intent_id", "amount_pence", "amount_gbp", "payment_status", "payment_description",
+      "payment_type", "payment_type_key", "currency",
       "studio_type", "studio_preference", "reason", "message", "friend_name", "friend_studio_number"
     ];
 
@@ -226,9 +230,21 @@ serve(async (req) => {
     // Add metadata to note for easy viewing in timeline
     if (Object.keys(metadata).length > 0) {
       noteContent += `\n\n--- Submission Details ---`;
+      const skipNoteKeys = new Set([
+        "raw_payload_json",
+        "form_type_raw",
+        "lead_type_normalized",
+        "inquiry_type_raw",
+      ]);
       for (const [key, value] of Object.entries(metadata)) {
-        const label = key.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
-        noteContent += `\n${label}: ${value}`;
+        if (skipNoteKeys.has(key) || value === null || value === undefined) continue;
+        const label = key.replace(/_/g, " ").replace(/\b\w/g, (l) => l.toUpperCase());
+        const displayValue =
+          typeof value === "object"
+            ? JSON.stringify(value)
+            : String(value).trim();
+        if (!displayValue) continue;
+        noteContent += `\n${label}: ${displayValue}`;
       }
     }
     
@@ -275,6 +291,9 @@ serve(async (req) => {
         studioPreference: String(payload.studio_preference || payload.studio_type || payload.room_choice || ""),
         reason: String(payload.reason || ""),
         message: String(payload.message || ""),
+        paymentTypeLabel: String(payload.payment_type || "").trim(),
+        paymentTypeKey: String(payload.payment_type_key || "").trim(),
+        currencyCode: String(payload.currency || "GBP").trim(),
       });
 
       // Prefer CRM-managed templates when available; fallback to generated body.
@@ -363,7 +382,8 @@ function mapFormTypeToSource(type: string): string {
     keyworker_inquiry: "web_keyworker",
     content_creator: "web_creator",
     pay_deposit: "web_secure_booking",
-    refer_friend: "web_refer_friend"
+    refer_friend: "web_refer_friend",
+    urban_hub_payment: "web_urban_hub_payment",
   };
   return map[type] || "web_contact";
 }
@@ -406,6 +426,7 @@ function normalizeLeadType(raw: string): string {
     keyworker_inquiry: "short_stay_keyworker",
     refer_friend: "refer_friend_deposit",
     pay_deposit: "pay_deposit",
+    urban_hub_payment: "urban_hub_balance_payment",
     content_creator: "content_creator_application",
   };
   return map[raw] || raw || "web_contact_form";
@@ -422,6 +443,7 @@ function resolveEmailTemplate(incomingTemplate: string, normalizedLeadType: stri
     short_stay_keyworker: "shortstay_keyworker_confirmation",
     refer_friend_deposit: "refer_friend_deposit_confirmation",
     pay_deposit: "pay_deposit",
+    urban_hub_balance_payment: "urban_hub_payment_confirmation",
     content_creator_application: "content_creator_confirmation",
   };
   return map[normalizedLeadType] || "inquiry_confirmation";
@@ -480,7 +502,12 @@ function buildAutoResponse(args: {
   studioPreference: string;
   reason: string;
   message: string;
+  paymentTypeLabel: string;
+  paymentTypeKey: string;
+  currencyCode: string;
 }) {
+  const paymentLabel = args.paymentTypeLabel || "Urban Hub payment";
+  const currency = (args.currencyCode || "GBP").toUpperCase();
   const subjectByTemplate: Record<string, string> = {
     viewing_confirmation: `Viewing Request Received - ${args.preferredDate || "Date TBC"} ${args.preferredTime || ""}`.trim(),
     callback_confirmation: "Callback Request Received - Urban Hub",
@@ -490,23 +517,44 @@ function buildAutoResponse(args: {
     shortstay_keyworker_confirmation: `Short Stay Request Received - Keyworker (${args.startDate || "TBC"} to ${args.endDate || "TBC"})`,
     refer_friend_deposit_confirmation: "Deposit Received - Refer a Friend Application",
     pay_deposit: "Deposit Payment Received - Booking Secured",
+    urban_hub_payment_confirmation: `Payment received — ${paymentLabel}`,
     content_creator_confirmation: "Content Creator Application Received - Urban Hub",
   };
   const subject = subjectByTemplate[args.emailTemplate] || "Thank you for contacting Urban Hub";
   const amountGbp = args.amountPence > 0 ? (args.amountPence / 100).toFixed(2) : "0.00";
+  const isUrbanHubPayment = args.emailTemplate === "urban_hub_payment_confirmation";
 
-  const bodyText =
-    `Hello ${args.fullName},\n\n` +
-    `We have received your submission (${args.normalizedLeadType.replace(/_/g, " ")}).\n` +
-    (args.preferredDate ? `Requested date/time: ${args.preferredDate} ${args.preferredTime}\n` : "") +
-    (args.startDate ? `Requested stay: ${args.startDate} to ${args.endDate}\n` : "") +
-    (args.studioPreference ? `Studio preference: ${args.studioPreference}\n` : "") +
-    (args.reason ? `Reason: ${args.reason}\n` : "") +
-    (args.message ? `Message: ${args.message}\n` : "") +
-    (args.amountPence > 0 ? `Payment received: GBP ${amountGbp} (Ref: ${args.paymentIntentId || "N/A"})\n` : "") +
-    `\nOur team will follow up shortly.\n\nUrban Hub Team`;
+  const bodyText = isUrbanHubPayment
+    ? `Hello ${args.fullName},\n\n` +
+      `We have received your payment to Urban Hub.\n` +
+      `Payment type: ${paymentLabel}\n` +
+      `Amount: ${currency} ${amountGbp}\n` +
+      `Reference: ${args.paymentIntentId || "N/A"}\n\n` +
+      `Thank you.\n\nUrban Hub Team`
+    : `Hello ${args.fullName},\n\n` +
+      `We have received your submission (${args.normalizedLeadType.replace(/_/g, " ")}).\n` +
+      (args.preferredDate ? `Requested date/time: ${args.preferredDate} ${args.preferredTime}\n` : "") +
+      (args.startDate ? `Requested stay: ${args.startDate} to ${args.endDate}\n` : "") +
+      (args.studioPreference ? `Studio preference: ${args.studioPreference}\n` : "") +
+      (args.reason ? `Reason: ${args.reason}\n` : "") +
+      (args.message ? `Message: ${args.message}\n` : "") +
+      (args.amountPence > 0 ? `Payment received: ${currency} ${amountGbp} (Ref: ${args.paymentIntentId || "N/A"})\n` : "") +
+      `\nOur team will follow up shortly.\n\nUrban Hub Team`;
 
-  const bodyHtml = `
+  const bodyHtml = isUrbanHubPayment
+    ? `
+    <div style="font-family:Arial,sans-serif;max-width:600px;margin:0 auto;padding:16px;">
+      <h2>${subject}</h2>
+      <p>Hello ${args.fullName},</p>
+      <p>We have received your payment to Urban Hub.</p>
+      <p><strong>Payment type:</strong> ${paymentLabel}</p>
+      <p><strong>Amount:</strong> ${currency} ${amountGbp}</p>
+      <p><strong>Payment reference:</strong> ${args.paymentIntentId || "N/A"}</p>
+      <p>Thank you — our team will record this against your account.</p>
+      <p>Urban Hub Team</p>
+    </div>
+  `
+    : `
     <div style="font-family:Arial,sans-serif;max-width:600px;margin:0 auto;padding:16px;">
       <h2>${subject}</h2>
       <p>Hello ${args.fullName},</p>
@@ -516,7 +564,7 @@ function buildAutoResponse(args: {
       ${args.studioPreference ? `<p><strong>Studio preference:</strong> ${args.studioPreference}</p>` : ""}
       ${args.reason ? `<p><strong>Reason:</strong> ${args.reason}</p>` : ""}
       ${args.message ? `<p><strong>Message:</strong> ${args.message}</p>` : ""}
-      ${args.amountPence > 0 ? `<p><strong>Payment received:</strong> GBP ${amountGbp}<br/><strong>Reference:</strong> ${args.paymentIntentId || "N/A"}</p>` : ""}
+      ${args.amountPence > 0 ? `<p><strong>Payment received:</strong> ${currency} ${amountGbp}<br/><strong>Reference:</strong> ${args.paymentIntentId || "N/A"}</p>` : ""}
       <p>Our team will follow up shortly.</p>
       <p>Urban Hub Team</p>
     </div>
@@ -534,6 +582,9 @@ function buildAutoResponse(args: {
     reason: args.reason || "",
     message: args.message || "",
     lead_type: args.normalizedLeadType,
+    payment_type_label: paymentLabel,
+    payment_type_key: args.paymentTypeKey || "",
+    currency,
   };
 
   return { subject, bodyHtml, bodyText, placeholders };

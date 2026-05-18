@@ -1,6 +1,7 @@
 import { supabase } from "@/integrations/supabase/client";
 import { LEAD_STATUS_CONFIG, ROOM_CHOICE_CONFIG } from "@/types/crm";
 import type { DashboardStats } from "@/hooks/useDashboardStats";
+import { mapDbLeadToExportRow } from "@/utils/exportLeadColumns";
 
 // Fetch active lead sources
 async function fetchLeadSources() {
@@ -135,93 +136,41 @@ function calculateStatusDistribution(leads: any[]) {
   }));
 }
 
-export async function exportDashboardToExcel(data: DashboardExportData) {
+async function buildDashboardExportPayload(data: DashboardExportData) {
   const { startDate, endDate, currencySymbol } = data;
-  
-  // Fetch leads for the date range
   const leads = await fetchLeadsByDateRange(startDate, endDate);
-  const stats = calculateStatsFromLeads(leads);
-  const monthlyData = calculateMonthlyData(leads);
-  const roomDistribution = calculateRoomDistribution(leads);
-  const statusDistribution = calculateStatusDistribution(leads);
-
-  // Format leads for export
-  const formattedLeads = leads.map(lead => ({
-    full_name: lead.full_name,
-    email: lead.email,
-    phone: lead.phone,
-    source: lead.source,
-    room_choice: lead.room_choice,
-    stay_duration: lead.stay_duration,
-    lead_status: lead.lead_status,
-    potential_revenue: lead.potential_revenue || 0,
-    academic_year: lead.academic_year || "N/A",
-    is_hot: lead.is_hot || false,
-    created_at: lead.created_at,
-    landing_page: lead.landing_page || null,
-    contact_reason: lead.contact_reason || null,
-    contact_message: lead.contact_message || null,
-    keyworker_length_of_stay: lead.keyworker_length_of_stay || null,
-    keyworker_preferred_date: lead.keyworker_preferred_date || null,
-  }));
-
-  // Fetch sources for proper labeling
   const sources = await fetchLeadSources();
 
-  // Use the existing export function
-  const { exportToExcel } = await import("./exportReports");
-  await exportToExcel({
-    stats,
-    monthlyData,
-    roomDistribution,
-    statusDistribution,
+  return {
+    stats: calculateStatsFromLeads(leads),
+    monthlyData: calculateMonthlyData(leads),
+    roomDistribution: calculateRoomDistribution(leads),
+    statusDistribution: calculateStatusDistribution(leads),
     dateRange: `${formatDate(startDate)} - ${formatDate(endDate)}`,
     currencySymbol,
     sources,
-    leads: formattedLeads,
-  });
+    leads: leads.map((lead) => mapDbLeadToExportRow(lead)),
+    leadProfile: "default" as const,
+    reportTitle: "Dashboard Performance Report",
+  };
+}
+
+export async function exportDashboardToCSV(data: DashboardExportData) {
+  const payload = await buildDashboardExportPayload(data);
+  const { exportToCSV } = await import("./exportReports");
+  exportToCSV(payload);
+}
+
+export async function exportDashboardToExcel(data: DashboardExportData) {
+  const payload = await buildDashboardExportPayload(data);
+  const { exportToExcel } = await import("./exportReports");
+  await exportToExcel(payload);
 }
 
 export async function exportDashboardToPDF(data: DashboardExportData) {
-  const { startDate, endDate, currencySymbol } = data;
-  
-  // Fetch leads for the date range
-  const leads = await fetchLeadsByDateRange(startDate, endDate);
-  const stats = calculateStatsFromLeads(leads);
-  const monthlyData = calculateMonthlyData(leads);
-  const roomDistribution = calculateRoomDistribution(leads);
-  const statusDistribution = calculateStatusDistribution(leads);
-
-  // Format leads for export
-  const formattedLeads = leads.map(lead => ({
-    full_name: lead.full_name,
-    email: lead.email,
-    phone: lead.phone,
-    source: lead.source,
-    room_choice: lead.room_choice,
-    stay_duration: lead.stay_duration,
-    lead_status: lead.lead_status,
-    potential_revenue: lead.potential_revenue || 0,
-    academic_year: lead.academic_year || "N/A",
-    is_hot: lead.is_hot || false,
-    created_at: lead.created_at,
-  }));
-
-  // Fetch sources for proper labeling
-  const sources = await fetchLeadSources();
-
-  // Use the existing export function
+  const payload = await buildDashboardExportPayload(data);
   const { exportToPDF } = await import("./exportReports");
-  await exportToPDF({
-    stats,
-    monthlyData,
-    roomDistribution,
-    statusDistribution,
-    dateRange: `${formatDate(startDate)} - ${formatDate(endDate)}`,
-    currencySymbol,
-    sources,
-    leads: formattedLeads,
-  });
+  await exportToPDF(payload);
 }
 
 function formatDate(date: Date): string {

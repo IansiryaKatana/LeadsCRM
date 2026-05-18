@@ -15,7 +15,14 @@ import {
   X,
   CheckSquare,
   CalendarDays,
+  MessageSquare,
+  CreditCard,
 } from "lucide-react";
+import {
+  DEPOSITS_PAYMENTS_SOURCE_SLUG,
+  INQUIRIES_SOURCE_SLUG,
+  isExcludedFromAllLeads,
+} from "@/constants/leadSegments";
 import { Button } from "@/components/ui/button";
 import {
   AlertDialog,
@@ -43,7 +50,6 @@ import { ChevronDown, ChevronRight } from "lucide-react";
 import { getSourceIcon } from "@/utils/sourceIcons";
 
 const WEB_SOURCE_SLUGS = [
-  "web_contact",
   "web_booking",
   "web_callback",
   "web_deposit",
@@ -58,6 +64,13 @@ const WEB_SOURCE_SLUGS = [
 const navigation = [
   { name: "Dashboard", href: "/", icon: LayoutDashboard },
   { name: "All Leads", href: "/leads", icon: Users },
+  { name: "Inquiries", href: "/inquiries", icon: MessageSquare, unreadSource: INQUIRIES_SOURCE_SLUG },
+  {
+    name: "Deposits & Payments",
+    href: "/deposits-payments",
+    icon: CreditCard,
+    unreadSource: DEPOSITS_PAYMENTS_SOURCE_SLUG,
+  },
   { name: "Tasks", href: "/tasks", icon: CheckSquare },
   { name: "Calendar", href: "/calendar", icon: CalendarDays },
   { name: "Reports", href: "/reports", icon: FileBarChart },
@@ -82,7 +95,7 @@ function UnreadCountBadgeForSource({ sourceSlug }: { sourceSlug: string }) {
   
   return (
     <span className="inline-flex items-center justify-center rounded-full bg-warning text-warning-foreground text-xs font-semibold px-2 py-0.5 min-w-[1.5rem]">
-      {count > 99 ? "99+" : count}
+      {count.toLocaleString()}
     </span>
   );
 }
@@ -150,7 +163,9 @@ export function Sidebar() {
     },
   });
 
-  const activeSources = sources.filter((s) => (sourceCounts?.get(s.slug) || 0) > 0);
+  const activeSources = sources.filter(
+    (s) => (sourceCounts?.get(s.slug) || 0) > 0 && !isExcludedFromAllLeads(s.slug),
+  );
   
   const logoUrl = settings.branding?.logo_url;
   
@@ -275,7 +290,7 @@ export function Sidebar() {
                             <span className="font-medium flex-1">{item.name}</span>
                             {unreadWebLeads > 0 && (
                               <span className="inline-flex items-center justify-center rounded-full bg-warning text-warning-foreground text-xs font-semibold px-2 py-0.5 min-w-[1.5rem]">
-                                {unreadWebLeads > 99 ? "99+" : unreadWebLeads}
+                                {unreadWebLeads.toLocaleString()}
                               </span>
                             )}
                             {activeSources.length > 0 && (
@@ -317,6 +332,7 @@ export function Sidebar() {
                 }
                 
                 // Regular navigation items
+                const unreadSource = "unreadSource" in item ? item.unreadSource : undefined;
                 return (
                   <NavLink
                     key={item.name}
@@ -328,7 +344,8 @@ export function Sidebar() {
                     onClick={() => setIsOpen(false)}
                   >
                     <item.icon className="h-5 w-5" />
-                    <span className="font-medium">{item.name}</span>
+                    <span className="font-medium flex-1">{item.name}</span>
+                    {unreadSource && <UnreadCountBadgeForSource sourceSlug={unreadSource} />}
                   </NavLink>
                 );
               })}

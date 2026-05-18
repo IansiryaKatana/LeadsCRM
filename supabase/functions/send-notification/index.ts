@@ -38,11 +38,27 @@ function toTitleWords(value: string): string {
 function resolveLeadSubjectType(lead: any): string {
   const normalizedLeadType = String(lead?.metadata?.lead_type_normalized || "").trim().toLowerCase();
   const source = String(lead?.source || "").trim().toLowerCase();
-  const isDeposit = normalizedLeadType === "pay_deposit"
-    || source === "web_secure_booking"
-    || Boolean(lead?.metadata?.is_payment_lead);
+  const submissionType = String(lead?.metadata?.submission_type || "").trim().toLowerCase();
+  const emailTemplate = String(lead?.metadata?.email_template || "").trim().toLowerCase();
 
-  if (isDeposit) return "Deposit Received";
+  const isBookingDeposit =
+    normalizedLeadType === "pay_deposit"
+    || source === "web_secure_booking"
+    || submissionType === "secure_booking_payment"
+    || emailTemplate === "pay_deposit";
+
+  if (isBookingDeposit) return "Deposit Received";
+
+  const isUrbanHubPayment =
+    normalizedLeadType === "urban_hub_balance_payment"
+    || source === "web_urban_hub_payment"
+    || emailTemplate === "urban_hub_payment_confirmation";
+
+  if (isUrbanHubPayment) {
+    const pt = String(lead?.metadata?.payment_type || "").trim();
+    if (pt) return `Payment Received — ${pt}`;
+    return "Payment Received — Urban Hub";
+  }
 
   const leadTypeLabels: Record<string, string> = {
     viewing: "Book a Viewing",
@@ -52,6 +68,7 @@ function resolveLeadSubjectType(lead: any): string {
     short_stay_tourist: "Short Stay Tourist",
     short_stay_keyworker: "Short Stay Keyworker",
     refer_friend_deposit: "Refer a Friend",
+    urban_hub_balance_payment: "Pay Urban Hub",
     content_creator_application: "Content Creator Application",
   };
   if (leadTypeLabels[normalizedLeadType]) return leadTypeLabels[normalizedLeadType];
@@ -62,6 +79,7 @@ function resolveLeadSubjectType(lead: any): string {
     web_contact: "General Inquiry",
     web_deposit: "Deposit Received",
     web_secure_booking: "Deposit Received",
+    web_urban_hub_payment: "Pay Urban Hub",
     web_tourist: "Short Stay Tourist",
     web_keyworker: "Short Stay Keyworker",
     web_creator: "Content Creator Application",
@@ -70,6 +88,20 @@ function resolveLeadSubjectType(lead: any): string {
   if (sourceLabels[source]) return sourceLabels[source];
 
   return toTitleWords(source || "Lead");
+}
+
+function formatLeadPaymentSummaryHtml(lead: any): string {
+  const meta = lead?.metadata;
+  if (!meta || typeof meta !== "object") return "";
+  const amountPence = Number(meta.amount_pence);
+  if (!Number.isFinite(amountPence) || amountPence <= 0) return "";
+  const gbp = (amountPence / 100).toFixed(2);
+  const pt = String(meta.payment_type || "").trim();
+  const ref = String(meta.payment_intent_id || "").trim();
+  let out = `<div class="info-item"><strong>Payment amount:</strong> GBP ${gbp}</div>`;
+  if (pt) out += `<div class="info-item"><strong>Payment type:</strong> ${pt}</div>`;
+  if (ref) out += `<div class="info-item"><strong>Payment ref:</strong> ${ref}</div>`;
+  return out;
 }
 
 serve(async (req) => {
@@ -270,6 +302,10 @@ serve(async (req) => {
       });
     }
 
+    const revenueDisplay = Number.isFinite(Number(lead.potential_revenue))
+      ? Number(lead.potential_revenue).toLocaleString()
+      : "0";
+
     // Determine recipients
     let recipients: string[] = [];
 
@@ -330,6 +366,7 @@ serve(async (req) => {
       case "new_lead":
         const leadSubjectType = resolveLeadSubjectType(lead);
         notificationSubject = `🔔 New ${leadSubjectType} Lead: ${lead.full_name}`;
+        const paymentSummary = formatLeadPaymentSummaryHtml(lead);
         htmlContent = `
           ${emailStyle}
           <div class="email-container">
@@ -344,7 +381,8 @@ serve(async (req) => {
                 <div class="info-item"><strong>Phone:</strong> ${lead.phone}</div>
                 <div class="info-item"><strong>Room Choice:</strong> ${lead.room_choice}</div>
                 <div class="info-item"><strong>Stay Duration:</strong> ${lead.stay_duration}</div>
-                <div class="info-item"><strong>Potential Revenue:</strong> ${currency.code} ${lead.potential_revenue.toLocaleString()}</div>
+                <div class="info-item"><strong>Potential Revenue:</strong> ${currency.code} ${revenueDisplay}</div>
+                ${paymentSummary}
                 ${lead.contact_message ? `<div class="info-item" style="margin-top: 15px; padding-top: 15px; border-top: 1px solid #e5e7eb;"><strong>Message:</strong><br/><span style="color: #4b5563; font-style: italic;">${lead.contact_message}</span></div>` : ''}
               </div>
               <p>Log in to the CRM to follow up with this lead as soon as possible.</p>
@@ -408,7 +446,7 @@ serve(async (req) => {
                     <div class="info-item"><strong>Email:</strong> ${lead.email}</div>
                     <div class="info-item"><strong>Phone:</strong> ${lead.phone}</div>
                     <div class="info-item"><strong>Room Choice:</strong> ${lead.room_choice}</div>
-                    <div class="info-item"><strong>Potential Revenue:</strong> ${currency.code} ${lead.potential_revenue.toLocaleString()}</div>
+                    <div class="info-item"><strong>Potential Revenue:</strong> ${currency.code} ${revenueDisplay}</div>
                   </div>
                   <p>Please reach out to this lead as soon as possible to maximize conversion chance!</p>
                   <div style="text-align: center;">

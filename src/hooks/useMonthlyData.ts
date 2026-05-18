@@ -2,11 +2,54 @@ import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 
-export function useMonthlyLeadData(academicYear?: string) {
+const MONTH_LABELS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+
+function applyLeadDateFilters<T extends { gte: (col: string, val: string) => T; lte: (col: string, val: string) => T }>(
+  query: T,
+  startDate?: Date | null,
+  endDate?: Date | null
+): T {
+  if (startDate) {
+    query = query.gte("created_at", startDate.toISOString());
+  }
+  if (endDate) {
+    query = query.lte("created_at", endDate.toISOString());
+  }
+  return query;
+}
+
+function buildMonthBuckets(startDate: Date | null, endDate: Date): Date[] {
+  const end = new Date(endDate.getFullYear(), endDate.getMonth(), 1);
+  const start = startDate
+    ? new Date(startDate.getFullYear(), startDate.getMonth(), 1)
+    : new Date(end.getFullYear(), end.getMonth() - 5, 1);
+
+  const buckets: Date[] = [];
+  const cursor = new Date(start);
+  while (cursor <= end) {
+    buckets.push(new Date(cursor));
+    cursor.setMonth(cursor.getMonth() + 1);
+  }
+
+  if (buckets.length === 0) {
+    buckets.push(new Date(end));
+  }
+  if (buckets.length > 12) {
+    return buckets.slice(-12);
+  }
+  return buckets;
+}
+
+export function useMonthlyLeadData(
+  academicYear?: string,
+  startDate?: Date | null,
+  endDate?: Date | null
+) {
   const { user } = useAuth();
+  const rangeEnd = endDate ?? new Date();
 
   return useQuery({
-    queryKey: ["monthly-lead-data", academicYear],
+    queryKey: ["monthly-lead-data", academicYear, startDate?.toISOString(), endDate?.toISOString()],
     queryFn: async () => {
       let query = supabase
         .from("leads")
@@ -15,27 +58,24 @@ export function useMonthlyLeadData(academicYear?: string) {
       if (academicYear && academicYear.trim() !== "") {
         query = query.eq("academic_year", academicYear);
       }
+      query = applyLeadDateFilters(query, startDate, endDate ?? rangeEnd);
 
       const { data, error } = await query;
 
       if (error) throw error;
 
-      // Group by month
+      const monthBuckets = buildMonthBuckets(startDate ?? null, rangeEnd);
       const monthlyMap = new Map<string, { leads: number; converted: number; revenue: number }>();
-      const months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
 
-      // Initialize last 6 months
-      const now = new Date();
-      for (let i = 5; i >= 0; i--) {
-        const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+      monthBuckets.forEach((d) => {
         const key = `${d.getFullYear()}-${d.getMonth()}`;
         monthlyMap.set(key, { leads: 0, converted: 0, revenue: 0 });
-      }
+      });
 
       data?.forEach((lead) => {
         const date = new Date(lead.created_at);
         const key = `${date.getFullYear()}-${date.getMonth()}`;
-        
+
         if (monthlyMap.has(key)) {
           const current = monthlyMap.get(key)!;
           current.leads += 1;
@@ -46,37 +86,41 @@ export function useMonthlyLeadData(academicYear?: string) {
         }
       });
 
-      // Convert to array format for charts
-      const result: { month: string; leads: number; converted: number; revenue: number }[] = [];
-      for (let i = 5; i >= 0; i--) {
-        const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+      return monthBuckets.map((d) => {
         const key = `${d.getFullYear()}-${d.getMonth()}`;
-        const data = monthlyMap.get(key) || { leads: 0, converted: 0, revenue: 0 };
-        result.push({
-          month: months[d.getMonth()],
-          ...data,
-        });
-      }
-
-      return result;
+        const bucket = monthlyMap.get(key) || { leads: 0, converted: 0, revenue: 0 };
+        const yearSuffix =
+          monthBuckets.length > 1 && new Set(monthBuckets.map((b) => b.getFullYear())).size > 1
+            ? ` '${String(d.getFullYear()).slice(-2)}`
+            : "";
+        return {
+          month: `${MONTH_LABELS[d.getMonth()]}${yearSuffix}`,
+          ...bucket,
+        };
+      });
     },
     enabled: !!user,
   });
 }
 
-export function useRoomDistribution(academicYear?: string) {
+export function useRoomDistribution(
+  academicYear?: string,
+  startDate?: Date | null,
+  endDate?: Date | null
+) {
   const { user } = useAuth();
 
   return useQuery({
-    queryKey: ["room-distribution", academicYear],
+    queryKey: ["room-distribution", academicYear, startDate?.toISOString(), endDate?.toISOString()],
     queryFn: async () => {
       let query = supabase
         .from("leads")
-        .select("room_choice, academic_year");
+        .select("room_choice, academic_year, created_at");
 
       if (academicYear && academicYear.trim() !== "") {
         query = query.eq("academic_year", academicYear);
       }
+      query = applyLeadDateFilters(query, startDate, endDate);
 
       const { data, error } = await query;
 
@@ -93,19 +137,24 @@ export function useRoomDistribution(academicYear?: string) {
   });
 }
 
-export function useStatusDistribution(academicYear?: string) {
+export function useStatusDistribution(
+  academicYear?: string,
+  startDate?: Date | null,
+  endDate?: Date | null
+) {
   const { user } = useAuth();
 
   return useQuery({
-    queryKey: ["status-distribution", academicYear],
+    queryKey: ["status-distribution", academicYear, startDate?.toISOString(), endDate?.toISOString()],
     queryFn: async () => {
       let query = supabase
         .from("leads")
-        .select("lead_status, academic_year");
+        .select("lead_status, academic_year, created_at");
 
       if (academicYear && academicYear.trim() !== "") {
         query = query.eq("academic_year", academicYear);
       }
+      query = applyLeadDateFilters(query, startDate, endDate);
 
       const { data, error } = await query;
 

@@ -12,14 +12,16 @@ import {
 } from "lucide-react";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell } from "recharts";
 
+import { CHART_PALETTE, chartTickStyle, chartTooltipStyle } from "@/constants/chartTheme";
+
 interface FollowUpAnalyticsProps {
   academicYear?: string;
+  startDate?: Date | null;
+  endDate?: Date | null;
 }
 
-const COLORS = ["#51A6FF", "#33C3F0", "#4ADE80", "#F59E0B", "#EF4444"];
-
-export function FollowUpAnalytics({ academicYear }: FollowUpAnalyticsProps) {
-  const { data: analytics, isLoading } = useFollowUpAnalytics(academicYear);
+export function FollowUpAnalytics({ academicYear, startDate, endDate }: FollowUpAnalyticsProps) {
+  const { data: analytics, isLoading } = useFollowUpAnalytics(academicYear, startDate, endDate);
 
   if (isLoading) {
     return (
@@ -167,26 +169,22 @@ export function FollowUpAnalytics({ academicYear }: FollowUpAnalyticsProps) {
             <div className="h-72">
               <ResponsiveContainer width="100%" height="100%">
                 <BarChart data={chartData}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="hsl(0, 0%, 88%)" />
+                  <CartesianGrid strokeDasharray="3 3" stroke="hsl(210, 20%, 92%)" vertical={false} />
                   <XAxis 
                     dataKey="name" 
-                    tick={{ fill: "hsl(0, 0%, 40%)", fontSize: 12 }}
+                    tick={chartTickStyle}
                     angle={-45}
                     textAnchor="end"
                     height={80}
                   />
-                  <YAxis tick={{ fill: "hsl(0, 0%, 40%)", fontSize: 12 }} />
+                  <YAxis tick={chartTickStyle} />
                   <Tooltip
-                    contentStyle={{
-                      backgroundColor: "hsl(0, 0%, 100%)",
-                      border: "1px solid hsl(0, 0%, 88%)",
-                      borderRadius: "12px",
-                    }}
-                    formatter={(value: any) => [`${value}%`, "Conversion Rate"]}
+                    contentStyle={chartTooltipStyle}
+                    formatter={(value: number) => [`${value.toFixed(1)}%`, "Conversion Rate"]}
                   />
-                  <Bar dataKey="conversionRate" radius={[4, 4, 0, 0]}>
+                  <Bar dataKey="conversionRate" radius={[6, 6, 0, 0]}>
                     {chartData.map((_, index) => (
-                      <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                      <Cell key={`cell-${index}`} fill={CHART_PALETTE[index % CHART_PALETTE.length]} />
                     ))}
                   </Bar>
                 </BarChart>

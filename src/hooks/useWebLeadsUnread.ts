@@ -1,6 +1,10 @@
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
+import {
+  DEPOSITS_PAYMENTS_SOURCE_SLUG,
+  EXCLUDED_FROM_ALL_LEADS_SOURCE_SLUGS,
+} from "@/constants/leadSegments";
 
 const STORAGE_KEY_PREFIX = "urban_hub_web_leads_viewed_";
 const WEB_SOURCES = [
@@ -14,7 +18,12 @@ const WEB_SOURCES = [
   "web_creator",
   "web_secure_booking",
   "web_refer_friend",
+  DEPOSITS_PAYMENTS_SOURCE_SLUG,
 ];
+
+const WEB_SOURCES_FOR_ALL_LEADS_BADGE = WEB_SOURCES.filter(
+  (slug) => !EXCLUDED_FROM_ALL_LEADS_SOURCE_SLUGS.includes(slug as (typeof EXCLUDED_FROM_ALL_LEADS_SOURCE_SLUGS)[number]),
+);
 
 function getStorageKey(userId?: string | null) {
   return `${STORAGE_KEY_PREFIX}${userId ?? "anonymous"}`;
@@ -50,7 +59,7 @@ export function useUnreadWebLeadsCount(academicYear?: string) {
       let query = supabase
         .from("leads")
         .select("id, source")
-        .in("source", WEB_SOURCES);
+        .in("source", WEB_SOURCES_FOR_ALL_LEADS_BADGE);
 
       if (academicYear && academicYear.trim() !== "") {
         query = query.eq("academic_year", academicYear);
@@ -67,6 +76,10 @@ export function useUnreadWebLeadsCount(academicYear?: string) {
     enabled: !!user,
     refetchInterval: 30000,
   });
+}
+
+export function useUnreadInquiriesCount(academicYear?: string) {
+  return useUnreadWebLeadsCountBySource("web_contact", academicYear);
 }
 
 export function useUnreadWebLeadsCountBySource(sourceSlug: string, academicYear?: string) {

@@ -1,4 +1,15 @@
 import type { TeamPerformanceMetrics } from "@/hooks/useTeamPerformance";
+import {
+  addPdfFooters,
+  addPdfReportHeader,
+  csvSectionTitle,
+  downloadTextFile,
+  drawPdfDottedRowSeparator,
+  drawPdfSectionHeader,
+  createPdfPageBreaker,
+  getExportTimestamp,
+  writeCsvReportHeader,
+} from "@/utils/exportTheme";
 
 interface TeamPerformanceExportData {
   teamMetrics: TeamPerformanceMetrics[];
@@ -8,18 +19,12 @@ interface TeamPerformanceExportData {
 }
 
 export function exportTeamPerformanceToCSV(data: TeamPerformanceExportData) {
-  const { teamMetrics, academicYear, dateRange, currencySymbol = "" } = data;
-  const date = new Date().toLocaleDateString("en-GB");
-  const time = new Date().toLocaleTimeString("en-GB");
-  
-  let csv = `Urban Hub Students Accommodations - Team Performance Report\n`;
-  csv += `Generated: ${date} at ${time}\n`;
-  if (academicYear) csv += `Academic Year: ${academicYear}\n`;
-  if (dateRange) csv += `Date Range: ${dateRange}\n`;
-  csv += `\n`;
-  csv += `═══════════════════════════════════════════════════════════════\n`;
-  csv += `TEAM PERFORMANCE SUMMARY\n`;
-  csv += `═══════════════════════════════════════════════════════════════\n`;
+  const { teamMetrics, academicYear, dateRange, currencySymbol = "£" } = data;
+  const { fileDate } = getExportTimestamp();
+  const lines: string[] = [];
+  writeCsvReportHeader(lines, "Team Performance Report", { academicYear, dateRange });
+  let csv = lines.join("\n");
+  csv += csvSectionTitle("Team Performance Summary");
   csv += `\n`;
   
   // Calculate team totals
@@ -27,10 +32,9 @@ export function exportTeamPerformanceToCSV(data: TeamPerformanceExportData) {
     (acc, user) => ({
       totalLeads: acc.totalLeads + user.total_leads_assigned,
       totalConversions: acc.totalConversions + user.total_conversions,
-      totalRevenue: acc.totalRevenue + user.total_revenue,
       totalFollowups: acc.totalFollowups + user.total_followups_recorded,
     }),
-    { totalLeads: 0, totalConversions: 0, totalRevenue: 0, totalFollowups: 0 }
+    { totalLeads: 0, totalConversions: 0, totalFollowups: 0 }
   );
   
   const teamAvgConversionRate =
@@ -45,36 +49,18 @@ export function exportTeamPerformanceToCSV(data: TeamPerformanceExportData) {
   csv += `Team Total Leads,${teamTotals.totalLeads}\n`;
   csv += `Team Total Conversions,${teamTotals.totalConversions}\n`;
   csv += `Team Average Conversion Rate,${teamAvgConversionRate.toFixed(2)}%\n`;
-  csv += `Team Total Revenue,${currencySymbol} ${teamTotals.totalRevenue.toLocaleString()}\n`;
   csv += `Team Average Compliance Rate,${teamAvgComplianceRate.toFixed(2)}%\n`;
   csv += `Team Total Follow-ups,${teamTotals.totalFollowups}\n`;
+  csv += csvSectionTitle("Individual Performance");
   csv += `\n`;
-  csv += `═══════════════════════════════════════════════════════════════\n`;
-  csv += `INDIVIDUAL PERFORMANCE\n`;
-  csv += `═══════════════════════════════════════════════════════════════\n`;
-  csv += `\n`;
-  csv += `Name,Role,Leads Assigned,Conversions,Conversion Rate,Revenue,Follow-ups,Compliance Rate,Avg Time to 1st FU (hours)\n`;
+  csv += `Name,Role,Leads Assigned,Conversions,Conversion Rate,Follow-ups,Compliance Rate,Avg Time to 1st FU (hours)\n`;
   
   teamMetrics.forEach(user => {
-    csv += `${user.full_name},${user.role},${user.total_leads_assigned},${user.total_conversions},${user.conversion_rate.toFixed(2)}%,${currencySymbol} ${user.total_revenue.toLocaleString()},${user.total_followups_recorded},${user.followup_compliance_rate.toFixed(2)}%,${user.avg_time_to_first_followup_hours ? Math.round(user.avg_time_to_first_followup_hours) : "N/A"}\n`;
+    csv += `${user.full_name},${user.role},${user.total_leads_assigned},${user.total_conversions},${user.conversion_rate.toFixed(2)}%,${user.total_followups_recorded},${user.followup_compliance_rate.toFixed(2)}%,${user.avg_time_to_first_followup_hours ? Math.round(user.avg_time_to_first_followup_hours) : "N/A"}\n`;
   });
   
-  csv += `\n`;
-  csv += `═══════════════════════════════════════════════════════════════\n`;
-  csv += `END OF REPORT\n`;
-  csv += `═══════════════════════════════════════════════════════════════\n`;
-  
-  // Download CSV
-  const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
-  const link = document.createElement("a");
-  const url = URL.createObjectURL(blob);
-  link.setAttribute("href", url);
-  link.setAttribute("download", `Urban_Hub_Team_Performance_${date.replace(/\//g, "-")}.csv`);
-  link.style.visibility = "hidden";
-  document.body.appendChild(link);
-  link.click();
-  document.body.removeChild(link);
-  URL.revokeObjectURL(url);
+  csv += csvSectionTitle("End of Report");
+  downloadTextFile(csv, `Urban_Hub_Team_Performance_${fileDate}.csv`, "text/csv;charset=utf-8;");
 }
 
 export async function exportTeamPerformanceToExcel(data: TeamPerformanceExportData) {
@@ -92,10 +78,9 @@ export async function exportTeamPerformanceToExcel(data: TeamPerformanceExportDa
     (acc, user) => ({
       totalLeads: acc.totalLeads + user.total_leads_assigned,
       totalConversions: acc.totalConversions + user.total_conversions,
-      totalRevenue: acc.totalRevenue + user.total_revenue,
       totalFollowups: acc.totalFollowups + user.total_followups_recorded,
     }),
-    { totalLeads: 0, totalConversions: 0, totalRevenue: 0, totalFollowups: 0 }
+    { totalLeads: 0, totalConversions: 0, totalFollowups: 0 }
   );
   
   const teamAvgConversionRate =
@@ -156,7 +141,6 @@ export async function exportTeamPerformanceToExcel(data: TeamPerformanceExportDa
     { width: 15 }, // Leads
     { width: 15 }, // Conversions
     { width: 18 }, // Conversion Rate
-    { width: 18 }, // Revenue
     { width: 15 }, // Follow-ups
     { width: 18 }, // Compliance
     { width: 20 }, // Avg Time
@@ -167,27 +151,27 @@ export async function exportTeamPerformanceToExcel(data: TeamPerformanceExportDa
   // Header
   const headerRow = worksheet.addRow(["Urban Hub Students Accommodations - Team Performance Report"]);
   headerRow.height = 30;
-  worksheet.mergeCells(`A${rowIndex}:I${rowIndex}`);
+  worksheet.mergeCells(`A${rowIndex}:H${rowIndex}`);
   headerRow.getCell(1).style = headerStyle;
   rowIndex++;
   
   // Metadata
   worksheet.addRow([`Generated: ${date} at ${time}`]);
   worksheet.getRow(rowIndex).getCell(1).style = { ...cellStyle, font: { size: 9, italic: true } };
-  worksheet.mergeCells(`A${rowIndex}:I${rowIndex}`);
+  worksheet.mergeCells(`A${rowIndex}:H${rowIndex}`);
   rowIndex++;
   
   if (academicYear) {
     worksheet.addRow([`Academic Year: ${academicYear}`]);
     worksheet.getRow(rowIndex).getCell(1).style = { ...cellStyle, font: { size: 9, italic: true } };
-    worksheet.mergeCells(`A${rowIndex}:I${rowIndex}`);
+    worksheet.mergeCells(`A${rowIndex}:H${rowIndex}`);
     rowIndex++;
   }
   
   if (dateRange) {
     worksheet.addRow([`Date Range: ${dateRange}`]);
     worksheet.getRow(rowIndex).getCell(1).style = { ...cellStyle, font: { size: 9, italic: true } };
-    worksheet.mergeCells(`A${rowIndex}:I${rowIndex}`);
+    worksheet.mergeCells(`A${rowIndex}:H${rowIndex}`);
     rowIndex++;
   }
   
@@ -210,7 +194,6 @@ export async function exportTeamPerformanceToExcel(data: TeamPerformanceExportDa
     ["Total Leads", teamTotals.totalLeads.toLocaleString()],
     ["Total Conversions", teamTotals.totalConversions.toLocaleString()],
     ["Average Conversion Rate", `${teamAvgConversionRate.toFixed(2)}%`],
-    ["Total Revenue", `${currencySymbol} ${teamTotals.totalRevenue.toLocaleString()}`],
     ["Average Compliance Rate", `${teamAvgComplianceRate.toFixed(2)}%`],
     ["Total Follow-ups", teamTotals.totalFollowups.toLocaleString()],
   ];
@@ -228,7 +211,7 @@ export async function exportTeamPerformanceToExcel(data: TeamPerformanceExportDa
   // Individual Performance Section
   const individualHeaderRow = worksheet.addRow(["Individual Performance"]);
   individualHeaderRow.height = 25;
-  worksheet.mergeCells(`A${rowIndex}:I${rowIndex}`);
+  worksheet.mergeCells(`A${rowIndex}:H${rowIndex}`);
   individualHeaderRow.getCell(1).style = sectionHeaderStyle;
   rowIndex++;
   
@@ -238,13 +221,12 @@ export async function exportTeamPerformanceToExcel(data: TeamPerformanceExportDa
     "Leads Assigned",
     "Conversions",
     "Conversion Rate",
-    "Revenue",
     "Follow-ups",
     "Compliance Rate",
     "Avg Time to 1st FU",
   ]);
   individualTableHeader.height = 20;
-  for (let i = 1; i <= 9; i++) {
+  for (let i = 1; i <= 8; i++) {
     individualTableHeader.getCell(i).style = tableHeaderStyle;
   }
   rowIndex++;
@@ -256,14 +238,13 @@ export async function exportTeamPerformanceToExcel(data: TeamPerformanceExportDa
       user.total_leads_assigned,
       user.total_conversions,
       `${user.conversion_rate.toFixed(2)}%`,
-      `${currencySymbol} ${user.total_revenue.toLocaleString()}`,
       user.total_followups_recorded,
       `${user.followup_compliance_rate.toFixed(2)}%`,
       user.avg_time_to_first_followup_hours ? `${Math.round(user.avg_time_to_first_followup_hours)}h` : "N/A",
     ]);
     row.height = 18;
-    for (let i = 1; i <= 9; i++) {
-      if (i === 3 || i === 4 || i === 6 || i === 7) {
+    for (let i = 1; i <= 8; i++) {
+      if (i === 3 || i === 4 || i === 6) {
         row.getCell(i).style = numberCellStyle;
       } else {
         row.getCell(i).style = cellStyle;
@@ -298,81 +279,47 @@ export async function exportTeamPerformanceToPDF(data: TeamPerformanceExportData
   });
   
   const pageWidth = doc.internal.pageSize.getWidth();
-  const pageHeight = doc.internal.pageSize.getHeight();
   const margin = 15;
   let yPos = margin;
   
-  const { teamMetrics, academicYear, dateRange, currencySymbol = "" } = data;
-  const date = new Date().toLocaleDateString("en-GB");
-  const time = new Date().toLocaleTimeString("en-GB");
-  
-  // Calculate team totals
+  const { teamMetrics, academicYear, dateRange } = data;
+  const { fileDate } = getExportTimestamp();
+
   const teamTotals = teamMetrics.reduce(
     (acc, user) => ({
       totalLeads: acc.totalLeads + user.total_leads_assigned,
       totalConversions: acc.totalConversions + user.total_conversions,
-      totalRevenue: acc.totalRevenue + user.total_revenue,
       totalFollowups: acc.totalFollowups + user.total_followups_recorded,
     }),
-    { totalLeads: 0, totalConversions: 0, totalRevenue: 0, totalFollowups: 0 }
+    { totalLeads: 0, totalConversions: 0, totalFollowups: 0 }
   );
-  
+
   const teamAvgConversionRate =
     teamTotals.totalLeads > 0
       ? (teamTotals.totalConversions / teamTotals.totalLeads) * 100
       : 0;
-  
+
   const teamAvgComplianceRate =
     teamMetrics.reduce((sum, u) => sum + u.followup_compliance_rate, 0) /
     teamMetrics.length;
-  
-  const checkPageBreak = (requiredHeight: number) => {
-    if (yPos + requiredHeight > pageHeight - margin) {
-      doc.addPage();
-      yPos = margin;
-      return true;
+
+  const checkPageBreak = createPdfPageBreaker(
+    doc,
+    margin,
+    () => yPos,
+    (y) => {
+      yPos = y;
     }
-    return false;
-  };
+  );
   
-  // Header
-  doc.setFillColor(81, 166, 255);
-  doc.rect(0, 0, pageWidth, 50, "F");
-  doc.setFillColor(120, 180, 255);
-  doc.rect(0, 45, pageWidth, 5, "F");
-  
-  doc.setTextColor(255, 255, 255);
-  doc.setFontSize(28);
-  doc.setFont("helvetica", "bold");
-  doc.text("Urban Hub Students Accommodations", margin, 25);
-  
-  doc.setFontSize(14);
-  doc.setFont("helvetica", "normal");
-  doc.text("Team Performance Report", margin, 35);
-  
-  doc.setFontSize(9);
-  doc.text(`Generated: ${date} at ${time}`, pageWidth - margin, 25, { align: "right" });
-  if (academicYear) {
-    doc.text(`Academic Year: ${academicYear}`, pageWidth - margin, 32, { align: "right" });
-  }
-  if (dateRange) {
-    doc.text(`Date Range: ${dateRange}`, pageWidth - margin, academicYear ? 39 : 32, { align: "right" });
-  }
-  
-  yPos = 60;
-  
-  // Team Summary Section
-  doc.setFillColor(240, 248, 255);
-  doc.rect(margin - 2, yPos - 8, pageWidth - 2 * margin + 4, 12, "F");
-  doc.setDrawColor(81, 166, 255);
-  doc.setLineWidth(0.5);
-  doc.rect(margin - 2, yPos - 8, pageWidth - 2 * margin + 4, 12, "S");
-  
-  doc.setFontSize(18);
-  doc.setFont("helvetica", "bold");
-  doc.setTextColor(81, 166, 255);
-  doc.text("Team Performance Summary", margin, yPos);
-  yPos += 12;
+  yPos = addPdfReportHeader(doc, {
+    title: "Team Performance Report",
+    academicYear,
+    dateRange,
+    margin,
+  });
+
+  yPos = drawPdfSectionHeader(doc, "Team Performance Summary", yPos, margin, pageWidth);
   
   doc.setFontSize(10);
   doc.setFont("helvetica", "normal");
@@ -382,7 +329,6 @@ export async function exportTeamPerformanceToPDF(data: TeamPerformanceExportData
     ["Total Leads", teamTotals.totalLeads.toLocaleString()],
     ["Total Conversions", teamTotals.totalConversions.toLocaleString()],
     ["Average Conversion Rate", `${teamAvgConversionRate.toFixed(2)}%`],
-    ["Total Revenue", `${currencySymbol} ${teamTotals.totalRevenue.toLocaleString()}`],
     ["Average Compliance Rate", `${teamAvgComplianceRate.toFixed(2)}%`],
     ["Total Follow-ups", teamTotals.totalFollowups.toLocaleString()],
   ];
@@ -395,8 +341,7 @@ export async function exportTeamPerformanceToPDF(data: TeamPerformanceExportData
     doc.text(row[0], margin + 2, yPos);
     doc.text(row[1], margin + colWidth + 2, yPos);
     if (index < summaryData.length - 1) {
-      doc.setDrawColor(200, 200, 200);
-      doc.line(margin, yPos + 2, pageWidth - margin, yPos + 2);
+      drawPdfDottedRowSeparator(doc, margin, yPos + 2, pageWidth - margin);
     }
     yPos += cellHeight;
   });
@@ -404,25 +349,14 @@ export async function exportTeamPerformanceToPDF(data: TeamPerformanceExportData
   yPos += 10;
   checkPageBreak(20);
   
-  // Individual Performance Section
-  doc.setFillColor(240, 248, 255);
-  doc.rect(margin - 2, yPos - 8, pageWidth - 2 * margin + 4, 12, "F");
-  doc.setDrawColor(81, 166, 255);
-  doc.setLineWidth(0.5);
-  doc.rect(margin - 2, yPos - 8, pageWidth - 2 * margin + 4, 12, "S");
-  
-  doc.setFontSize(18);
-  doc.setFont("helvetica", "bold");
-  doc.setTextColor(81, 166, 255);
-  doc.text("Individual Performance", margin, yPos);
-  yPos += 12;
+  yPos = drawPdfSectionHeader(doc, "Individual Performance", yPos, margin, pageWidth);
   
   doc.setFontSize(8);
   doc.setFont("helvetica", "normal");
   doc.setTextColor(0, 0, 0);
   
-  const headers = ["Name", "Role", "Leads", "Conv", "Rate", "Revenue", "FU", "Compl"];
-  const colWidths = [30, 20, 15, 12, 15, 25, 12, 15];
+  const headers = ["Name", "Role", "Leads", "Conv", "Rate", "FU", "Compl"];
+  const colWidths = [34, 22, 16, 14, 16, 14, 18];
   
   // Header
   doc.setFillColor(240, 240, 240);
@@ -450,36 +384,14 @@ export async function exportTeamPerformanceToPDF(data: TeamPerformanceExportData
     xPos += colWidths[3];
     doc.text(`${user.conversion_rate.toFixed(1)}%`, xPos, yPos);
     xPos += colWidths[4];
-    doc.text(`${currencySymbol}${(user.total_revenue / 1000).toFixed(0)}K`, xPos, yPos);
-    xPos += colWidths[5];
     doc.text(user.total_followups_recorded.toString(), xPos, yPos);
-    xPos += colWidths[6];
+    xPos += colWidths[5];
     doc.text(`${user.followup_compliance_rate.toFixed(1)}%`, xPos, yPos);
-    doc.setDrawColor(200, 200, 200);
-    doc.line(margin, yPos + 2, pageWidth - margin, yPos + 2);
+    drawPdfDottedRowSeparator(doc, margin, yPos + 2, pageWidth - margin);
     yPos += cellHeight;
   });
   
-  // Footer
-  const totalPages = doc.getNumberOfPages();
-  for (let i = 1; i <= totalPages; i++) {
-    doc.setPage(i);
-    doc.setFontSize(8);
-    doc.setTextColor(128, 128, 128);
-    doc.text(
-      `Page ${i} of ${totalPages}`,
-      pageWidth / 2,
-      pageHeight - 10,
-      { align: "center" }
-    );
-    doc.text(
-      "Urban Hub Students Accommodations - Confidential",
-      pageWidth / 2,
-      pageHeight - 5,
-      { align: "center" }
-    );
-  }
-  
-  doc.save(`Urban_Hub_Team_Performance_${date.replace(/\//g, "-")}.pdf`);
+  addPdfFooters(doc);
+  doc.save(`Urban_Hub_Team_Performance_${fileDate}.pdf`);
 }
 

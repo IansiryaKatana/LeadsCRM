@@ -1,4 +1,17 @@
 import type { FollowUpAnalytics } from "@/hooks/useFollowUpAnalytics";
+import {
+  addPdfFooters,
+  addPdfReportHeader,
+  csvSectionTitle,
+  downloadTextFile,
+  drawPdfDottedRowSeparator,
+  drawPdfSectionHeader,
+  createPdfPageBreaker,
+  escapeCsvValue,
+  generateASCIIChart,
+  getExportTimestamp,
+  writeCsvReportHeader,
+} from "@/utils/exportTheme";
 
 interface FollowUpExportData {
   analytics: FollowUpAnalytics;
@@ -6,31 +19,13 @@ interface FollowUpExportData {
   dateRange?: string;
 }
 
-// Generate ASCII bar chart for CSV
-function generateASCIIChart(data: Array<{ name: string; value: number }>, maxWidth = 40): string {
-  const maxValue = Math.max(...data.map(d => d.value), 1);
-  return data
-    .map(item => {
-      const barLength = Math.round((item.value / maxValue) * maxWidth);
-      const bar = "█".repeat(barLength);
-      return `${item.name.padEnd(20)} │${bar} ${item.value}`;
-    })
-    .join("\n");
-}
-
 export function exportFollowUpAnalyticsToCSV(data: FollowUpExportData) {
   const { analytics, academicYear, dateRange } = data;
-  const date = new Date().toLocaleDateString("en-GB");
-  const time = new Date().toLocaleTimeString("en-GB");
-  
-  let csv = `Urban Hub Students Accommodations - Follow-Up Analytics Report\n`;
-  csv += `Generated: ${date} at ${time}\n`;
-  if (academicYear) csv += `Academic Year: ${academicYear}\n`;
-  if (dateRange) csv += `Date Range: ${dateRange}\n`;
-  csv += `\n`;
-  csv += `═══════════════════════════════════════════════════════════════\n`;
-  csv += `FOLLOW-UP METRICS\n`;
-  csv += `═══════════════════════════════════════════════════════════════\n`;
+  const { fileDate } = getExportTimestamp();
+  const lines: string[] = [];
+  writeCsvReportHeader(lines, "Follow-Up Analytics Report", { academicYear, dateRange });
+  let csv = lines.join("\n");
+  csv += csvSectionTitle("Follow-Up Metrics");
   csv += `\n`;
   csv += `Metric,Value\n`;
   csv += `Total Leads,${analytics.totalLeads}\n`;
@@ -42,10 +37,7 @@ export function exportFollowUpAnalyticsToCSV(data: FollowUpExportData) {
   csv += `Follow-up Response Rate,${analytics.followupResponseRate.toFixed(2)}%\n`;
   csv += `Overdue Follow-ups,${analytics.overdueFollowups}\n`;
   csv += `Upcoming Follow-ups,${analytics.upcomingFollowups}\n`;
-  csv += `\n`;
-  csv += `═══════════════════════════════════════════════════════════════\n`;
-  csv += `FOLLOW-UP TYPE EFFECTIVENESS\n`;
-  csv += `═══════════════════════════════════════════════════════════════\n`;
+  csv += csvSectionTitle("Follow-Up Type Effectiveness");
   csv += `\n`;
   csv += `Type,Count,Conversion Rate\n`;
   analytics.followupTypeEffectiveness.forEach(item => {
@@ -61,22 +53,8 @@ export function exportFollowUpAnalyticsToCSV(data: FollowUpExportData) {
     30
   );
   csv += `\n`;
-  csv += `\n`;
-  csv += `═══════════════════════════════════════════════════════════════\n`;
-  csv += `END OF REPORT\n`;
-  csv += `═══════════════════════════════════════════════════════════════\n`;
-  
-  // Download CSV
-  const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
-  const link = document.createElement("a");
-  const url = URL.createObjectURL(blob);
-  link.setAttribute("href", url);
-  link.setAttribute("download", `Urban_Hub_FollowUp_Analytics_${date.replace(/\//g, "-")}.csv`);
-  link.style.visibility = "hidden";
-  document.body.appendChild(link);
-  link.click();
-  document.body.removeChild(link);
-  URL.revokeObjectURL(url);
+  csv += csvSectionTitle("End of Report");
+  downloadTextFile(csv, `Urban_Hub_FollowUp_Analytics_${fileDate}.csv`, "text/csv;charset=utf-8;");
 }
 
 export async function exportFollowUpAnalyticsToExcel(data: FollowUpExportData) {
@@ -253,61 +231,29 @@ export async function exportFollowUpAnalyticsToPDF(data: FollowUpExportData) {
   });
   
   const pageWidth = doc.internal.pageSize.getWidth();
-  const pageHeight = doc.internal.pageSize.getHeight();
   const margin = 15;
   let yPos = margin;
   
   const { analytics, academicYear, dateRange } = data;
-  const date = new Date().toLocaleDateString("en-GB");
-  const time = new Date().toLocaleTimeString("en-GB");
-  
-  const checkPageBreak = (requiredHeight: number) => {
-    if (yPos + requiredHeight > pageHeight - margin) {
-      doc.addPage();
-      yPos = margin;
-      return true;
+  const { fileDate } = getExportTimestamp();
+
+  const checkPageBreak = createPdfPageBreaker(
+    doc,
+    margin,
+    () => yPos,
+    (y) => {
+      yPos = y;
     }
-    return false;
-  };
-  
-  // Header
-  doc.setFillColor(81, 166, 255);
-  doc.rect(0, 0, pageWidth, 50, "F");
-  doc.setFillColor(120, 180, 255);
-  doc.rect(0, 45, pageWidth, 5, "F");
-  
-  doc.setTextColor(255, 255, 255);
-  doc.setFontSize(28);
-  doc.setFont("helvetica", "bold");
-  doc.text("Urban Hub Students Accommodations", margin, 25);
-  
-  doc.setFontSize(14);
-  doc.setFont("helvetica", "normal");
-  doc.text("Follow-Up Analytics Report", margin, 35);
-  
-  doc.setFontSize(9);
-  doc.text(`Generated: ${date} at ${time}`, pageWidth - margin, 25, { align: "right" });
-  if (academicYear) {
-    doc.text(`Academic Year: ${academicYear}`, pageWidth - margin, 32, { align: "right" });
-  }
-  if (dateRange) {
-    doc.text(`Date Range: ${dateRange}`, pageWidth - margin, academicYear ? 39 : 32, { align: "right" });
-  }
-  
-  yPos = 60;
-  
-  // Metrics Section
-  doc.setFillColor(240, 248, 255);
-  doc.rect(margin - 2, yPos - 8, pageWidth - 2 * margin + 4, 12, "F");
-  doc.setDrawColor(81, 166, 255);
-  doc.setLineWidth(0.5);
-  doc.rect(margin - 2, yPos - 8, pageWidth - 2 * margin + 4, 12, "S");
-  
-  doc.setFontSize(18);
-  doc.setFont("helvetica", "bold");
-  doc.setTextColor(81, 166, 255);
-  doc.text("Follow-Up Metrics", margin, yPos);
-  yPos += 12;
+  );
+
+  yPos = addPdfReportHeader(doc, {
+    title: "Follow-Up Analytics Report",
+    academicYear,
+    dateRange,
+    margin,
+  });
+
+  yPos = drawPdfSectionHeader(doc, "Follow-Up Metrics", yPos, margin, pageWidth);
   
   doc.setFontSize(10);
   doc.setFont("helvetica", "normal");
@@ -333,8 +279,7 @@ export async function exportFollowUpAnalyticsToPDF(data: FollowUpExportData) {
     doc.text(row[0], margin + 2, yPos);
     doc.text(row[1], margin + colWidth + 2, yPos);
     if (index < metricsData.length - 1) {
-      doc.setDrawColor(200, 200, 200);
-      doc.line(margin, yPos + 2, pageWidth - margin, yPos + 2);
+      drawPdfDottedRowSeparator(doc, margin, yPos + 2, pageWidth - margin);
     }
     yPos += cellHeight;
   });
@@ -342,18 +287,7 @@ export async function exportFollowUpAnalyticsToPDF(data: FollowUpExportData) {
   yPos += 10;
   checkPageBreak(20);
   
-  // Type Effectiveness Section
-  doc.setFillColor(240, 248, 255);
-  doc.rect(margin - 2, yPos - 8, pageWidth - 2 * margin + 4, 12, "F");
-  doc.setDrawColor(81, 166, 255);
-  doc.setLineWidth(0.5);
-  doc.rect(margin - 2, yPos - 8, pageWidth - 2 * margin + 4, 12, "S");
-  
-  doc.setFontSize(18);
-  doc.setFont("helvetica", "bold");
-  doc.setTextColor(81, 166, 255);
-  doc.text("Follow-up Type Effectiveness", margin, yPos);
-  yPos += 12;
+  yPos = drawPdfSectionHeader(doc, "Follow-up Type Effectiveness", yPos, margin, pageWidth);
   
   doc.setFontSize(10);
   doc.setFont("helvetica", "normal");
@@ -382,31 +316,11 @@ export async function exportFollowUpAnalyticsToPDF(data: FollowUpExportData) {
     doc.text(item.count.toString(), xPos, yPos);
     xPos += typeColWidths[1];
     doc.text(`${item.conversionRate.toFixed(2)}%`, xPos, yPos);
-    doc.setDrawColor(200, 200, 200);
-    doc.line(margin, yPos + 2, pageWidth - margin, yPos + 2);
+    drawPdfDottedRowSeparator(doc, margin, yPos + 2, pageWidth - margin);
     yPos += cellHeight;
   });
-  
-  // Footer
-  const totalPages = doc.getNumberOfPages();
-  for (let i = 1; i <= totalPages; i++) {
-    doc.setPage(i);
-    doc.setFontSize(8);
-    doc.setTextColor(128, 128, 128);
-    doc.text(
-      `Page ${i} of ${totalPages}`,
-      pageWidth / 2,
-      pageHeight - 10,
-      { align: "center" }
-    );
-    doc.text(
-      "Urban Hub Students Accommodations - Confidential",
-      pageWidth / 2,
-      pageHeight - 5,
-      { align: "center" }
-    );
-  }
-  
-  doc.save(`Urban_Hub_FollowUp_Analytics_${date.replace(/\//g, "-")}.pdf`);
+
+  addPdfFooters(doc);
+  doc.save(`Urban_Hub_FollowUp_Analytics_${fileDate}.pdf`);
 }
 

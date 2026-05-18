@@ -6,9 +6,18 @@ import { Textarea } from "@/components/ui/textarea";
 import {
   Dialog,
   DialogContent,
+  DialogDescription,
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import {
+  Sheet,
+  SheetContent,
+  SheetDescription,
+  SheetHeader,
+  SheetTitle,
+} from "@/components/ui/sheet";
+import { useIsMobile } from "@/hooks/use-mobile";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -39,6 +48,7 @@ import { FollowUpHistory } from "@/components/leads/FollowUpHistory";
 import { FollowUpForm } from "@/components/leads/FollowUpForm";
 import { ExceptionRequestDialog } from "@/components/leads/ExceptionRequestDialog";
 import { AuditTrailDisplay } from "@/components/leads/AuditTrailDisplay";
+import { LeadNoteContent } from "@/components/leads/LeadNoteContent";
 import { EmailTab } from "@/components/leads/EmailTab";
 import { TasksTab } from "@/components/leads/TasksTab";
 import { CalendarTab } from "@/components/leads/CalendarTab";
@@ -57,6 +67,7 @@ interface LeadDetailDialogProps {
 }
 
 export function LeadDetailDialog({ lead, onClose }: LeadDetailDialogProps) {
+  const isMobile = useIsMobile();
   const [newNote, setNewNote] = useState("");
   const [showFollowUpForm, setShowFollowUpForm] = useState(false);
   const [showCloseWarning, setShowCloseWarning] = useState(false);
@@ -134,21 +145,22 @@ export function LeadDetailDialog({ lead, onClose }: LeadDetailDialogProps) {
   const sourceConfig = getSourceConfig(leadData.source, sources);
   const isCompletedOrClosed = leadData.lead_status === "converted" || leadData.lead_status === "closed";
 
-  return (
-    <Dialog open={!!leadData} onOpenChange={() => onClose()}>
-      <DialogContent className="sm:max-w-2xl overflow-hidden flex flex-col pb-6">
-        {/* Mobile drag handle */}
-        <div className="sm:hidden mx-auto mt-2 mb-2 h-1.5 w-12 rounded-full bg-muted" />
-        
-        <DialogHeader className="sm:pt-0">
-          <DialogTitle className="flex items-center gap-3 font-display text-2xl">
-            <button onClick={handleToggleHot} className="hover:scale-110 transition-transform">
-              <Flame className={cn("h-6 w-6", leadData.is_hot ? "text-warning fill-warning" : "text-muted-foreground")} />
-            </button>
-            {leadData.full_name}
-          </DialogTitle>
-        </DialogHeader>
+  const tabScrollClass = cn(
+    "mt-4 overflow-y-auto pr-2 scrollbar-thin scrollbar-thumb-muted scrollbar-track-transparent",
+    isMobile ? "max-h-[60vh]" : "flex-1 min-h-0",
+  );
 
+  const leadTitle = (
+    <span className="flex items-center gap-3 font-display text-2xl">
+      <button onClick={handleToggleHot} className="hover:scale-110 transition-transform">
+        <Flame className={cn("h-6 w-6", leadData.is_hot ? "text-warning fill-warning" : "text-muted-foreground")} />
+      </button>
+      {leadData.full_name}
+    </span>
+  );
+
+  const leadDetailBody = (
+    <>
         {/* Status & Source - Always visible */}
         <div className="flex flex-wrap gap-3 mb-4">
           <span className={cn(
@@ -165,15 +177,23 @@ export function LeadDetailDialog({ lead, onClose }: LeadDetailDialogProps) {
         </div>
 
         {/* Tabs for better organization */}
-        <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+        <Tabs
+          value={activeTab}
+          onValueChange={setActiveTab}
+          className={cn("w-full", !isMobile && "flex flex-col flex-1 min-h-0")}
+        >
           <TabsList
             className={cn(
-              "grid w-full",
-              isWebSimpleDialog 
-                ? "grid-cols-3" 
-                : hasElevatedRole 
-                  ? "grid-cols-7" 
-                  : "grid-cols-6",
+              isMobile
+                ? cn(
+                    "grid w-full",
+                    isWebSimpleDialog
+                      ? "grid-cols-3"
+                      : hasElevatedRole
+                        ? "grid-cols-7"
+                        : "grid-cols-6",
+                  )
+                : "inline-flex h-auto w-full flex-nowrap justify-start gap-0.5",
             )}
           >
             <TabsTrigger value="details">
@@ -229,7 +249,7 @@ export function LeadDetailDialog({ lead, onClose }: LeadDetailDialogProps) {
           </TabsList>
 
           {/* Details / Contact Info Tab */}
-          <TabsContent value="details" className="mt-4 space-y-4 overflow-y-auto max-h-[60vh] pr-2 scrollbar-thin scrollbar-thumb-muted scrollbar-track-transparent">
+          <TabsContent value="details" className={cn(tabScrollClass, "space-y-4")}>
             {/* Contact Info */}
             <div className="space-y-3">
               <h3 className="font-semibold text-sm text-muted-foreground uppercase tracking-wide">Contact Information</h3>
@@ -331,7 +351,7 @@ export function LeadDetailDialog({ lead, onClose }: LeadDetailDialogProps) {
 
           {/* Follow-Ups Tab (not shown for Web Contact / Keyworkers) */}
           {!isWebSimpleDialog && (
-          <TabsContent value="followups" className="mt-4 space-y-4 overflow-y-auto max-h-[60vh] pr-2 scrollbar-thin scrollbar-thumb-muted scrollbar-track-transparent">
+          <TabsContent value="followups" className={cn(tabScrollClass, "space-y-4")}>
             {!isCompletedOrClosed && (
               <div className="flex items-center justify-between pb-4 border-b">
                 <div className="space-y-1">
@@ -391,7 +411,7 @@ export function LeadDetailDialog({ lead, onClose }: LeadDetailDialogProps) {
 
           {/* Notes Tab (not shown for Web Contact / Keyworkers) */}
           {!isWebSimpleDialog && (
-          <TabsContent value="notes" className="mt-4 space-y-4 overflow-y-auto max-h-[60vh] pr-2 scrollbar-thin scrollbar-thumb-muted scrollbar-track-transparent">
+          <TabsContent value="notes" className={cn(tabScrollClass, "space-y-4")}>
             <div className="space-y-4">
               <div className="flex items-center justify-between pb-4 border-b">
                 <h3 className="font-semibold flex items-center gap-2">
@@ -440,10 +460,11 @@ export function LeadDetailDialog({ lead, onClose }: LeadDetailDialogProps) {
               ) : (
                 <div className="space-y-3">
                   {notes.map((note) => (
-                    <div key={note.id} className="p-3 rounded-lg bg-muted/50 text-sm border border-border">
-                      <p className="whitespace-pre-wrap">{note.note}</p>
-                      <p className="text-xs text-muted-foreground mt-2">
-                        {(note as any).profiles?.full_name || "Unknown"} • {new Date(note.created_at).toLocaleString()}
+                    <div key={note.id} className="rounded-lg border border-border bg-muted/50 p-4">
+                      <LeadNoteContent note={note.note} />
+                      <p className="mt-3 border-t border-border/60 pt-3 text-xs text-muted-foreground">
+                        {(note as any).profiles?.full_name || (note.created_by ? "Unknown" : "System")} •{" "}
+                        {new Date(note.created_at).toLocaleString()}
                       </p>
                     </div>
                   ))}
@@ -455,21 +476,21 @@ export function LeadDetailDialog({ lead, onClose }: LeadDetailDialogProps) {
 
           {/* Tasks Tab (not shown for Web Contact / Keyworkers) */}
           {!isWebSimpleDialog && (
-          <TabsContent value="tasks" className="mt-4 overflow-y-auto max-h-[60vh] pr-2 scrollbar-thin scrollbar-thumb-muted scrollbar-track-transparent">
+          <TabsContent value="tasks" className={tabScrollClass}>
             <TasksTab leadId={leadData.id} />
           </TabsContent>
           )}
 
           {/* Calendar Tab (not shown for Web Contact / Keyworkers) */}
           {!isWebSimpleDialog && (
-          <TabsContent value="calendar" className="mt-4 overflow-y-auto max-h-[60vh] pr-2 scrollbar-thin scrollbar-thumb-muted scrollbar-track-transparent">
+          <TabsContent value="calendar" className={tabScrollClass}>
             <CalendarTab leadId={leadData.id} leadName={leadData.full_name} />
           </TabsContent>
           )}
 
           {/* Contact Message Tab (Web Contact only) */}
           {isWebContact && (
-            <TabsContent value="contact-message" className="mt-4 space-y-4 overflow-y-auto max-h-[60vh] pr-2 scrollbar-thin scrollbar-thumb-muted scrollbar-track-transparent">
+            <TabsContent value="contact-message" className={cn(tabScrollClass, "space-y-4")}>
               <div className="space-y-4">
                 <div className="p-4 rounded-xl bg-muted/50">
                   <h3 className="font-semibold mb-2">Reason for contacting</h3>
@@ -489,7 +510,7 @@ export function LeadDetailDialog({ lead, onClose }: LeadDetailDialogProps) {
 
           {/* Keyworkers Details Tab (Web Keyworkers only) */}
           {isWebKeyworkers && (
-            <TabsContent value="keyworkers-details" className="mt-4 space-y-4 overflow-y-auto max-h-[60vh] pr-2 scrollbar-thin scrollbar-thumb-muted scrollbar-track-transparent">
+            <TabsContent value="keyworkers-details" className={cn(tabScrollClass, "space-y-4")}>
               <div className="space-y-4">
                 <div className="p-4 rounded-xl bg-muted/50">
                   <h3 className="font-semibold mb-2">Length of Stay</h3>
@@ -517,7 +538,7 @@ export function LeadDetailDialog({ lead, onClose }: LeadDetailDialogProps) {
 
           {/* Tourist Details Tab (Web Tourist only) */}
           {isWebTourist && (
-            <TabsContent value="tourist-details" className="mt-4 space-y-4 overflow-y-auto max-h-[60vh] pr-2 scrollbar-thin scrollbar-thumb-muted scrollbar-track-transparent">
+            <TabsContent value="tourist-details" className={cn(tabScrollClass, "space-y-4")}>
               <div className="space-y-4">
                 <div className="grid grid-cols-2 gap-4">
                   <div className="p-4 rounded-xl bg-muted/50">
@@ -539,7 +560,7 @@ export function LeadDetailDialog({ lead, onClose }: LeadDetailDialogProps) {
 
           {/* Content Creator Details Tab */}
           {isWebCreator && (
-            <TabsContent value="creator-details" className="mt-4 space-y-4 overflow-y-auto max-h-[60vh] pr-2 scrollbar-thin scrollbar-thumb-muted scrollbar-track-transparent">
+            <TabsContent value="creator-details" className={cn(tabScrollClass, "space-y-4")}>
               <div className="space-y-4">
                 <div className="p-4 rounded-xl bg-muted/50">
                   <h3 className="font-semibold mb-2 text-xs uppercase text-muted-foreground">City / University</h3>
@@ -593,7 +614,7 @@ export function LeadDetailDialog({ lead, onClose }: LeadDetailDialogProps) {
 
           {/* Secure Booking Details Tab */}
           {isWebSecureBooking && (
-            <TabsContent value="secure-booking" className="mt-4 space-y-4 overflow-y-auto max-h-[60vh] pr-2 scrollbar-thin scrollbar-thumb-muted scrollbar-track-transparent">
+            <TabsContent value="secure-booking" className={cn(tabScrollClass, "space-y-4")}>
               <div className="space-y-4">
                 <div className="p-4 rounded-xl bg-primary/10 border border-primary/20">
                   <h3 className="font-semibold mb-2 text-xs uppercase text-primary">Payment Details</h3>
@@ -644,7 +665,7 @@ export function LeadDetailDialog({ lead, onClose }: LeadDetailDialogProps) {
 
           {/* Refer a Friend Details Tab */}
           {isWebReferFriend && (
-            <TabsContent value="refer-friend" className="mt-4 space-y-4 overflow-y-auto max-h-[60vh] pr-2 scrollbar-thin scrollbar-thumb-muted scrollbar-track-transparent">
+            <TabsContent value="refer-friend" className={cn(tabScrollClass, "space-y-4")}>
               <div className="space-y-4">
                 <div className="p-4 rounded-xl bg-primary/10 border border-primary/20">
                   <h3 className="font-semibold mb-2 text-xs uppercase text-primary">Referral Payment</h3>
@@ -685,13 +706,13 @@ export function LeadDetailDialog({ lead, onClose }: LeadDetailDialogProps) {
           )}
 
           {/* Email Tab */}
-          <TabsContent value="email" className="mt-4 space-y-4 overflow-y-auto max-h-[60vh] pr-2 scrollbar-thin scrollbar-thumb-muted scrollbar-track-transparent">
+          <TabsContent value="email" className={cn(tabScrollClass, "space-y-4")}>
             <EmailTab lead={leadData} />
           </TabsContent>
 
           {/* History Tab - Only for elevated users */}
           {hasElevatedRole && (
-            <TabsContent value="history" className="mt-4 space-y-4 overflow-y-auto max-h-[60vh] pr-2 scrollbar-thin scrollbar-thumb-muted scrollbar-track-transparent">
+            <TabsContent value="history" className={cn(tabScrollClass, "space-y-4")}>
               <div className="space-y-4">
                 <div className="flex items-center justify-between pb-4 border-b">
                   <h3 className="font-semibold flex items-center gap-2">
@@ -704,9 +725,45 @@ export function LeadDetailDialog({ lead, onClose }: LeadDetailDialogProps) {
             </TabsContent>
           )}
         </Tabs>
+    </>
+  );
 
-        {/* Follow-Up Form Dialog */}
-        <FollowUpForm
+  return (
+    <>
+      {isMobile ? (
+        <Dialog open={!!leadData} onOpenChange={() => onClose()}>
+          <DialogContent className="sm:max-w-2xl overflow-hidden flex flex-col pb-6">
+            <div className="mx-auto mt-2 mb-2 h-1.5 w-12 rounded-full bg-muted" aria-hidden />
+            <DialogHeader className="sm:pt-0">
+              <DialogTitle>{leadTitle}</DialogTitle>
+              <DialogDescription className="sr-only">
+                Lead details, follow-ups, tasks, and activity for {leadData.full_name}
+              </DialogDescription>
+            </DialogHeader>
+            {leadDetailBody}
+          </DialogContent>
+        </Dialog>
+      ) : (
+        <Sheet open={!!leadData} onOpenChange={(open) => !open && onClose()}>
+          <SheetContent
+            side="right"
+            className="flex h-full w-full max-w-[min(100vw,1100px)] flex-col gap-0 overflow-hidden p-0 sm:max-w-none sm:w-[1100px]"
+          >
+            <SheetHeader className="shrink-0 border-b px-6 pb-4 pt-6 text-left">
+              <SheetTitle className="font-display text-2xl">{leadTitle}</SheetTitle>
+              <SheetDescription className="sr-only">
+                Lead details, follow-ups, tasks, and activity for {leadData.full_name}
+              </SheetDescription>
+            </SheetHeader>
+            <div className="flex min-h-0 flex-1 flex-col overflow-hidden px-6 pb-6">
+              {leadDetailBody}
+            </div>
+          </SheetContent>
+        </Sheet>
+      )}
+
+      {/* Follow-Up Form Dialog */}
+      <FollowUpForm
           leadId={leadData.id}
           currentFollowUpCount={followUpCount}
           open={showFollowUpForm}
@@ -772,7 +829,6 @@ export function LeadDetailDialog({ lead, onClose }: LeadDetailDialogProps) {
             setPendingStatus(null);
           }}
         />
-      </DialogContent>
-    </Dialog>
+    </>
   );
 }

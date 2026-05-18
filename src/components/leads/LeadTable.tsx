@@ -30,12 +30,14 @@ import { Search, Filter, Flame, Eye, MoreHorizontal, Trash2, CheckSquare, Square
 import { LeadFilters, ActiveFiltersDisplay, type LeadFilters as LeadFiltersType } from "./LeadFilters";
 import { useDeleteLead, useToggleHotLead, useUpdateLeadStatus, useAssignLead } from "@/hooks/useLeads";
 import { useAuth } from "@/hooks/useAuth";
-import { useSystemSettingsContext } from "@/contexts/SystemSettingsContext";
 import { toast } from "@/hooks/use-toast";
 import { useTeamMembers } from "@/hooks/useDashboardStats";
 import { useWebLeadReadManager } from "@/hooks/useWebLeadsUnread";
 import { useLeadSources } from "@/hooks/useLeadSources";
 import type { Database } from "@/integrations/supabase/types";
+import { DEPOSITS_PAYMENTS_SOURCE_SLUG } from "@/constants/leadSegments";
+import { getLeadPaymentId, getLeadPaymentAmountPounds } from "@/utils/leadPaymentAmount";
+import { useSystemSettingsContext } from "@/contexts/SystemSettingsContext";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -50,7 +52,7 @@ import {
 type Lead = Database["public"]["Tables"]["leads"]["Row"];
 type LeadStatus = Database["public"]["Enums"]["lead_status"];
 
-type LeadTableViewMode = "default" | "web_contact" | "web_keyworkers";
+type LeadTableViewMode = "default" | "web_contact" | "web_keyworkers" | "deposits_payments";
 const WEB_LEAD_SOURCES = [
   "web_contact",
   "web_booking",
@@ -62,6 +64,7 @@ const WEB_LEAD_SOURCES = [
   "web_creator",
   "web_secure_booking",
   "web_refer_friend",
+  DEPOSITS_PAYMENTS_SOURCE_SLUG,
 ];
 
 interface LeadTableProps {
@@ -70,9 +73,16 @@ interface LeadTableProps {
   viewMode?: LeadTableViewMode;
   // Optional: IDs of all leads in the current filter (across all pages)
   allLeadIds?: string[];
+  excludeSourceSlugs?: string[];
 }
 
-export function LeadTable({ leads, onViewLead, viewMode = "default", allLeadIds }: LeadTableProps) {
+export function LeadTable({
+  leads,
+  onViewLead,
+  viewMode = "default",
+  allLeadIds,
+  excludeSourceSlugs = [],
+}: LeadTableProps) {
   const [searchQuery, setSearchQuery] = useState("");
   const [filters, setFilters] = useState<LeadFiltersType>({
     statuses: [],
@@ -99,7 +109,6 @@ export function LeadTable({ leads, onViewLead, viewMode = "default", allLeadIds 
   const [leadToDelete, setLeadToDelete] = useState<Lead | null>(null);
   
   const { isAdmin, user } = useAuth();
-  const { formatCurrency } = useSystemSettingsContext();
   const { data: sources = [] } = useLeadSources();
   const deleteLead = useDeleteLead();
   const toggleHot = useToggleHotLead();
@@ -107,6 +116,8 @@ export function LeadTable({ leads, onViewLead, viewMode = "default", allLeadIds 
   const assignLead = useAssignLead();
   const { data: teamMembers = [] } = useTeamMembers();
   const { markLeadAsRead, isLeadUnread } = useWebLeadReadManager();
+  const { formatCurrency } = useSystemSettingsContext();
+  const isDepositsPaymentsView = viewMode === "deposits_payments";
 
   // Apply search and filters
   const filteredLeads = leads.filter((lead) => {
@@ -114,7 +125,7 @@ export function LeadTable({ leads, onViewLead, viewMode = "default", allLeadIds 
     const matchesSearch =
       lead.full_name.toLowerCase().includes(searchQuery.toLowerCase()) ||
       lead.email.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      lead.phone.includes(searchQuery);
+      (lead.phone?.includes(searchQuery) ?? false);
 
     if (!matchesSearch) return false;
 
@@ -413,6 +424,7 @@ export function LeadTable({ leads, onViewLead, viewMode = "default", allLeadIds 
               <LeadFilters
                 filters={filters}
                 onFiltersChange={setFilters}
+                excludeSourceSlugs={excludeSourceSlugs}
                 onClear={() => setFilters({
                   statuses: [],
                   sources: [],
@@ -552,16 +564,21 @@ export function LeadTable({ leads, onViewLead, viewMode = "default", allLeadIds 
                 />
               </TableHead>
               <TableHead className="font-semibold">Lead</TableHead>
+              <TableHead className="font-semibold">Phone</TableHead>
               <TableHead className="font-semibold">Source</TableHead>
               <TableHead className="font-semibold">
                 {viewMode === "web_contact"
                   ? "Reason"
                   : viewMode === "web_keyworkers"
                     ? "Length of Stay"
-                    : "LP / Campaign"}
+                    : viewMode === "deposits_payments"
+                      ? "Payment ID"
+                      : "LP / Campaign"}
               </TableHead>
+              {isDepositsPaymentsView && (
+                <TableHead className="font-semibold">Amount</TableHead>
+              )}
               <TableHead className="font-semibold">Status</TableHead>
-              <TableHead className="font-semibold">Revenue</TableHead>
               <TableHead className="font-semibold">Created</TableHead>
               <TableHead className="font-semibold w-12"></TableHead>
             </TableRow>
@@ -569,7 +586,10 @@ export function LeadTable({ leads, onViewLead, viewMode = "default", allLeadIds 
           <TableBody>
             {sortedLeads.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={7} className="text-center py-8 text-muted-foreground">
+                <TableCell
+                  colSpan={isDepositsPaymentsView ? 9 : 8}
+                  className="text-center py-8 text-muted-foreground"
+                >
                   No leads found
                 </TableCell>
               </TableRow>
@@ -578,7 +598,9 @@ export function LeadTable({ leads, onViewLead, viewMode = "default", allLeadIds 
                 const statusConfig = LEAD_STATUS_CONFIG[lead.lead_status];
                 const sourceConfig = getSourceConfig(lead.source, sources);
                 const isSelected = selectedLeads.has(lead.id);
-                
+                const paymentAmount = isDepositsPaymentsView
+                  ? getLeadPaymentAmountPounds(lead.metadata)
+                  : null;
                 return (
                   <TableRow 
                     key={lead.id} 
@@ -634,6 +656,9 @@ export function LeadTable({ leads, onViewLead, viewMode = "default", allLeadIds 
                       </div>
                     </TableCell>
                     <TableCell>
+                      <span className="text-sm whitespace-nowrap">{lead.phone?.trim() || "—"}</span>
+                    </TableCell>
+                    <TableCell>
                       <div className="flex items-center gap-2">
                         <span>{sourceConfig.icon}</span>
                         <span className="text-sm">{sourceConfig.label}</span>
@@ -648,12 +673,23 @@ export function LeadTable({ leads, onViewLead, viewMode = "default", allLeadIds 
                         <span className="text-xs text-muted-foreground">
                           {lead.keyworker_length_of_stay || "-"}
                         </span>
+                      ) : viewMode === "deposits_payments" ? (
+                        <span className="text-xs font-mono text-muted-foreground break-all">
+                          {getLeadPaymentId(lead.metadata) ?? "—"}
+                        </span>
                       ) : (
                         <span className="text-xs text-muted-foreground">
                           {lead.landing_page ?? "-"}
                         </span>
                       )}
                     </TableCell>
+                    {isDepositsPaymentsView && (
+                      <TableCell>
+                        <span className="text-sm font-medium whitespace-nowrap">
+                          {paymentAmount !== null ? formatCurrency(paymentAmount) : "—"}
+                        </span>
+                      </TableCell>
+                    )}
                     <TableCell>
                       <span className={cn(
                         "px-3 py-1 rounded-full text-xs font-semibold",
@@ -661,11 +697,6 @@ export function LeadTable({ leads, onViewLead, viewMode = "default", allLeadIds 
                         statusConfig.color
                       )}>
                         {statusConfig.label}
-                      </span>
-                    </TableCell>
-                    <TableCell>
-                      <span className="font-semibold">
-                        {formatCurrency(lead.potential_revenue)}
                       </span>
                     </TableCell>
                     <TableCell className="text-muted-foreground">

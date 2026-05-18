@@ -1,6 +1,8 @@
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell } from "recharts";
+import { useMemo } from "react";
 import { getSourceConfig } from "@/types/crm";
 import { useLeadSources } from "@/hooks/useLeadSources";
+import { CHART_PALETTE } from "@/constants/chartTheme";
+import { cn } from "@/lib/utils";
 
 interface ChannelData {
   source: string;
@@ -11,105 +13,133 @@ interface ChannelData {
 
 interface ChannelPerformanceProps {
   data: ChannelData[];
+  className?: string;
 }
 
-const COLORS = [
-  "hsl(211, 100%, 66%)",
-  "hsl(47, 100%, 50%)",
-  "hsl(166, 58%, 47%)",
-  "hsl(0, 100%, 47%)",
-  "hsl(280, 70%, 50%)",
-  "hsl(30, 100%, 50%)",
-  "hsl(180, 70%, 45%)",
-];
+interface ChannelRow {
+  name: string;
+  icon: string;
+  leads: number;
+  color: string;
+}
 
-export function ChannelPerformanceChart({ data }: ChannelPerformanceProps) {
+/** Source | bar track | count */
+const ROW_GRID = "minmax(0, 1.15fr) minmax(0, 1.6fr) 3rem";
+
+function getAxisMax(value: number): number {
+  if (value <= 0) return 80;
+  if (value <= 10) return 10;
+  if (value <= 20) return 20;
+  if (value <= 40) return 40;
+  if (value <= 60) return 60;
+  if (value <= 80) return 80;
+  const step = value <= 200 ? 20 : value <= 500 ? 50 : 100;
+  return Math.ceil(value / step) * step;
+}
+
+export function ChannelPerformanceChart({ data, className }: ChannelPerformanceProps) {
   const { data: sources = [] } = useLeadSources();
-  const totalLeads = data.reduce((sum, item) => sum + item.leads, 0);
-  
-  const chartData = data.map((item) => {
-    const sourceConfig = getSourceConfig(item.source, sources);
-    return {
-      name: sourceConfig?.label || item.source,
-      icon: sourceConfig?.icon || "📊",
-      leads: item.leads,
-      percentage: totalLeads > 0 ? (item.leads / totalLeads) * 100 : 0,
-      revenue: item.revenue,
-      converted: item.converted,
-    };
-  }).sort((a, b) => b.leads - a.leads);
 
-  if (chartData.length === 0) {
-    return (
-      <div className="bg-card rounded-2xl p-6 shadow-card">
-        <div className="mb-6">
-          <h3 className="font-display text-xl font-bold">Channel Performance</h3>
-          <p className="text-sm text-muted-foreground">Leads by acquisition source</p>
-        </div>
-        <div className="h-64 flex items-center justify-center text-muted-foreground">
-          No data available
-        </div>
-      </div>
-    );
-  }
+  const { rows, axisMax } = useMemo(() => {
+    const chartRows: ChannelRow[] = data
+      .map((item, index) => {
+        const sourceConfig = getSourceConfig(item.source, sources);
+        return {
+          name: sourceConfig?.label || item.source,
+          icon: sourceConfig?.icon || "📊",
+          leads: item.leads,
+          color: CHART_PALETTE[index % CHART_PALETTE.length],
+        };
+      })
+      .sort((a, b) => b.leads - a.leads);
+
+    const maxLeads = chartRows.reduce((m, r) => Math.max(m, r.leads), 0);
+
+    return {
+      rows: chartRows,
+      axisMax: getAxisMax(maxLeads),
+    };
+  }, [data, sources]);
 
   return (
-    <div className="bg-card rounded-2xl p-6 shadow-card">
-      <div className="mb-6">
-        <h3 className="font-display text-xl font-bold">Channel Performance</h3>
-        <p className="text-sm text-muted-foreground">Leads by acquisition source</p>
+    <div
+      className={cn(
+        "bg-card rounded-2xl p-5 sm:p-6 shadow-card flex flex-col min-h-[420px] h-full",
+        className
+      )}
+    >
+      <div className="mb-4 sm:mb-5 shrink-0">
+        <h3 className="font-display text-xl font-bold tracking-tight">Channel Performance</h3>
+        <p className="text-sm text-muted-foreground font-body mt-0.5">
+          Leads by acquisition source
+        </p>
       </div>
 
-      <div className="h-64 mb-6">
-        <ResponsiveContainer width="100%" height="100%">
-          <BarChart data={chartData} layout="vertical" margin={{ left: 0, right: 20 }}>
-            <CartesianGrid strokeDasharray="3 3" stroke="hsl(0, 0%, 88%)" horizontal={true} vertical={false} />
-            <XAxis 
-              type="number" 
-              tick={{ fill: "hsl(0, 0%, 40%)", fontSize: 12 }}
-              axisLine={{ stroke: "hsl(0, 0%, 88%)" }}
-            />
-            <YAxis 
-              type="category" 
-              dataKey="name" 
-              width={80}
-              tick={{ fill: "hsl(0, 0%, 40%)", fontSize: 12 }}
-              axisLine={false}
-            />
-            <Tooltip
-              contentStyle={{
-                backgroundColor: "hsl(0, 0%, 100%)",
-                border: "1px solid hsl(0, 0%, 88%)",
-                borderRadius: "12px",
-                boxShadow: "0 4px 24px -4px rgba(0,0,0,0.1)",
-              }}
-              formatter={(value: number) => [value, "Leads"]}
-            />
-            <Bar dataKey="leads" radius={[0, 8, 8, 0]} barSize={24}>
-              {chartData.map((_, index) => (
-                <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-              ))}
-            </Bar>
-          </BarChart>
-        </ResponsiveContainer>
-      </div>
-
-      <div className="grid grid-cols-2 gap-3">
-        {chartData.slice(0, 4).map((channel, index) => (
+      {rows.length === 0 ? (
+        <div className="flex-1 flex items-center justify-center text-muted-foreground font-body text-sm">
+          No channel data in this period
+        </div>
+      ) : (
+        <div className="flex flex-col flex-1 min-h-0">
           <div
-            key={channel.name}
-            className="flex items-center gap-3 p-3 rounded-xl bg-muted/50"
+            className="grid items-end gap-x-3 pb-2 border-b border-border/80 shrink-0"
+            style={{ gridTemplateColumns: ROW_GRID }}
           >
-            <span className="text-xl">{channel.icon}</span>
-            <div className="flex-1 min-w-0">
-              <p className="text-sm font-medium truncate">{channel.name}</p>
-              <p className="text-xs text-muted-foreground">
-                {channel.leads} leads • {channel.percentage.toFixed(1)}%
-              </p>
-            </div>
+            <span className="text-[10px] sm:text-xs font-semibold uppercase tracking-wider text-muted-foreground font-body">
+              Source
+            </span>
+            <span className="sr-only">Bar</span>
+            <span className="text-[10px] sm:text-xs font-semibold uppercase tracking-wider text-muted-foreground font-body text-right">
+              Enquiries
+            </span>
           </div>
-        ))}
-      </div>
+
+          <div className="flex-1 flex flex-col py-1 min-h-0 overflow-y-auto scrollbar-thin">
+            {rows.map((channel) => (
+              <div
+                key={channel.name}
+                className="grid items-center gap-x-3 py-2.5 sm:py-3 border-b border-border/40 last:border-b-0"
+                style={{ gridTemplateColumns: ROW_GRID }}
+              >
+                <div className="flex items-center gap-2 sm:gap-2.5 min-w-0">
+                  <span
+                    className="flex h-8 w-8 sm:h-9 sm:w-9 shrink-0 items-center justify-center rounded-lg text-base sm:text-lg shadow-sm"
+                    style={{ backgroundColor: channel.color }}
+                    aria-hidden
+                  >
+                    {channel.icon}
+                  </span>
+                  <span
+                    className="text-xs sm:text-sm font-medium text-foreground font-body leading-tight line-clamp-2"
+                    title={channel.name}
+                  >
+                    {channel.name}
+                  </span>
+                </div>
+
+                <div className="relative h-7 sm:h-8 flex items-center">
+                  <div className="absolute inset-y-1.5 inset-x-0 rounded-full bg-muted/60" aria-hidden />
+                  <div
+                    className="relative h-4 sm:h-5 rounded-full transition-all duration-500 ease-out"
+                    style={{
+                      width:
+                        axisMax > 0
+                          ? `${Math.max((channel.leads / axisMax) * 100, channel.leads > 0 ? 4 : 0)}%`
+                          : "0%",
+                      backgroundColor: channel.color,
+                      minWidth: channel.leads > 0 ? "6px" : 0,
+                    }}
+                  />
+                </div>
+
+                <span className="text-sm sm:text-base font-display font-bold text-foreground text-right tabular-nums">
+                  {channel.leads}
+                </span>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
     </div>
   );
 }

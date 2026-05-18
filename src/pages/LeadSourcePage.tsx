@@ -24,7 +24,8 @@ import { PaginationInfo } from "@/components/ui/pagination-info";
 import { ExportDialog } from "@/components/dashboard/ExportDialog";
 import { Button } from "@/components/ui/button";
 import { toast } from "@/hooks/use-toast";
-import { exportSourceToExcel, exportSourceToPDF } from "@/utils/exportSource";
+import { exportSourceToCSV, exportSourceToExcel, exportSourceToPDF } from "@/utils/exportSource";
+import type { ExportFormat } from "@/components/dashboard/ExportDialog";
 import type { Database } from "@/integrations/supabase/types";
 
 type Lead = Database["public"]["Tables"]["leads"]["Row"];
@@ -75,35 +76,27 @@ export default function LeadSourcePage() {
     }
   }, [activeTab]);
 
-  const handleExport = async (format: "excel" | "pdf", startDate: Date, endDate: Date) => {
+  const handleExport = async (format: ExportFormat, startDate: Date, endDate: Date) => {
     if (!source) return;
     
     setIsExporting(true);
     try {
-      if (format === "excel") {
-        await exportSourceToExcel({
-          startDate,
-          endDate,
-          currencySymbol: currency.symbol,
-          sourceSlug: source.slug,
-          sourceName: source.name,
-        });
-        toast({
-          title: "Export Successful",
-          description: `Excel file for ${source.name} has been downloaded`,
-        });
+      const args = {
+        startDate,
+        endDate,
+        currencySymbol: currency.symbol,
+        sourceSlug: source.slug,
+        sourceName: source.name,
+      };
+      if (format === "csv") {
+        await exportSourceToCSV(args);
+        toast({ title: "Export Successful", description: `CSV file for ${source.name} has been downloaded` });
+      } else if (format === "excel") {
+        await exportSourceToExcel(args);
+        toast({ title: "Export Successful", description: `Excel file for ${source.name} has been downloaded` });
       } else {
-        await exportSourceToPDF({
-          startDate,
-          endDate,
-          currencySymbol: currency.symbol,
-          sourceSlug: source.slug,
-          sourceName: source.name,
-        });
-        toast({
-          title: "Export Successful",
-          description: `PDF file for ${source.name} has been downloaded`,
-        });
+        await exportSourceToPDF(args);
+        toast({ title: "Export Successful", description: `PDF file for ${source.name} has been downloaded` });
       }
       setExportDialogOpen(false);
     } catch (error: any) {

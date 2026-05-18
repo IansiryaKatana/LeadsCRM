@@ -19,11 +19,15 @@ export interface FollowUpAnalytics {
   upcomingFollowups: number;
 }
 
-export function useFollowUpAnalytics(academicYear?: string) {
+export function useFollowUpAnalytics(
+  academicYear?: string,
+  startDate?: Date | null,
+  endDate?: Date | null
+) {
   const { user } = useAuth();
 
   return useQuery({
-    queryKey: ["followup-analytics", academicYear],
+    queryKey: ["followup-analytics", academicYear, startDate?.toISOString(), endDate?.toISOString()],
     queryFn: async (): Promise<FollowUpAnalytics> => {
       let query = supabase
         .from("leads")
@@ -45,6 +49,12 @@ export function useFollowUpAnalytics(academicYear?: string) {
 
       if (academicYear && academicYear.trim() !== "") {
         query = query.eq("academic_year", academicYear);
+      }
+      if (startDate) {
+        query = query.gte("created_at", startDate.toISOString());
+      }
+      if (endDate) {
+        query = query.lte("created_at", endDate.toISOString());
       }
 
       const { data: leads, error } = await query;

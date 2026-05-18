@@ -41,7 +41,7 @@ export function WebhookIntegrationSettingsTab() {
                   from your website and automatically creates leads in the CRM.
                 </p>
                 <ul className="list-disc pl-5 space-y-1">
-                  <li>Supported forms: Booking, Callback, Inquiry, Resident Support, Tourist/Keyworker Short Stay, Refer a Friend, Secure Booking (Pay Deposit), and Content Creator.</li>
+                  <li>Supported forms: Booking, Callback, Inquiry, Resident Support, Tourist/Keyworker Short Stay, Refer a Friend, Secure Booking (Pay Deposit), Pay Urban Hub (balance payments), and Content Creator.</li>
                   <li>
                     Each form sends a <span className="font-mono">form_type</span> value so the CRM knows if it&apos;s a
                     contact, booking, callback, short-stay, referral, creator, or payment lead.

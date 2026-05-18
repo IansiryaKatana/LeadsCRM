@@ -6,7 +6,6 @@ import { LeadDetailDialog } from "@/components/leads/LeadDetailDialog";
 import { SkeletonTable } from "@/components/ui/skeleton-loader";
 import { useLeads } from "@/hooks/useLeads";
 import { usePagination } from "@/hooks/usePagination";
-import { LEAD_STATUS_CONFIG } from "@/types/crm";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   Select,
@@ -15,56 +14,74 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Flame, Calendar } from "lucide-react";
+import { Flame, Calendar, Download } from "lucide-react";
 import { useSystemSettingsContext } from "@/contexts/SystemSettingsContext";
 import { TablePagination } from "@/components/ui/table-pagination";
 import { PaginationInfo } from "@/components/ui/pagination-info";
-import type { Database } from "@/integrations/supabase/types";
+import { ExportDialog } from "@/components/dashboard/ExportDialog";
+import { Button } from "@/components/ui/button";
+import { toast } from "@/hooks/use-toast";
 import {
-  EXCLUDED_FROM_ALL_LEADS_SOURCE_SLUGS,
-  isExcludedFromAllLeads,
-} from "@/constants/leadSegments";
+  exportSourceToCSV,
+  exportSourceToExcel,
+  exportSourceToPDF,
+} from "@/utils/exportSource";
+import type { ExportFormat } from "@/components/dashboard/ExportDialog";
+import type { Database } from "@/integrations/supabase/types";
 
 type Lead = Database["public"]["Tables"]["leads"]["Row"];
+type LeadTableViewMode = "default" | "web_contact" | "web_keyworkers" | "deposits_payments";
 
-export default function Leads() {
-  const { academicYears, defaultAcademicYear, currentAcademicYear, setCurrentAcademicYear } = useSystemSettingsContext();
+export interface SegmentLeadsPageProps {
+  sourceSlug: string;
+  title: string;
+  subtitle: string;
+  viewMode?: LeadTableViewMode;
+  showExport?: boolean;
+  showCreateLead?: boolean;
+}
 
-  // Track whether the user has manually changed the year in this session
+export function SegmentLeadsPage({
+  sourceSlug,
+  title,
+  subtitle,
+  viewMode = "default",
+  showExport = true,
+  showCreateLead = true,
+}: SegmentLeadsPageProps) {
+  const { academicYears, defaultAcademicYear, currentAcademicYear, setCurrentAcademicYear, currency } =
+    useSystemSettingsContext();
   const [hasUserChangedYear, setHasUserChangedYear] = useState(false);
-  const [selectedYear, setSelectedYear] = useState<string>("");
+  const [selectedYear, setSelectedYear] = useState("");
+  const { data: allLeads = [], isLoading } = useLeads(selectedYear || undefined);
+  const [selectedLead, setSelectedLead] = useState<Lead | null>(null);
+  const [activeTab, setActiveTab] = useState("all");
+  const [exportDialogOpen, setExportDialogOpen] = useState(false);
+  const [isExporting, setIsExporting] = useState(false);
 
-  // When settings/context change and the user hasn't changed the year yet,
-  // keep the local selection in sync with the configured default/current year.
   useEffect(() => {
     if (!hasUserChangedYear) {
-      const baseYear = currentAcademicYear || defaultAcademicYear || "";
-      setSelectedYear(baseYear);
+      setSelectedYear(currentAcademicYear || defaultAcademicYear || "");
     }
   }, [currentAcademicYear, defaultAcademicYear, hasUserChangedYear]);
 
-  // Keep shared currentAcademicYear in sync when local selection changes
   useEffect(() => {
     setCurrentAcademicYear(selectedYear);
   }, [selectedYear, setCurrentAcademicYear]);
 
-  const { data: leads = [], isLoading } = useLeads(selectedYear || undefined);
-
-  const salesLeads = useMemo(
-    () => leads.filter((lead) => !isExcludedFromAllLeads(lead.source)),
-    [leads],
+  const segmentLeads = useMemo(
+    () => allLeads.filter((lead) => lead.source === sourceSlug),
+    [allLeads, sourceSlug],
   );
-  const [selectedLead, setSelectedLead] = useState<Lead | null>(null);
-  const [activeTab, setActiveTab] = useState("all");
 
   const filterLeads = (status: string) => {
-    if (status === "all") return salesLeads;
-    if (status === "hot") return salesLeads.filter((l) => l.is_hot);
-    return salesLeads.filter((l) => l.lead_status === status);
+    if (status === "all") return segmentLeads;
+    if (status === "hot") return segmentLeads.filter((l) => l.is_hot);
+    return segmentLeads.filter((l) => l.lead_status === status);
   };
 
-  const filteredLeads = useMemo(() => filterLeads(activeTab), [salesLeads, activeTab]);
-  
+  const filteredLeads = useMemo(() => filterLeads(activeTab), [segmentLeads, activeTab]);
+
   const {
     paginatedItems: paginatedLeads,
     currentPage,
@@ -79,20 +96,49 @@ export default function Leads() {
     totalItems,
   } = usePagination(filteredLeads);
 
-  // Reset to page 1 when tab changes
   useEffect(() => {
     if (currentPage > 1) {
       goToPage(1);
     }
   }, [activeTab]);
 
+  const handleExport = async (format: ExportFormat, startDate: Date, endDate: Date) => {
+    setIsExporting(true);
+    try {
+      const exportArgs = {
+        startDate,
+        endDate,
+        currencySymbol: currency.symbol,
+        sourceSlug,
+        sourceName: title,
+        viewMode,
+      };
+      if (format === "csv") {
+        await exportSourceToCSV(exportArgs);
+        toast({ title: "Export Successful", description: `CSV file for ${title} has been downloaded` });
+      } else if (format === "excel") {
+        await exportSourceToExcel(exportArgs);
+        toast({ title: "Export Successful", description: `Excel file for ${title} has been downloaded` });
+      } else {
+        await exportSourceToPDF(exportArgs);
+        toast({ title: "Export Successful", description: `PDF file for ${title} has been downloaded` });
+      }
+      setExportDialogOpen(false);
+    } catch (error: unknown) {
+      const message = error instanceof Error ? error.message : "Failed to export data";
+      toast({ title: "Export Failed", description: message, variant: "destructive" });
+    } finally {
+      setIsExporting(false);
+    }
+  };
+
   const tabCounts = {
-    all: salesLeads.length,
-    hot: salesLeads.filter((l) => l.is_hot).length,
-    new: salesLeads.filter((l) => l.lead_status === "new").length,
-    high_interest: salesLeads.filter((l) => l.lead_status === "high_interest").length,
-    converted: salesLeads.filter((l) => l.lead_status === "converted").length,
-    closed: salesLeads.filter((l) => l.lead_status === "closed").length,
+    all: segmentLeads.length,
+    hot: segmentLeads.filter((l) => l.is_hot).length,
+    new: segmentLeads.filter((l) => l.lead_status === "new").length,
+    high_interest: segmentLeads.filter((l) => l.lead_status === "high_interest").length,
+    converted: segmentLeads.filter((l) => l.lead_status === "converted").length,
+    closed: segmentLeads.filter((l) => l.lead_status === "closed").length,
   };
 
   return (
@@ -100,19 +146,16 @@ export default function Leads() {
       <div className="space-y-6 animate-fade-in">
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
           <div>
-            <h1 className="font-display text-3xl sm:text-4xl font-bold">Leads</h1>
-            <p className="text-muted-foreground mt-1">
-              Manage and track sales leads — inquiries and payments are on their own pages
-            </p>
+            <h1 className="font-display text-3xl sm:text-4xl font-bold">{title}</h1>
+            <p className="text-muted-foreground mt-1">{subtitle}</p>
           </div>
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-3 flex-wrap">
             <div className="flex items-center gap-2">
               <Calendar className="h-4 w-4 text-muted-foreground" />
               <Select
                 value={selectedYear || "all"}
                 onValueChange={(value) => {
-                  const year = value === "all" ? "" : value;
-                  setSelectedYear(year);
+                  setSelectedYear(value === "all" ? "" : value);
                   setHasUserChangedYear(true);
                 }}
               >
@@ -129,11 +172,16 @@ export default function Leads() {
                 </SelectContent>
               </Select>
             </div>
-            <CreateLeadForm />
+            {showExport && (
+              <Button variant="outline" className="gap-2" onClick={() => setExportDialogOpen(true)}>
+                <Download className="h-4 w-4" />
+                <span className="hidden sm:inline">Export</span>
+              </Button>
+            )}
+            {showCreateLead && <CreateLeadForm />}
           </div>
         </div>
 
-        {/* Pagination Info at Top */}
         {!isLoading && filteredLeads.length > 0 && (
           <PaginationInfo
             startIndex={startIndex}
@@ -144,7 +192,7 @@ export default function Leads() {
         )}
 
         <Tabs value={activeTab} onValueChange={setActiveTab}>
-          <TabsList className="bg-muted/50 p-1">
+          <TabsList className="bg-muted/50 p-1 overflow-x-auto scrollbar-hide">
             <TabsTrigger value="all" className="gap-2 shrink-0">
               All {!isLoading && <span className="text-xs bg-background px-2 py-0.5 rounded-full">{tabCounts.all}</span>}
             </TabsTrigger>
@@ -156,10 +204,16 @@ export default function Leads() {
               New {!isLoading && <span className="text-xs bg-background px-2 py-0.5 rounded-full">{tabCounts.new}</span>}
             </TabsTrigger>
             <TabsTrigger value="high_interest" className="gap-2 shrink-0">
-              High Interest {!isLoading && <span className="text-xs bg-background px-2 py-0.5 rounded-full">{tabCounts.high_interest}</span>}
+              High Interest{" "}
+              {!isLoading && (
+                <span className="text-xs bg-background px-2 py-0.5 rounded-full">{tabCounts.high_interest}</span>
+              )}
             </TabsTrigger>
             <TabsTrigger value="converted" className="gap-2 shrink-0">
-              Converted {!isLoading && <span className="text-xs bg-background px-2 py-0.5 rounded-full">{tabCounts.converted}</span>}
+              Converted{" "}
+              {!isLoading && (
+                <span className="text-xs bg-background px-2 py-0.5 rounded-full">{tabCounts.converted}</span>
+              )}
             </TabsTrigger>
             <TabsTrigger value="closed" className="gap-2 shrink-0">
               Closed {!isLoading && <span className="text-xs bg-background px-2 py-0.5 rounded-full">{tabCounts.closed}</span>}
@@ -174,8 +228,8 @@ export default function Leads() {
                 <LeadTable
                   leads={paginatedLeads}
                   onViewLead={setSelectedLead}
+                  viewMode={viewMode}
                   allLeadIds={filteredLeads.map((l) => l.id)}
-                  excludeSourceSlugs={[...EXCLUDED_FROM_ALL_LEADS_SOURCE_SLUGS]}
                 />
                 {filteredLeads.length > 0 && (
                   <TablePagination
@@ -196,10 +250,18 @@ export default function Leads() {
           </TabsContent>
         </Tabs>
 
-        <LeadDetailDialog 
-          lead={selectedLead} 
-          onClose={() => setSelectedLead(null)} 
-        />
+        <LeadDetailDialog lead={selectedLead} onClose={() => setSelectedLead(null)} />
+
+        {showExport && (
+          <ExportDialog
+            open={exportDialogOpen}
+            onOpenChange={setExportDialogOpen}
+            onExport={handleExport}
+            isExporting={isExporting}
+            title={`Export ${title}`}
+            description="Includes summary analytics and lead rows with columns matching this page (e.g. Payment ID & Amount for deposits)."
+          />
+        )}
       </div>
     </AppLayout>
   );

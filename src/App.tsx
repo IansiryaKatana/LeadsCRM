@@ -2,7 +2,7 @@ import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Routes, Route } from "react-router-dom";
+import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { AuthProvider } from "@/hooks/useAuth";
 import { SystemSettingsProvider, useSystemSettingsContext } from "@/contexts/SystemSettingsContext";
 import { ProtectedRoute } from "@/components/ProtectedRoute";
@@ -10,6 +10,12 @@ import { useFavicon } from "@/hooks/useFavicon";
 import Dashboard from "./pages/Dashboard";
 import Leads from "./pages/Leads";
 import LeadSourcePage from "./pages/LeadSourcePage";
+import Inquiries from "./pages/Inquiries";
+import DepositsPayments from "./pages/DepositsPayments";
+import {
+  INQUIRIES_SOURCE_SLUG,
+  DEPOSITS_PAYMENTS_SOURCE_SLUG,
+} from "@/constants/leadSegments";
 import Tasks from "./pages/Tasks";
 import Calendar from "./pages/Calendar";
 import Reports from "./pages/Reports";
@@ -45,6 +51,16 @@ const App = () => (
             <Route path="/auth" element={<Auth />} />
             <Route path="/" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
             <Route path="/leads" element={<ProtectedRoute><Leads /></ProtectedRoute>} />
+            <Route path="/inquiries" element={<ProtectedRoute><Inquiries /></ProtectedRoute>} />
+            <Route path="/deposits-payments" element={<ProtectedRoute><DepositsPayments /></ProtectedRoute>} />
+            <Route
+              path={`/leads/source/${INQUIRIES_SOURCE_SLUG}`}
+              element={<Navigate to="/inquiries" replace />}
+            />
+            <Route
+              path={`/leads/source/${DEPOSITS_PAYMENTS_SOURCE_SLUG}`}
+              element={<Navigate to="/deposits-payments" replace />}
+            />
             <Route path="/leads/source/:sourceSlug" element={<ProtectedRoute><LeadSourcePage /></ProtectedRoute>} />
             <Route path="/tasks" element={<ProtectedRoute><Tasks /></ProtectedRoute>} />
             <Route path="/calendar" element={<ProtectedRoute><Calendar /></ProtectedRoute>} />

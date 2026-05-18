@@ -69,6 +69,7 @@ serve(async (req) => {
       .gte("start_date", fiveAndHalfHoursFromNow)
       .lte("start_date", sixAndHalfHoursFromNow)
       .eq("reminder_sent", false)
+      .eq("status", "scheduled")
       .not("lead_id", "is", null);
 
     if (eventsError) {

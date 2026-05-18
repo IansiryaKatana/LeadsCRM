@@ -55,13 +55,15 @@ interface LeadFiltersProps {
   filters: LeadFilters;
   onFiltersChange: (filters: LeadFilters) => void;
   onClear: () => void;
+  excludeSourceSlugs?: string[];
 }
 
-export function LeadFilters({ filters, onFiltersChange, onClear }: LeadFiltersProps) {
+export function LeadFilters({ filters, onFiltersChange, onClear, excludeSourceSlugs = [] }: LeadFiltersProps) {
   const [open, setOpen] = useState(false);
   const [localFilters, setLocalFilters] = useState<LeadFilters>(filters);
   const { data: sources = [] } = useLeadSources();
   const { data: teamMembers = [] } = useTeamMembers();
+  const filterableSources = sources.filter((s) => !excludeSourceSlugs.includes(s.slug));
 
   const handleApply = () => {
     onFiltersChange(localFilters);
@@ -197,7 +199,7 @@ export function LeadFilters({ filters, onFiltersChange, onClear }: LeadFiltersPr
                   </PopoverTrigger>
                   <PopoverContent className="w-full p-0" align="start">
                     <div className="max-h-64 overflow-y-auto p-2">
-                      {sources.map((source) => (
+                      {filterableSources.map((source) => (
                         <div key={source.slug} className="flex items-center space-x-2 p-2 rounded-sm hover:bg-accent">
                           <Checkbox
                             id={`source-${source.slug}`}

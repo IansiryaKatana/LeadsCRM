@@ -24,7 +24,8 @@ import {
 import { Button } from "@/components/ui/button";
 import { Link } from "react-router-dom";
 import { toast } from "@/hooks/use-toast";
-import { exportDashboardToExcel, exportDashboardToPDF } from "@/utils/exportDashboard";
+import { exportDashboardToCSV, exportDashboardToExcel, exportDashboardToPDF } from "@/utils/exportDashboard";
+import type { ExportFormat } from "@/components/dashboard/ExportDialog";
 import {
   Select,
   SelectContent,
@@ -44,29 +45,19 @@ export default function Dashboard() {
 
   const loading = statsLoading;
 
-  const handleExport = async (format: "excel" | "pdf", startDate: Date, endDate: Date) => {
+  const handleExport = async (format: ExportFormat, startDate: Date, endDate: Date) => {
     setIsExporting(true);
     try {
-      if (format === "excel") {
-        await exportDashboardToExcel({
-          startDate,
-          endDate,
-          currencySymbol: currency.symbol,
-        });
-        toast({
-          title: "Export Successful",
-          description: "Excel file has been downloaded",
-        });
+      const args = { startDate, endDate, currencySymbol: currency.symbol };
+      if (format === "csv") {
+        await exportDashboardToCSV(args);
+        toast({ title: "Export Successful", description: "CSV file has been downloaded" });
+      } else if (format === "excel") {
+        await exportDashboardToExcel(args);
+        toast({ title: "Export Successful", description: "Excel file has been downloaded" });
       } else {
-        await exportDashboardToPDF({
-          startDate,
-          endDate,
-          currencySymbol: currency.symbol,
-        });
-        toast({
-          title: "Export Successful",
-          description: "PDF file has been downloaded",
-        });
+        await exportDashboardToPDF(args);
+        toast({ title: "Export Successful", description: "PDF file has been downloaded" });
       }
       setExportDialogOpen(false);
     } catch (error: any) {
