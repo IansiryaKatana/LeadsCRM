@@ -136,6 +136,25 @@ function calculateStatusDistribution(leads: any[]) {
   }));
 }
 
+function calculateChannelPerformance(leads: any[]) {
+  const sourceMap = new Map<string, { leads: number; converted: number; revenue: number }>();
+
+  leads.forEach((lead) => {
+    const existing = sourceMap.get(lead.source) || { leads: 0, converted: 0, revenue: 0 };
+    existing.leads++;
+    if (lead.lead_status === "converted") {
+      existing.converted++;
+      existing.revenue += lead.potential_revenue || 0;
+    }
+    sourceMap.set(lead.source, existing);
+  });
+
+  return Array.from(sourceMap.entries()).map(([source, stats]) => ({
+    source,
+    ...stats,
+  }));
+}
+
 async function buildDashboardExportPayload(data: DashboardExportData) {
   const { startDate, endDate, currencySymbol } = data;
   const leads = await fetchLeadsByDateRange(startDate, endDate);
@@ -146,6 +165,7 @@ async function buildDashboardExportPayload(data: DashboardExportData) {
     monthlyData: calculateMonthlyData(leads),
     roomDistribution: calculateRoomDistribution(leads),
     statusDistribution: calculateStatusDistribution(leads),
+    channelPerformance: calculateChannelPerformance(leads),
     dateRange: `${formatDate(startDate)} - ${formatDate(endDate)}`,
     currencySymbol,
     sources,

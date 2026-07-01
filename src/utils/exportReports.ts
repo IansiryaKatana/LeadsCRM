@@ -1,4 +1,4 @@
-import type { DashboardStats } from "@/hooks/useDashboardStats";
+import type { DashboardStats, ChannelPerformance } from "@/hooks/useDashboardStats";
 import {
   EXPORT_BRAND_NAME,
   createExcelStyles,
@@ -32,12 +32,69 @@ export interface ExportData {
   monthlyData: Array<{ month: string; leads: number; converted: number }>;
   roomDistribution: Array<{ name: string; value: number }>;
   statusDistribution: Array<{ name: string; value: number; fill: string }>;
+  channelPerformance?: ChannelPerformance[];
   dateRange: string;
   currencySymbol?: string;
   sources?: Array<{ slug: string; name: string; icon: string }>;
   leads?: RawLeadForExport[];
   leadProfile?: LeadExportProfile;
   reportTitle?: string;
+}
+
+type ChannelExportRow = {
+  name: string;
+  leads: number;
+  converted: number;
+  conversionRate: number;
+  revenue: number;
+  shareOfLeads: number;
+};
+
+function resolveChannelExportRows(
+  channels: ChannelPerformance[] | undefined,
+  sources?: Array<{ slug: string; name: string }>,
+): ChannelExportRow[] {
+  if (!channels?.length) return [];
+
+  const labelFor = (slug: string) =>
+    sources?.find((s) => s.slug === slug)?.name ?? slug.replace(/_/g, " ");
+
+  const totalLeads = channels.reduce((sum, channel) => sum + channel.leads, 0);
+
+  return [...channels]
+    .sort((a, b) => b.leads - a.leads)
+    .map((channel) => ({
+      name: labelFor(channel.source),
+      leads: channel.leads,
+      converted: channel.converted,
+      conversionRate: channel.leads > 0 ? (channel.converted / channel.leads) * 100 : 0,
+      revenue: channel.revenue,
+      shareOfLeads: totalLeads > 0 ? (channel.leads / totalLeads) * 100 : 0,
+    }));
+}
+
+function appendChannelPerformanceCsv(
+  csv: string,
+  channels: ChannelExportRow[],
+  currencySymbol: string,
+): string {
+  if (channels.length === 0) return csv;
+
+  let next = csv;
+  next += csvSectionTitle("Channel Performance");
+  next += `\n`;
+  next += `Channel,Leads,Converted,Conversion Rate,Share of Leads,Revenue (${currencySymbol})\n`;
+  channels.forEach((channel) => {
+    next += `${channel.name},${channel.leads},${channel.converted},${channel.conversionRate.toFixed(1)}%,${channel.shareOfLeads.toFixed(1)}%,${channel.revenue.toFixed(2)}\n`;
+  });
+  next += `\n`;
+  next += `Channel Leads Chart (Visual Representation):\n`;
+  next += generateASCIIChart(
+    channels.map((channel) => ({ name: channel.name, value: channel.leads })),
+    30,
+  );
+  next += `\n`;
+  return next;
 }
 
 export function exportToCSV(data: ExportData) {
@@ -53,6 +110,7 @@ export function exportToCSV(data: ExportData) {
     reportTitle = "Performance Analytics Report",
   } = data;
   const { fileDate } = getExportTimestamp();
+  const channelRows = resolveChannelExportRows(data.channelPerformance, data.sources);
   const lines: string[] = [];
   writeCsvReportHeader(lines, reportTitle, { dateRange });
 
@@ -89,6 +147,7 @@ export function exportToCSV(data: ExportData) {
     30
   );
   csv += `\n`;
+  csv = appendChannelPerformanceCsv(csv, channelRows, currencySymbol);
   csv += `\n`;
   csv += `═══════════════════════════════════════════════════════════════\n`;
   csv += `ROOM DISTRIBUTION\n`;
@@ -158,6 +217,7 @@ export async function exportToExcel(data: ExportData) {
     reportTitle = "Performance Analytics Report",
   } = data;
   const { date, time, fileDate } = getExportTimestamp();
+  const channelRows = resolveChannelExportRows(data.channelPerformance, data.sources);
   const styles = createExcelStyles();
   const mergeWidth = 8;
 
@@ -250,7 +310,50 @@ export async function exportToExcel(data: ExportData) {
   });
   
   rowIndex += 2;
-  
+
+  if (channelRows.length > 0) {
+    const channelHeaderRow = worksheet.addRow(["Channel Performance"]);
+    channelHeaderRow.height = 25;
+    worksheet.mergeCells(`A${rowIndex}:F${rowIndex}`);
+    channelHeaderRow.getCell(1).style = styles.sectionHeaderStyle;
+    rowIndex++;
+
+    const channelTableHeader = worksheet.addRow([
+      "Channel",
+      "Leads",
+      "Converted",
+      "Conversion Rate",
+      "Share of Leads",
+      `Revenue (${currencySymbol})`,
+    ]);
+    channelTableHeader.height = 20;
+    for (let col = 1; col <= 6; col++) {
+      channelTableHeader.getCell(col).style = styles.tableHeaderStyle;
+    }
+    rowIndex++;
+
+    channelRows.forEach((channel) => {
+      const row = worksheet.addRow([
+        channel.name,
+        channel.leads,
+        channel.converted,
+        `${channel.conversionRate.toFixed(1)}%`,
+        `${channel.shareOfLeads.toFixed(1)}%`,
+        channel.revenue,
+      ]);
+      row.height = 18;
+      row.getCell(1).style = styles.cellStyle;
+      row.getCell(2).style = styles.numberCellStyle;
+      row.getCell(3).style = styles.numberCellStyle;
+      row.getCell(4).style = styles.numberCellStyle;
+      row.getCell(5).style = styles.numberCellStyle;
+      row.getCell(6).style = styles.numberCellStyle;
+      rowIndex++;
+    });
+
+    rowIndex += 2;
+  }
+
   // Room Distribution Section
   const roomHeaderRow = worksheet.addRow(["Room Distribution"]);
   roomHeaderRow.height = 25;
@@ -378,6 +481,7 @@ export async function exportToPDF(data: ExportData) {
     reportTitle = "Performance Analytics Report",
   } = data;
   const { fileDate } = getExportTimestamp();
+  const channelRows = resolveChannelExportRows(data.channelPerformance, data.sources);
 
   const checkPageBreak = createPdfPageBreaker(
     doc,
@@ -480,6 +584,58 @@ export async function exportToPDF(data: ExportData) {
   
   yPos += 5;
   checkPageBreak(30);
+
+  if (channelRows.length > 0) {
+    yPos = drawPdfSectionHeader(doc, "Channel Performance", yPos, margin, pageWidth);
+
+    doc.setFontSize(10);
+    doc.setFont("helvetica", "normal");
+    doc.setTextColor(0, 0, 0);
+
+    const channelHeaders = [
+      "Channel",
+      "Leads",
+      "Conv.",
+      "Conv. %",
+      "Share %",
+      `Rev. (${currencySymbol})`,
+    ];
+    const channelColWidths = [42, 18, 18, 22, 22, 28];
+
+    doc.setFillColor(240, 240, 240);
+    doc.rect(startX, yPos - 5, pageWidth - 2 * margin, cellHeight, "F");
+    doc.setFont("helvetica", "bold");
+    xPos = startX + 2;
+    channelHeaders.forEach((header, i) => {
+      drawPdfTableCellText(doc, header, xPos, yPos, channelColWidths[i], { fontSize: 9 });
+      xPos += channelColWidths[i];
+    });
+
+    yPos += cellHeight;
+    doc.setFont("helvetica", "normal");
+
+    channelRows.forEach((channel) => {
+      checkPageBreak(cellHeight + 2);
+      xPos = startX + 2;
+      drawPdfTableCellText(doc, channel.name, xPos, yPos, channelColWidths[0], { fontSize: 9 });
+      xPos += channelColWidths[0];
+      doc.text(channel.leads.toString(), xPos, yPos);
+      xPos += channelColWidths[1];
+      doc.text(channel.converted.toString(), xPos, yPos);
+      xPos += channelColWidths[2];
+      doc.text(`${channel.conversionRate.toFixed(1)}%`, xPos, yPos);
+      xPos += channelColWidths[3];
+      doc.text(`${channel.shareOfLeads.toFixed(1)}%`, xPos, yPos);
+      xPos += channelColWidths[4];
+      doc.text(channel.revenue.toFixed(2), xPos, yPos);
+
+      drawPdfDottedRowSeparator(doc, startX, yPos + 2, pageWidth - margin);
+      yPos += cellHeight;
+    });
+
+    yPos += 5;
+    checkPageBreak(30);
+  }
 
   yPos = drawPdfSectionHeader(doc, "Room Distribution", yPos, margin, pageWidth);
   
