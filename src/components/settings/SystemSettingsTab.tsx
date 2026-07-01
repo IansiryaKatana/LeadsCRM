@@ -429,8 +429,8 @@ export function SystemSettingsTab() {
                 </div>
               </div>
               {logoUrl && (
-                <div className="p-4 border rounded-lg bg-muted/50">
-                  <img src={logoUrl} alt="Logo preview" className="max-h-16 object-contain" />
+                <div className="p-4 border rounded-lg bg-muted/50 overflow-hidden">
+                  <img src={logoUrl} alt="Logo preview" className="max-h-16 max-w-full w-auto object-contain" />
                 </div>
               )}
             </div>
@@ -462,8 +462,8 @@ export function SystemSettingsTab() {
                 </div>
               </div>
               {faviconUrl && (
-                <div className="p-4 border rounded-lg bg-muted/50">
-                  <img src={faviconUrl} alt="Favicon preview" className="max-h-8 object-contain" />
+                <div className="p-4 border rounded-lg bg-muted/50 overflow-hidden">
+                  <img src={faviconUrl} alt="Favicon preview" className="max-h-8 max-w-full w-auto object-contain" />
                 </div>
               )}
             </div>

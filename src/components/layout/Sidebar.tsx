@@ -243,16 +243,16 @@ export function Sidebar() {
           {/* Logo */}
           <div className="p-5 border-b border-border">
             <div className="flex items-center gap-2.5">
-              <div className="size-9 rounded bg-primary flex items-center justify-center overflow-hidden shrink-0">
+              <div className="h-[2.875rem] w-[2.875rem] shrink-0 rounded bg-primary flex items-center justify-center overflow-hidden">
                 <img
                   src={faviconUrl || logoUrl || "/favicon.png"}
                   alt="Urban Hub"
-                  className="size-full object-contain"
+                  className="max-h-full max-w-full object-contain"
                 />
               </div>
               <div className="min-w-0">
                 <h1 className={sidebarBrandTitleClass}>Urban Hub</h1>
-                <p className="text-xs text-muted-foreground font-body">Leads CRM</p>
+                <p className="text-xs text-muted-foreground font-body leading-tight">Leads CRM</p>
               </div>
             </div>
           </div>
@@ -358,8 +358,8 @@ export function Sidebar() {
               <NotificationCenter />
             </div>
             <div className="flex items-center gap-2.5 p-2.5 rounded-xl bg-muted/50">
-              <div className="w-9 h-9 rounded-full bg-primary/10 flex items-center justify-center">
-                <span className="font-semibold text-primary">
+              <div className="h-[2.5rem] w-[2.5rem] shrink-0 rounded bg-primary/10 flex items-center justify-center">
+                <span className="font-semibold text-primary text-sm">
                   {profile ? getInitials(profile.full_name) : "?"}
                 </span>
               </div>
