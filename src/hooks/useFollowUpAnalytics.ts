@@ -1,14 +1,32 @@
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
+import type { Database } from "@/integrations/supabase/types";
+
+type LeadRow = Pick<
+  Database["public"]["Tables"]["leads"]["Row"],
+  | "id"
+  | "lead_status"
+  | "followup_count"
+  | "created_at"
+  | "last_followup_date"
+  | "next_followup_date"
+>;
+
+type FollowUpRow = Pick<
+  Database["public"]["Tables"]["lead_followups"]["Row"],
+  "id" | "lead_id" | "followup_type" | "outcome" | "followup_date" | "followup_number"
+>;
 
 export interface FollowUpAnalytics {
   totalLeads: number;
+  closedLeads: number;
+  convertedLeads: number;
   leadsWith3PlusFollowups: number;
   complianceRate: number;
   averageFollowupsToConversion: number;
-  averageTimeToFirstFollowup: number; // in hours
-  averageFollowupInterval: number; // in hours
+  averageTimeToFirstFollowup: number;
+  averageFollowupInterval: number;
   followupResponseRate: number;
   followupTypeEffectiveness: {
     type: string;
@@ -17,162 +35,282 @@ export interface FollowUpAnalytics {
   }[];
   overdueFollowups: number;
   upcomingFollowups: number;
+  loggedFollowupsInRange: number;
+  leadsWithFirstFollowup: number;
+}
+
+const SUCCESSFUL_OUTCOMES = new Set([
+  "contacted",
+  "interested",
+  "callback_requested",
+  "voicemail",
+]);
+
+const LEAD_PAGE_SIZE = 1000;
+const FOLLOWUP_ID_CHUNK = 150;
+
+async function fetchLeadsForAnalytics(
+  academicYear?: string | null,
+): Promise<LeadRow[]> {
+  const allLeads: LeadRow[] = [];
+  let from = 0;
+
+  while (true) {
+    let query = supabase
+      .from("leads")
+      .select(
+        "id, lead_status, followup_count, created_at, last_followup_date, next_followup_date",
+      )
+      .order("created_at", { ascending: true })
+      .range(from, from + LEAD_PAGE_SIZE - 1);
+
+    if (academicYear && academicYear.trim() !== "") {
+      query = query.eq("academic_year", academicYear);
+    }
+
+    const { data, error } = await query;
+    if (error) throw error;
+
+    const page = data ?? [];
+    allLeads.push(...page);
+
+    if (page.length < LEAD_PAGE_SIZE) break;
+    from += LEAD_PAGE_SIZE;
+  }
+
+  return allLeads;
+}
+
+async function fetchFollowupsForLeads(leadIds: string[]): Promise<FollowUpRow[]> {
+  if (leadIds.length === 0) return [];
+
+  const allFollowups: FollowUpRow[] = [];
+
+  for (let i = 0; i < leadIds.length; i += FOLLOWUP_ID_CHUNK) {
+    const chunk = leadIds.slice(i, i + FOLLOWUP_ID_CHUNK);
+    const { data, error } = await supabase
+      .from("lead_followups")
+      .select("id, lead_id, followup_type, outcome, followup_date, followup_number")
+      .in("lead_id", chunk)
+      .order("followup_date", { ascending: true });
+
+    if (error) throw error;
+    if (data) allFollowups.push(...data);
+  }
+
+  return allFollowups;
+}
+
+function groupFollowupsByLeadId(followups: FollowUpRow[]) {
+  const map = new Map<string, FollowUpRow[]>();
+  for (const followup of followups) {
+    const existing = map.get(followup.lead_id) ?? [];
+    existing.push(followup);
+    map.set(followup.lead_id, existing);
+  }
+  return map;
+}
+
+function effectiveFollowupCount(lead: LeadRow, followups: FollowUpRow[] | undefined) {
+  const recordCount = followups?.length ?? 0;
+  return Math.max(lead.followup_count ?? 0, recordCount);
+}
+
+function isFollowupInRange(
+  followupDate: string,
+  startDate?: Date | null,
+  endDate?: Date | null,
+) {
+  const timestamp = new Date(followupDate).getTime();
+  if (startDate && timestamp < startDate.getTime()) return false;
+  if (endDate && timestamp > endDate.getTime()) return false;
+  return true;
 }
 
 export function useFollowUpAnalytics(
   academicYear?: string | null,
   startDate?: Date | null,
-  endDate?: Date | null
+  endDate?: Date | null,
 ) {
   const { user } = useAuth();
 
   return useQuery({
-    queryKey: ["followup-analytics", academicYear, startDate?.toISOString(), endDate?.toISOString()],
+    queryKey: [
+      "followup-analytics",
+      academicYear,
+      startDate?.toISOString(),
+      endDate?.toISOString(),
+    ],
     queryFn: async (): Promise<FollowUpAnalytics> => {
-      let query = supabase
-        .from("leads")
-        .select(`
-          id,
-          lead_status,
-          followup_count,
-          created_at,
-          last_followup_date,
-          next_followup_date,
-          lead_followups (
-            id,
-            followup_type,
-            outcome,
-            followup_date,
-            lead_id
-          )
-        `);
+      const leads = await fetchLeadsForAnalytics(academicYear);
+      const leadIds = leads.map((lead) => lead.id);
+      const allFollowups = await fetchFollowupsForLeads(leadIds);
+      const followupsByLeadId = groupFollowupsByLeadId(allFollowups);
 
-      if (academicYear && academicYear.trim() !== "") {
-        query = query.eq("academic_year", academicYear);
-      }
-      if (startDate) {
-        query = query.gte("created_at", startDate.toISOString());
-      }
-      if (endDate) {
-        query = query.lte("created_at", endDate.toISOString());
-      }
+      const rangedFollowups = allFollowups.filter((followup) =>
+        isFollowupInRange(followup.followup_date, startDate, endDate),
+      );
 
-      const { data: leads, error } = await query;
+      const totalLeads = leads.length;
+      const closedLeads = leads.filter((lead) => lead.lead_status === "closed");
+      const convertedLeads = leads.filter((lead) => lead.lead_status === "converted");
 
-      if (error) throw error;
+      const leadsWith3Plus = closedLeads.filter(
+        (lead) =>
+          effectiveFollowupCount(lead, followupsByLeadId.get(lead.id)) >= 3,
+      );
 
-      const totalLeads = leads?.length || 0;
-      const closedLeads = leads?.filter((l) => l.lead_status === "closed") || [];
-      const convertedLeads = leads?.filter((l) => l.lead_status === "converted") || [];
-      const leadsWith3Plus = closedLeads.filter((l) => (l.followup_count || 0) >= 3);
       const complianceRate =
-        closedLeads.length > 0 ? (leadsWith3Plus.length / closedLeads.length) * 100 : 0;
-
-      // Calculate average follow-ups to conversion
-      const convertedWithFollowups = convertedLeads.filter((l) => (l.followup_count || 0) > 0);
-      const averageFollowupsToConversion =
-        convertedWithFollowups.length > 0
-          ? convertedWithFollowups.reduce((sum, l) => sum + (l.followup_count || 0), 0) /
-            convertedWithFollowups.length
+        closedLeads.length > 0
+          ? (leadsWith3Plus.length / closedLeads.length) * 100
           : 0;
 
-      // Calculate average time to first follow-up
-      const leadsWithFirstFollowup = leads?.filter(
-        (l) => l.lead_followups && l.lead_followups.length > 0
-      ) || [];
+      const convertedWithFollowups = convertedLeads.filter(
+        (lead) => effectiveFollowupCount(lead, followupsByLeadId.get(lead.id)) > 0,
+      );
+
+      const averageFollowupsToConversion =
+        convertedWithFollowups.length > 0
+          ? convertedWithFollowups.reduce(
+              (sum, lead) =>
+                sum + effectiveFollowupCount(lead, followupsByLeadId.get(lead.id)),
+              0,
+            ) / convertedWithFollowups.length
+          : 0;
+
       let totalHoursToFirst = 0;
-      leadsWithFirstFollowup.forEach((lead) => {
-        if (lead.lead_followups && lead.lead_followups.length > 0) {
-          const firstFollowup = lead.lead_followups.sort(
-            (a: any, b: any) =>
-              new Date(a.followup_date).getTime() - new Date(b.followup_date).getTime()
-          )[0];
+      let firstFollowupLeadCount = 0;
+
+      for (const lead of leads) {
+        const leadFollowups = followupsByLeadId.get(lead.id) ?? [];
+        if (leadFollowups.length > 0) {
+          const firstFollowup = leadFollowups.reduce((earliest, current) =>
+            new Date(current.followup_date).getTime() <
+            new Date(earliest.followup_date).getTime()
+              ? current
+              : earliest,
+          );
           const hours =
             (new Date(firstFollowup.followup_date).getTime() -
               new Date(lead.created_at).getTime()) /
             (1000 * 60 * 60);
-          totalHoursToFirst += hours;
+          if (hours >= 0) {
+            totalHoursToFirst += hours;
+            firstFollowupLeadCount++;
+          }
+          continue;
         }
-      });
-      const averageTimeToFirstFollowup =
-        leadsWithFirstFollowup.length > 0 ? totalHoursToFirst / leadsWithFirstFollowup.length : 0;
 
-      // Calculate average follow-up interval
-      const leadsWithMultipleFollowups = leads?.filter(
-        (l) => l.lead_followups && l.lead_followups.length > 1
-      ) || [];
+        if ((lead.followup_count ?? 0) > 0 && lead.last_followup_date) {
+          const hours =
+            (new Date(lead.last_followup_date).getTime() -
+              new Date(lead.created_at).getTime()) /
+            (1000 * 60 * 60);
+          if (hours >= 0) {
+            totalHoursToFirst += hours;
+            firstFollowupLeadCount++;
+          }
+        }
+      }
+
+      const averageTimeToFirstFollowup =
+        firstFollowupLeadCount > 0 ? totalHoursToFirst / firstFollowupLeadCount : 0;
+
       let totalIntervalHours = 0;
       let intervalCount = 0;
-      leadsWithMultipleFollowups.forEach((lead) => {
-        if (lead.lead_followups && lead.lead_followups.length > 1) {
-          const sortedFollowups = lead.lead_followups.sort(
-            (a: any, b: any) =>
-              new Date(a.followup_date).getTime() - new Date(b.followup_date).getTime()
+
+      for (const lead of leads) {
+        const leadFollowups = (followupsByLeadId.get(lead.id) ?? [])
+          .filter((followup) =>
+            isFollowupInRange(followup.followup_date, startDate, endDate),
+          )
+          .sort(
+            (a, b) =>
+              new Date(a.followup_date).getTime() - new Date(b.followup_date).getTime(),
           );
-          for (let i = 1; i < sortedFollowups.length; i++) {
-            const hours =
-              (new Date(sortedFollowups[i].followup_date).getTime() -
-                new Date(sortedFollowups[i - 1].followup_date).getTime()) /
-              (1000 * 60 * 60);
+
+        for (let i = 1; i < leadFollowups.length; i++) {
+          const hours =
+            (new Date(leadFollowups[i].followup_date).getTime() -
+              new Date(leadFollowups[i - 1].followup_date).getTime()) /
+            (1000 * 60 * 60);
+          if (hours >= 0) {
             totalIntervalHours += hours;
             intervalCount++;
           }
         }
-      });
+      }
+
       const averageFollowupInterval =
         intervalCount > 0 ? totalIntervalHours / intervalCount : 0;
 
-      // Calculate follow-up response rate
-      const allFollowups = leads?.flatMap((l) => l.lead_followups || []) || [];
-      const contactedFollowups = allFollowups.filter(
-        (f: any) => f.outcome === "contacted" || f.outcome === "interested"
+      const contactedFollowups = rangedFollowups.filter((followup) =>
+        SUCCESSFUL_OUTCOMES.has(followup.outcome),
       );
       const followupResponseRate =
-        allFollowups.length > 0 ? (contactedFollowups.length / allFollowups.length) * 100 : 0;
+        rangedFollowups.length > 0
+          ? (contactedFollowups.length / rangedFollowups.length) * 100
+          : 0;
 
-      // Calculate follow-up type effectiveness
-      const typeMap = new Map<string, { count: number; conversions: number }>();
-      leads?.forEach((lead) => {
-        if (lead.lead_followups) {
-          lead.lead_followups.forEach((followup: any) => {
-            const existing = typeMap.get(followup.followup_type) || { count: 0, conversions: 0 };
-            existing.count++;
-            if (lead.lead_status === "converted") {
-              existing.conversions++;
-            }
-            typeMap.set(followup.followup_type, existing);
-          });
+      const typeStats = new Map<string, { count: number; convertedLeadIds: Set<string> }>();
+      const convertedLeadIds = new Set(convertedLeads.map((lead) => lead.id));
+
+      for (const followup of rangedFollowups) {
+        const existing = typeStats.get(followup.followup_type) ?? {
+          count: 0,
+          convertedLeadIds: new Set<string>(),
+        };
+        existing.count++;
+        if (convertedLeadIds.has(followup.lead_id)) {
+          existing.convertedLeadIds.add(followup.lead_id);
         }
-      });
-      const followupTypeEffectiveness = Array.from(typeMap.entries()).map(([type, data]) => ({
-        type,
-        count: data.count,
-        conversionRate: data.count > 0 ? (data.conversions / data.count) * 100 : 0,
-      }));
+        typeStats.set(followup.followup_type, existing);
+      }
 
-      // Count overdue and upcoming follow-ups
+      const leadsByType = new Map<string, Set<string>>();
+      for (const followup of rangedFollowups) {
+        const leadIdsForType = leadsByType.get(followup.followup_type) ?? new Set<string>();
+        leadIdsForType.add(followup.lead_id);
+        leadsByType.set(followup.followup_type, leadIdsForType);
+      }
+
+      const followupTypeEffectiveness = Array.from(typeStats.entries()).map(
+        ([type, data]) => {
+          const leadsWithType = leadsByType.get(type)?.size ?? 0;
+          return {
+            type,
+            count: data.count,
+            conversionRate:
+              leadsWithType > 0
+                ? (data.convertedLeadIds.size / leadsWithType) * 100
+                : 0,
+          };
+        },
+      );
+
       const now = new Date();
-      const overdueFollowups =
-        leads?.filter(
-          (l) =>
-            l.lead_status !== "converted" &&
-            l.lead_status !== "closed" &&
-            l.next_followup_date &&
-            new Date(l.next_followup_date) < now
-        ).length || 0;
+      const overdueFollowups = leads.filter(
+        (lead) =>
+          lead.lead_status !== "converted" &&
+          lead.lead_status !== "closed" &&
+          lead.next_followup_date &&
+          new Date(lead.next_followup_date) < now,
+      ).length;
 
-      const upcomingFollowups =
-        leads?.filter(
-          (l) =>
-            l.lead_status !== "converted" &&
-            l.lead_status !== "closed" &&
-            l.next_followup_date &&
-            new Date(l.next_followup_date) > now &&
-            new Date(l.next_followup_date) <= new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000)
-        ).length || 0;
+      const upcomingFollowups = leads.filter(
+        (lead) =>
+          lead.lead_status !== "converted" &&
+          lead.lead_status !== "closed" &&
+          lead.next_followup_date &&
+          new Date(lead.next_followup_date) > now &&
+          new Date(lead.next_followup_date) <=
+            new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000),
+      ).length;
 
       return {
         totalLeads,
+        closedLeads: closedLeads.length,
+        convertedLeads: convertedLeads.length,
         leadsWith3PlusFollowups: leadsWith3Plus.length,
         complianceRate,
         averageFollowupsToConversion,
@@ -182,6 +320,8 @@ export function useFollowUpAnalytics(
         followupTypeEffectiveness,
         overdueFollowups,
         upcomingFollowups,
+        loggedFollowupsInRange: rangedFollowups.length,
+        leadsWithFirstFollowup: firstFollowupLeadCount,
       };
     },
     enabled: !!user && academicYear !== null,
@@ -200,7 +340,6 @@ export function useOverdueFollowups() {
       return data || [];
     },
     enabled: !!user,
-    refetchInterval: 60000, // Refetch every minute
+    refetchInterval: 60000,
   });
 }
-

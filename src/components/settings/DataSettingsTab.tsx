@@ -76,7 +76,7 @@ export function DataSettingsTab() {
     return (
       <Card className="shadow-card">
         <CardHeader>
-          <CardTitle className="font-display">Data Management</CardTitle>
+          <CardTitle>Data Management</CardTitle>
           <CardDescription>Manage system data</CardDescription>
         </CardHeader>
         <CardContent>
@@ -98,10 +98,7 @@ export function DataSettingsTab() {
       
       <Card className="shadow-card">
         <CardHeader>
-          <CardTitle className="font-display flex items-center gap-2">
-            <Trash2 className="h-5 w-5 text-destructive" />
-            Data Management
-          </CardTitle>
+          <CardTitle>Data Management</CardTitle>
           <CardDescription>Dangerous operations - use with caution</CardDescription>
         </CardHeader>
         <CardContent className="space-y-6">

@@ -485,7 +485,7 @@ export default function BulkUpload() {
                 <div className="mx-auto w-16 h-16 rounded-2xl bg-primary/10 flex items-center justify-center mb-4">
                   <Upload className="h-8 w-8 text-primary" />
                 </div>
-                <h3 className="font-display text-xl font-bold mb-2">
+                <h3 className={cn(pageTitleClass, "mb-2")}>
                   Drop your CSV file here
                 </h3>
                 <p className="text-muted-foreground mb-2">
@@ -566,7 +566,7 @@ export default function BulkUpload() {
 
             <Card className="shadow-card">
               <CardHeader>
-                <CardTitle className="font-display">Preview</CardTitle>
+                <CardTitle>Preview</CardTitle>
               </CardHeader>
               <CardContent>
                 <div className="overflow-x-auto">
@@ -658,10 +658,7 @@ export default function BulkUpload() {
           <TabsContent value="history" className="space-y-6">
             <Card className="shadow-card">
               <CardHeader>
-                <CardTitle className="font-display flex items-center gap-2">
-                  <History className="h-5 w-5" />
-                  Upload History
-                </CardTitle>
+                <CardTitle>Upload History</CardTitle>
               </CardHeader>
               <CardContent>
                 {historyLoading ? (

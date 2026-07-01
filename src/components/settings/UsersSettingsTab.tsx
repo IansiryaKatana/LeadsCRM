@@ -33,7 +33,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { Loader2, Plus, Edit, Trash2, UserPlus, Users } from "lucide-react";
+import { Loader2, Plus, Edit, Trash2, UserPlus } from "lucide-react";
 import type { Database } from "@/integrations/supabase/types";
 
 type UserRole = Database["public"]["Enums"]["app_role"];
@@ -282,7 +282,7 @@ export function UsersSettingsTab() {
     return (
       <Card className="shadow-card">
         <CardHeader>
-          <CardTitle className="font-display">User Management</CardTitle>
+          <CardTitle>User Management</CardTitle>
           <CardDescription>Manage system users</CardDescription>
         </CardHeader>
         <CardContent>
@@ -300,10 +300,7 @@ export function UsersSettingsTab() {
         <CardHeader>
           <div className="flex items-center justify-between">
             <div>
-              <CardTitle className="font-display flex items-center gap-2">
-                <Users className="h-5 w-5" />
-                User Management
-              </CardTitle>
+              <CardTitle>User Management</CardTitle>
               <CardDescription>
                 {role === "super_admin" 
                   ? "Manage all users in the system"

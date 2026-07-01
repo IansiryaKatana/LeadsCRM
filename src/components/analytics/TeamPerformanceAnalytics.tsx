@@ -4,14 +4,12 @@ import { useTeamPerformance } from "@/hooks/useTeamPerformance";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Badge } from "@/components/ui/badge";
 import { 
-  Trophy, 
   TrendingUp, 
   Users, 
   DollarSign,
   Clock,
   CheckCircle2,
   PhoneCall,
-  Award
 } from "lucide-react";
 import { useSystemSettingsContext } from "@/contexts/SystemSettingsContext";
 import {
@@ -200,10 +198,7 @@ export function TeamPerformanceAnalytics({ academicYear, startDate, endDate }: T
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
         <Card className="shadow-card">
           <CardHeader>
-            <CardTitle className="font-display flex items-center gap-2">
-              <Trophy className="h-5 w-5 text-accent" />
-              Top Revenue Generator
-            </CardTitle>
+            <CardTitle>Top Revenue Generator</CardTitle>
           </CardHeader>
           <CardContent>
             {topRevenue ? (
@@ -224,10 +219,7 @@ export function TeamPerformanceAnalytics({ academicYear, startDate, endDate }: T
 
         <Card className="shadow-card">
           <CardHeader>
-            <CardTitle className="font-display flex items-center gap-2">
-              <Award className="h-5 w-5 text-primary" />
-              Most Conversions
-            </CardTitle>
+            <CardTitle>Most Conversions</CardTitle>
           </CardHeader>
           <CardContent>
             {topConversions ? (
@@ -248,10 +240,7 @@ export function TeamPerformanceAnalytics({ academicYear, startDate, endDate }: T
 
         <Card className="shadow-card">
           <CardHeader>
-            <CardTitle className="font-display flex items-center gap-2">
-              <CheckCircle2 className="h-5 w-5 text-success" />
-              Most Compliant
-            </CardTitle>
+            <CardTitle>Most Compliant</CardTitle>
           </CardHeader>
           <CardContent>
             {topCompliance ? (
@@ -275,7 +264,7 @@ export function TeamPerformanceAnalytics({ academicYear, startDate, endDate }: T
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <Card className="shadow-card">
           <CardHeader>
-            <CardTitle className="font-display">Revenue by Team Member</CardTitle>
+            <CardTitle>Revenue by Team Member</CardTitle>
           </CardHeader>
           <CardContent className="pt-0">
             <TeamRevenueChart data={revenueChartData} formatValue={formatCurrency} />
@@ -284,7 +273,7 @@ export function TeamPerformanceAnalytics({ academicYear, startDate, endDate }: T
 
         <Card className="shadow-card">
           <CardHeader>
-            <CardTitle className="font-display">Conversion Rate by Team Member</CardTitle>
+            <CardTitle>Conversion Rate by Team Member</CardTitle>
           </CardHeader>
           <CardContent className="pt-0">
             <TeamConversionChart data={conversionChartData} />
@@ -296,7 +285,7 @@ export function TeamPerformanceAnalytics({ academicYear, startDate, endDate }: T
       <Card className="shadow-card">
         <CardHeader>
           <div className="flex items-center justify-between">
-            <CardTitle className="font-display">Team Performance Details</CardTitle>
+            <CardTitle>Team Performance Details</CardTitle>
             <div className="flex gap-2">
               <button
                 onClick={() => setSortBy("revenue")}

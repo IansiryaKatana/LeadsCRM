@@ -15,6 +15,13 @@ export const sidebarBrandTitleClass =
 export const sectionTitleClass =
   "font-display text-lg font-bold tracking-tight";
 
+/** Subsection / card titles (Inter Tight, uppercase, 15px desktop) */
+export const subsectionTitleClass =
+  "font-body text-sm lg:text-[15px] font-semibold uppercase tracking-wide leading-none";
+
+/** @deprecated Use subsectionTitleClass */
+export const settingsSectionTitleClass = subsectionTitleClass;
+
 /** Muted helper under page titles */
 export const pageSubtitleClass = "text-sm text-muted-foreground mt-1";
 

@@ -145,7 +145,7 @@ export function NotificationSettingsTab() {
   return (
     <Card className="shadow-card">
       <CardHeader>
-        <CardTitle className="font-display">Notification Preferences</CardTitle>
+        <CardTitle>Notification Preferences</CardTitle>
         <CardDescription>Configure how you receive notifications</CardDescription>
       </CardHeader>
       <CardContent className="space-y-6">

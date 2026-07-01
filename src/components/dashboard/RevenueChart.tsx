@@ -49,7 +49,7 @@ export function RevenueChart({ academicYear, className }: RevenueChartProps) {
   return (
     <Card className={cn("shadow-card rounded-2xl border-0 flex flex-col h-full min-h-[26.25rem]", className)}>
       <CardHeader className="shrink-0 pb-2">
-        <CardTitle className="font-display text-xl">Revenue Forecast</CardTitle>
+        <CardTitle>Revenue Forecast</CardTitle>
         <CardDescription className="font-body">Monthly revenue trends</CardDescription>
       </CardHeader>
       <CardContent className="flex flex-1 flex-col min-h-0 pt-0">

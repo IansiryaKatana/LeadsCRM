@@ -411,7 +411,7 @@ export default function Reports() {
                 <div className="grid grid-cols-1 xl:grid-cols-2 gap-6 items-stretch">
                   <Card className="shadow-card rounded-2xl border-0 h-full flex flex-col">
                     <CardHeader className="pb-2 shrink-0">
-                      <CardTitle className="font-display text-xl">Lead Volume</CardTitle>
+                      <CardTitle>Lead Volume</CardTitle>
                       <CardDescription className="font-body">Leads vs conversions by month</CardDescription>
                     </CardHeader>
                     <CardContent className="flex flex-1 flex-col min-h-0 pt-0">
@@ -424,7 +424,7 @@ export default function Reports() {
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                   <Card className="shadow-card rounded-2xl border-0">
                     <CardHeader className="pb-2">
-                      <CardTitle className="font-display text-xl">Room Distribution</CardTitle>
+                      <CardTitle>Room Distribution</CardTitle>
                       <CardDescription className="font-body">Preference mix in selected period</CardDescription>
                     </CardHeader>
                     <CardContent className="pt-0">
@@ -434,7 +434,7 @@ export default function Reports() {
 
                   <Card className="shadow-card rounded-2xl border-0">
                     <CardHeader className="pb-2">
-                      <CardTitle className="font-display text-xl">Pipeline Status</CardTitle>
+                      <CardTitle>Pipeline Status</CardTitle>
                       <CardDescription className="font-body">Lead status breakdown</CardDescription>
                     </CardHeader>
                     <CardContent className="pt-0">

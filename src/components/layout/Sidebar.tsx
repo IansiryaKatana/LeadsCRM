@@ -47,7 +47,7 @@ import {
 } from "@/components/ui/collapsible";
 import { ChevronDown, ChevronRight } from "lucide-react";
 import { getSourceIcon } from "@/utils/sourceIcons";
-import { sidebarBrandTitleClass } from "@/lib/typography";
+import { sidebarBrandTitleClass, pageTitleClass } from "@/lib/typography";
 
 const WEB_SOURCE_SLUGS = [
   "web_booking",
@@ -384,8 +384,7 @@ export function Sidebar() {
                 </AlertDialogTrigger>
                 <AlertDialogContent>
                   <AlertDialogHeader>
-                    <AlertDialogTitle className="flex items-center gap-2">
-                      <LogOut className="h-5 w-5 text-muted-foreground" />
+                    <AlertDialogTitle className={pageTitleClass}>
                       Sign Out
                     </AlertDialogTitle>
                     <AlertDialogDescription>

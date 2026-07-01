@@ -19,7 +19,7 @@ import {
   useEmailHistory,
   replaceTemplateVariables,
 } from "@/hooks/useEmailTemplates";
-import { Mail, Send, Loader2, Clock, CheckCircle2 } from "lucide-react";
+import { Mail, Send, Loader2, CheckCircle2 } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
 import type { Database } from "@/integrations/supabase/types";
 import { ROOM_CHOICE_CONFIG, STAY_DURATION_CONFIG } from "@/types/crm";
@@ -116,10 +116,7 @@ export function EmailTab({ lead }: EmailTabProps) {
       {/* Send Email Section */}
       <Card className="shadow-card">
         <CardHeader>
-          <CardTitle className="font-display flex items-center gap-2">
-            <Mail className="h-5 w-5" />
-            Send Email
-          </CardTitle>
+          <CardTitle>Send Email</CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="flex items-center gap-4">
@@ -211,10 +208,7 @@ export function EmailTab({ lead }: EmailTabProps) {
       {/* Email History Section */}
       <Card className="shadow-card">
         <CardHeader>
-          <CardTitle className="font-display flex items-center gap-2">
-            <Clock className="h-5 w-5" />
-            Email History
-          </CardTitle>
+          <CardTitle>Email History</CardTitle>
         </CardHeader>
         <CardContent>
           {historyLoading ? (

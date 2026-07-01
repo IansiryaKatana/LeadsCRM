@@ -11,7 +11,7 @@ export function WebhookIntegrationSettingsTab() {
   return (
     <Card className="shadow-card">
       <CardHeader>
-        <CardTitle className="font-display">Webhooks & Website Forms</CardTitle>
+        <CardTitle>Webhooks & Website Forms</CardTitle>
         <CardDescription>
           Connect your WordPress forms (WPForms, Elementor) to Urban Hub Leads CRM using the Supabase
           Edge Function webhook.

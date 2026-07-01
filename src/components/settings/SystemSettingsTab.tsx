@@ -7,7 +7,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Separator } from "@/components/ui/separator";
 import { useSystemSettings, CURRENCY_OPTIONS, RoomPrices, RoomLabels } from "@/hooks/useSystemSettings";
 import { getLatestAcademicYear } from "@/utils/academicYear";
-import { Loader2, Upload, Image, DollarSign, Tag, Calendar, Plus, X, Building2, Mail, Bell } from "lucide-react";
+import { Loader2, Upload, Plus, X } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
 
@@ -359,8 +359,7 @@ export function SystemSettingsTab() {
       {/* Currency Settings */}
       <Card className="shadow-card">
         <CardHeader>
-          <CardTitle className="font-display flex items-center gap-2">
-            <DollarSign className="h-5 w-5" />
+          <CardTitle>
             Currency Settings
           </CardTitle>
           <CardDescription>Set the default currency for revenue display</CardDescription>
@@ -393,8 +392,7 @@ export function SystemSettingsTab() {
       {/* Branding Settings */}
       <Card className="shadow-card">
         <CardHeader>
-          <CardTitle className="font-display flex items-center gap-2">
-            <Image className="h-5 w-5" />
+          <CardTitle>
             Branding
           </CardTitle>
           <CardDescription>Customize your system logo and favicon</CardDescription>
@@ -480,8 +478,7 @@ export function SystemSettingsTab() {
       {/* Lead Notifications Settings */}
       <Card className="shadow-card">
         <CardHeader>
-          <CardTitle className="font-display flex items-center gap-2">
-            <Bell className="h-5 w-5" />
+          <CardTitle>
             Lead Notifications
           </CardTitle>
           <CardDescription>Manage who receives email notifications when a new lead is added</CardDescription>
@@ -547,8 +544,7 @@ export function SystemSettingsTab() {
       {/* Room Labels */}
       <Card className="shadow-card">
         <CardHeader>
-          <CardTitle className="font-display flex items-center gap-2">
-            <Tag className="h-5 w-5" />
+          <CardTitle>
             Room Names
           </CardTitle>
           <CardDescription>Customize display names for room types</CardDescription>
@@ -580,8 +576,7 @@ export function SystemSettingsTab() {
       {/* System Name Settings */}
       <Card className="shadow-card">
         <CardHeader>
-          <CardTitle className="font-display flex items-center gap-2">
-            <Building2 className="h-5 w-5" />
+          <CardTitle>
             System Name
           </CardTitle>
           <CardDescription>Set the name displayed in the sidebar and throughout the system</CardDescription>
@@ -611,8 +606,7 @@ export function SystemSettingsTab() {
       {/* Email From Address Settings */}
       <Card className="shadow-card">
         <CardHeader>
-          <CardTitle className="font-display flex items-center gap-2">
-            <Mail className="h-5 w-5" />
+          <CardTitle>
             Student Email Settings
           </CardTitle>
           <CardDescription>
@@ -705,8 +699,7 @@ export function SystemSettingsTab() {
       {/* Room Prices */}
       <Card className="shadow-card">
         <CardHeader>
-          <CardTitle className="font-display flex items-center gap-2">
-            <DollarSign className="h-5 w-5" />
+          <CardTitle>
             Room Pricing
           </CardTitle>
           <CardDescription>Configure base prices for each room type (per week)</CardDescription>
@@ -746,8 +739,7 @@ export function SystemSettingsTab() {
       {/* Academic Years Settings */}
       <Card className="shadow-card">
         <CardHeader>
-          <CardTitle className="font-display flex items-center gap-2">
-            <Calendar className="h-5 w-5" />
+          <CardTitle>
             Academic Years
           </CardTitle>
           <CardDescription>Manage available academic years and set the default year for new leads</CardDescription>

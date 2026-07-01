@@ -71,7 +71,7 @@ export function ChannelPerformanceChart({ data, className }: ChannelPerformanceP
       )}
     >
       <CardHeader className="shrink-0 pb-2">
-        <CardTitle className="font-display text-xl">Channel Performance</CardTitle>
+        <CardTitle>Channel Performance</CardTitle>
         <CardDescription className="font-body">Leads by acquisition source</CardDescription>
       </CardHeader>
 

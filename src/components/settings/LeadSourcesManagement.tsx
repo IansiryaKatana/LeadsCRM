@@ -23,7 +23,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { useLeadSources, useCreateLeadSource, useUpdateLeadSource, useDeleteLeadSource, type LeadSource } from "@/hooks/useLeadSources";
 import { toast } from "@/hooks/use-toast";
-import { Loader2, Plus, Edit, Trash2, Tag } from "lucide-react";
+import { Loader2, Plus, Edit, Trash2 } from "lucide-react";
 import { getSourceIcon } from "@/utils/sourceIcons";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
@@ -141,10 +141,7 @@ export function LeadSourcesManagement() {
       <CardHeader>
         <div className="flex items-center justify-between">
           <div>
-            <CardTitle className="font-display flex items-center gap-2">
-              <Tag className="h-5 w-5" />
-              Lead Sources Management
-            </CardTitle>
+            <CardTitle>Lead Sources Management</CardTitle>
             <CardDescription>
               Add, edit, or remove lead source categories
             </CardDescription>

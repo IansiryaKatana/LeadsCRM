@@ -32,7 +32,7 @@ export function PWASettingsTab() {
   return (
     <Card className="shadow-card">
       <CardHeader>
-        <CardTitle className="font-display">Install App</CardTitle>
+        <CardTitle>Install App</CardTitle>
         <CardDescription>
           Install Urban Hub Students Accommodations as a Progressive Web App
         </CardDescription>

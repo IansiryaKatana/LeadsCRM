@@ -109,7 +109,7 @@ export default function Settings() {
           <TabsContent value="profile">
             <Card className="shadow-card">
               <CardHeader>
-                <CardTitle className="font-display">Profile Information</CardTitle>
+                <CardTitle>Profile Information</CardTitle>
                 <CardDescription>Update your personal information</CardDescription>
               </CardHeader>
               <CardContent className="space-y-6">
@@ -164,7 +164,7 @@ export default function Settings() {
           <TabsContent value="security">
             <Card className="shadow-card">
               <CardHeader>
-                <CardTitle className="font-display">Security Settings</CardTitle>
+                <CardTitle>Security Settings</CardTitle>
                 <CardDescription>Manage your account security</CardDescription>
               </CardHeader>
               <CardContent className="space-y-6">

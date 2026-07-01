@@ -3,7 +3,7 @@ import { useOverdueFollowups } from "@/hooks/useOverdueFollowups";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { AlertCircle, PhoneCall, ChevronRight, CheckCircle2 } from "lucide-react";
+import { PhoneCall, ChevronRight, CheckCircle2 } from "lucide-react";
 import { Link } from "react-router-dom";
 import { formatDistanceToNow } from "date-fns";
 import { useSystemSettingsContext } from "@/contexts/SystemSettingsContext";
@@ -110,10 +110,7 @@ export function OverdueFollowUpsWidget({
     <Card className="shadow-card">
       <CardHeader>
         <div className="flex items-center justify-between">
-          <CardTitle className="flex items-center gap-2">
-            <AlertCircle className={`h-5 w-5 ${overdueCount > 0 ? "text-red-500" : "text-muted-foreground"}`} />
-            Overdue Follow-Ups
-          </CardTitle>
+          <CardTitle>Overdue Follow-Ups</CardTitle>
           {overdueCount > 0 && (
             <Badge variant={urgentCount > 0 ? "destructive" : "secondary"}>
               {overdueCount} {overdueCount === 1 ? "lead" : "leads"}

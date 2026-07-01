@@ -222,10 +222,7 @@ export function EmailTemplatesSettingsTab() {
         <CardHeader>
           <div className="flex items-center justify-between">
             <div>
-              <CardTitle className="font-display flex items-center gap-2">
-                <Mail className="h-5 w-5" />
-                Email Templates
-              </CardTitle>
+              <CardTitle>Email Templates</CardTitle>
               <CardDescription>
                 Create and manage email templates for automated and manual communications
               </CardDescription>

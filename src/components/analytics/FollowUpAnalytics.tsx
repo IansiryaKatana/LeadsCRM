@@ -8,7 +8,6 @@ import {
   TrendingUp, 
   AlertCircle, 
   PhoneCall,
-  BarChart3 
 } from "lucide-react";
 import { FollowUpTypeChart } from "@/components/charts/analytics-charts";
 
@@ -64,7 +63,9 @@ export function FollowUpAnalytics({ academicYear, startDate, endDate }: FollowUp
               className="mt-2"
             />
             <p className="text-xs text-muted-foreground mt-1">
-              {analytics.leadsWith3PlusFollowups} of {analytics.totalLeads} leads
+              {analytics.closedLeads > 0
+                ? `${analytics.leadsWith3PlusFollowups} of ${analytics.closedLeads} closed leads`
+                : `${analytics.leadsWith3PlusFollowups} of ${analytics.totalLeads} leads with 3+ follow-ups`}
             </p>
           </CardContent>
         </Card>
@@ -79,7 +80,9 @@ export function FollowUpAnalytics({ academicYear, startDate, endDate }: FollowUp
               {analytics.averageFollowupsToConversion.toFixed(1)}
             </p>
             <p className="text-xs text-muted-foreground mt-1">
-              Average follow-ups before conversion
+              {analytics.convertedLeads > 0
+                ? `Across ${analytics.convertedLeads} converted leads`
+                : "No converted leads in this period"}
             </p>
           </CardContent>
         </Card>
@@ -94,7 +97,9 @@ export function FollowUpAnalytics({ academicYear, startDate, endDate }: FollowUp
               {Math.round(analytics.averageTimeToFirstFollowup)}h
             </p>
             <p className="text-xs text-muted-foreground mt-1">
-              Average hours from lead creation
+              {analytics.leadsWithFirstFollowup > 0
+                ? `Across ${analytics.leadsWithFirstFollowup} leads with a logged follow-up`
+                : "No logged follow-ups yet"}
             </p>
           </CardContent>
         </Card>
@@ -109,7 +114,9 @@ export function FollowUpAnalytics({ academicYear, startDate, endDate }: FollowUp
               {analytics.followupResponseRate.toFixed(1)}%
             </p>
             <p className="text-xs text-muted-foreground mt-1">
-              Successful contacts per follow-up
+              {analytics.loggedFollowupsInRange > 0
+                ? `Based on ${analytics.loggedFollowupsInRange} logged follow-ups`
+                : "No logged follow-ups in selected date range"}
             </p>
           </CardContent>
         </Card>
@@ -156,10 +163,7 @@ export function FollowUpAnalytics({ academicYear, startDate, endDate }: FollowUp
       {chartData.length > 0 && (
         <Card className="shadow-card">
           <CardHeader>
-            <CardTitle className="font-display flex items-center gap-2">
-              <BarChart3 className="h-5 w-5" />
-              Follow-up Type Effectiveness
-            </CardTitle>
+            <CardTitle>Follow-up Type Effectiveness</CardTitle>
             <CardDescription>Conversion rate by follow-up channel</CardDescription>
           </CardHeader>
           <CardContent className="pt-0">
