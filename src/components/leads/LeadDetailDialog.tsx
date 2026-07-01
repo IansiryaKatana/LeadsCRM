@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { LEAD_STATUS_CONFIG, getSourceConfig } from "@/types/crm";
 import { SourceIcon } from "@/utils/sourceIcons";
 import { cn } from "@/lib/utils";
+import { subsectionTitleClass, pageTitleClass } from "@/lib/typography";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import {
@@ -159,7 +160,7 @@ export function LeadDetailDialog({ lead, onClose, initialTab }: LeadDetailDialog
   );
 
   const leadTitle = (
-    <span className="flex items-center gap-3 font-display text-2xl">
+    <span className={cn("flex items-center gap-3", pageTitleClass)}>
       <button onClick={handleToggleHot} className="hover:scale-110 transition-transform">
         <Flame className={cn("h-6 w-6", leadData.is_hot ? "text-warning fill-warning" : "text-muted-foreground")} />
       </button>
@@ -261,7 +262,7 @@ export function LeadDetailDialog({ lead, onClose, initialTab }: LeadDetailDialog
           <TabsContent value="details" className={cn(tabScrollClass, "space-y-4")}>
             {/* Contact Info */}
             <div className="space-y-3">
-              <h3 className="font-semibold text-sm text-muted-foreground uppercase tracking-wide">Contact Information</h3>
+              <h3 className={cn(subsectionTitleClass, "text-muted-foreground")}>Contact Information</h3>
               <div className="flex items-center gap-3 text-muted-foreground">
                 <Mail className="h-4 w-4" />
                 <a href={`mailto:${leadData.email}`} className="hover:text-primary">{leadData.email}</a>
@@ -522,20 +523,20 @@ export function LeadDetailDialog({ lead, onClose, initialTab }: LeadDetailDialog
             <TabsContent value="keyworkers-details" className={cn(tabScrollClass, "space-y-4")}>
               <div className="space-y-4">
                 <div className="p-4 rounded-xl bg-muted/50">
-                  <h3 className="font-semibold mb-2">Length of Stay</h3>
+                  <h3 className={cn(subsectionTitleClass, "mb-2")}>Length of Stay</h3>
                   <p className="text-sm text-muted-foreground whitespace-pre-wrap">
                     {leadData.keyworker_length_of_stay || (leadData.metadata as any)?.stay_duration || "Not provided"}
                   </p>
                 </div>
                 <div className="p-4 rounded-xl bg-muted/50">
-                  <h3 className="font-semibold mb-2">Preferred Date</h3>
+                  <h3 className={cn(subsectionTitleClass, "mb-2")}>Preferred Date</h3>
                   <p className="text-sm text-muted-foreground whitespace-pre-wrap">
                     {leadData.keyworker_preferred_date || (leadData.metadata as any)?.start_date || "Not provided"}
                   </p>
                 </div>
                 {(leadData.metadata as any)?.rooms_count && (
                   <div className="p-4 rounded-xl bg-muted/50">
-                    <h3 className="font-semibold mb-2">Rooms Requested</h3>
+                    <h3 className={cn(subsectionTitleClass, "mb-2")}>Rooms Requested</h3>
                     <p className="text-sm text-muted-foreground">
                       {(leadData.metadata as any).rooms_count}
                     </p>
@@ -744,7 +745,7 @@ export function LeadDetailDialog({ lead, onClose, initialTab }: LeadDetailDialog
           <DialogContent className="sm:max-w-2xl overflow-hidden flex flex-col pb-6">
             <div className="mx-auto mt-2 mb-2 h-1.5 w-12 rounded-full bg-muted" aria-hidden />
             <DialogHeader className="sm:pt-0 mb-4">
-              <DialogTitle>{leadTitle}</DialogTitle>
+              <DialogTitle className={pageTitleClass}>{leadTitle}</DialogTitle>
               <DialogDescription className="sr-only">
                 Lead details, follow-ups, tasks, and activity for {leadData.full_name}
               </DialogDescription>
@@ -759,7 +760,7 @@ export function LeadDetailDialog({ lead, onClose, initialTab }: LeadDetailDialog
             className="flex h-full w-full max-w-[min(100vw,1100px)] flex-col gap-0 overflow-hidden p-0 sm:max-w-none sm:w-[1100px]"
           >
             <SheetHeader className="shrink-0 border-b px-6 pb-4 pt-6 text-left">
-              <SheetTitle className="font-display text-2xl">{leadTitle}</SheetTitle>
+              <SheetTitle className={pageTitleClass}>{leadTitle}</SheetTitle>
               <SheetDescription className="sr-only">
                 Lead details, follow-ups, tasks, and activity for {leadData.full_name}
               </SheetDescription>
