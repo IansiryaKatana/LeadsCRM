@@ -10,7 +10,9 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { PasswordInput } from "@/components/ui/password-input";
 import { Label } from "@/components/ui/label";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardDescription, CardHeader } from "@/components/ui/card";
+import { pageTitleClass } from "@/lib/typography";
+import { cn } from "@/lib/utils";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { toast } from "@/hooks/use-toast";
 import { Loader2 } from "lucide-react";
@@ -143,7 +145,7 @@ export default function Auth() {
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-background p-4 relative overflow-hidden">
+    <div className="min-h-screen flex items-center justify-center bg-background p-6 sm:p-8 relative overflow-hidden">
       {/* Background decorative elements */}
       <div className="absolute top-0 left-0 w-full h-full -z-10 pointer-events-none">
         <motion.div 
@@ -166,8 +168,8 @@ export default function Auth() {
         transition={{ duration: 0.5, ease: "easeOut" }}
         className="w-full max-w-md"
       >
-        <Card className="shadow-elevated border-none bg-white/80 backdrop-blur-sm">
-          <CardHeader className="text-center space-y-4">
+        <Card className="shadow-elevated border-none bg-white/80 backdrop-blur-sm overflow-hidden">
+          <CardHeader className="text-center space-y-4 px-8 pt-8 pb-6 sm:px-10 sm:pt-10">
             <motion.div 
               initial={{ scale: 0 }}
               animate={{ scale: 1 }}
@@ -185,15 +187,15 @@ export default function Auth() {
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.3 }}
             >
-              <CardTitle className="font-display text-4xl font-black text-black uppercase tracking-tighter">
-                URBAN HUB
-              </CardTitle>
+              <h1 className={cn(pageTitleClass, "text-black")}>
+                Urban Hub
+              </h1>
               <CardDescription className="mt-2 text-muted-foreground font-medium">
                 {isRecovery ? "Reset your password" : "Student accommodation leads management"}
               </CardDescription>
             </motion.div>
           </CardHeader>
-          <CardContent>
+          <CardContent className="px-8 pb-8 sm:px-10 sm:pb-10">
             <AnimatePresence mode="wait">
               {isRecovery ? (
                 <motion.form 
