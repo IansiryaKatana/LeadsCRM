@@ -31,7 +31,7 @@ export function RevenueChart({ academicYear, className }: RevenueChartProps) {
 
   if (isLoading) {
     return (
-      <Card className={cn("shadow-card rounded-2xl border-0 flex flex-col h-full min-h-[420px]", className)}>
+      <Card className={cn("shadow-card rounded-2xl border-0 flex flex-col h-full min-h-[26.25rem]", className)}>
         <CardHeader className="shrink-0">
           <Skeleton className="h-6 w-48" />
           <Skeleton className="h-4 w-32 mt-2" />
@@ -47,7 +47,7 @@ export function RevenueChart({ academicYear, className }: RevenueChartProps) {
   const formatCurrency = (value: number) => `${currency.symbol}${value.toLocaleString()}`;
 
   return (
-    <Card className={cn("shadow-card rounded-2xl border-0 flex flex-col h-full min-h-[420px]", className)}>
+    <Card className={cn("shadow-card rounded-2xl border-0 flex flex-col h-full min-h-[26.25rem]", className)}>
       <CardHeader className="shrink-0 pb-2">
         <CardTitle className="font-display text-xl">Revenue Forecast</CardTitle>
         <CardDescription className="font-body">Monthly revenue trends</CardDescription>

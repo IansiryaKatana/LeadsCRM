@@ -1,5 +1,6 @@
 import { cn } from "@/lib/utils";
 import { LucideIcon } from "lucide-react";
+import { statValueClass } from "@/lib/typography";
 
 interface StatCardProps {
   title: string;
@@ -42,7 +43,7 @@ export function StatCard({
   return (
     <div
       className={cn(
-        "rounded-2xl p-6 shadow-card card-hover transition-all duration-300",
+        "rounded-2xl p-5 shadow-card card-hover transition-all duration-300",
         variantStyles[variant],
         className
       )}
@@ -55,7 +56,7 @@ export function StatCard({
           )}>
             {title}
           </p>
-          <p className="text-3xl font-display font-bold tracking-tight">
+          <p className={statValueClass}>
             {typeof value === "number" ? value.toLocaleString() : value}
           </p>
           {subtitle && (
@@ -71,7 +72,7 @@ export function StatCard({
           "rounded-xl p-3",
           iconVariantStyles[variant]
         )}>
-          <Icon className="h-6 w-6" />
+          <Icon className="h-5 w-5" />
         </div>
       </div>
       {trend && (

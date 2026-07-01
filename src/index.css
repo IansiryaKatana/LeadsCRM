@@ -42,6 +42,10 @@
 
     --radius: 1rem;
 
+    /* Desktop density: 12px root ≈ 75% of default 16px (matches preferred browser zoom) */
+    --app-font-size: 16px;
+    --app-density: 1;
+
     /* Custom CRM tokens */
     --crm-blue: 211 100% 66%;
     --crm-yellow: 47 100% 50%;
@@ -120,8 +124,19 @@
     @apply border-border;
   }
 
+  html {
+    font-size: var(--app-font-size);
+  }
+
+  @media (min-width: 1024px) {
+    :root {
+      --app-font-size: 12px;
+      --app-density: 0.75;
+    }
+  }
+
   body {
-    @apply bg-background text-foreground font-body antialiased;
+    @apply bg-background text-foreground font-body antialiased leading-relaxed;
   }
 
   h1, h2, h3, h4, h5, h6 {

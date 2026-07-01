@@ -241,9 +241,9 @@ export function Sidebar() {
       >
         <div className="flex flex-col h-full">
           {/* Logo */}
-          <div className="p-6 border-b border-border">
-            <div className="flex items-center gap-3">
-              <div className="size-10 rounded bg-primary flex items-center justify-center overflow-hidden shrink-0">
+          <div className="p-5 border-b border-border">
+            <div className="flex items-center gap-2.5">
+              <div className="size-9 rounded bg-primary flex items-center justify-center overflow-hidden shrink-0">
                 <img
                   src={faviconUrl || logoUrl || "/favicon.png"}
                   alt="Urban Hub"
@@ -271,7 +271,7 @@ export function Sidebar() {
                           <NavLink
                             to={item.href}
                             className={cn(
-                              "flex items-center gap-3 px-4 py-3 rounded-xl text-muted-foreground transition-all duration-200 hover:bg-muted hover:text-foreground w-full",
+                              "flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-muted-foreground transition-all duration-200 hover:bg-muted hover:text-foreground w-full",
                               !isSourcePage && location.pathname === item.href && "bg-primary text-primary-foreground hover:bg-primary hover:text-primary-foreground shadow-card"
                             )}
                             activeClassName="bg-primary text-primary-foreground hover:bg-primary hover:text-primary-foreground shadow-card"
@@ -287,7 +287,7 @@ export function Sidebar() {
                               }
                             }}
                           >
-                            <item.icon className="h-5 w-5" />
+                            <item.icon className="h-4 w-4" />
                             <span className="font-medium flex-1">{item.name}</span>
                             {unreadWebLeads > 0 && (
                               <span className="inline-flex items-center justify-center rounded-full bg-warning text-warning-foreground text-xs font-semibold px-2 py-0.5 min-w-[1.5rem]">
@@ -339,12 +339,12 @@ export function Sidebar() {
                     key={item.name}
                     to={item.href}
                     className={cn(
-                      "flex items-center gap-3 px-4 py-3 rounded-xl text-muted-foreground transition-all duration-200 hover:bg-muted hover:text-foreground"
+                      "flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-muted-foreground transition-all duration-200 hover:bg-muted hover:text-foreground"
                     )}
                     activeClassName="bg-primary text-primary-foreground hover:bg-primary hover:text-primary-foreground shadow-card"
                     onClick={() => setIsOpen(false)}
                   >
-                    <item.icon className="h-5 w-5" />
+                    <item.icon className="h-4 w-4" />
                     <span className="font-medium flex-1">{item.name}</span>
                     {unreadSource && <UnreadCountBadgeForSource sourceSlug={unreadSource} />}
                   </NavLink>
@@ -357,8 +357,8 @@ export function Sidebar() {
             <div className="flex items-center gap-2 justify-end mb-2">
               <NotificationCenter />
             </div>
-            <div className="flex items-center gap-3 p-3 rounded-xl bg-muted/50">
-              <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center">
+            <div className="flex items-center gap-2.5 p-2.5 rounded-xl bg-muted/50">
+              <div className="w-9 h-9 rounded-full bg-primary/10 flex items-center justify-center">
                 <span className="font-semibold text-primary">
                   {profile ? getInitials(profile.full_name) : "?"}
                 </span>

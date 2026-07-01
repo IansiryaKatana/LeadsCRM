@@ -66,7 +66,7 @@ export function ChannelPerformanceChart({ data, className }: ChannelPerformanceP
   return (
     <Card
       className={cn(
-        "shadow-card rounded-2xl border-0 flex flex-col min-h-[420px] h-full",
+        "shadow-card rounded-2xl border-0 flex flex-col min-h-[26.25rem] h-full",
         className,
       )}
     >

@@ -16,7 +16,7 @@ export function LeadStatusCard({ status, count, revenue, className }: LeadStatus
   return (
     <div
       className={cn(
-        "rounded-xl p-4 bg-card shadow-card card-hover border border-border/50",
+        "rounded-xl p-3.5 bg-card shadow-card card-hover border border-border/50",
         className
       )}
     >
@@ -28,7 +28,7 @@ export function LeadStatusCard({ status, count, revenue, className }: LeadStatus
         )}>
           {config.label}
         </span>
-        <span className="font-display text-2xl font-bold">{count}</span>
+        <span className="font-display text-xl font-bold tabular-nums">{count}</span>
       </div>
       <div className="text-sm text-muted-foreground">
         <span className="font-medium text-foreground">
