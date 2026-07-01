@@ -7,15 +7,20 @@ import { AlertCircle, PhoneCall, ChevronRight, CheckCircle2 } from "lucide-react
 import { Link } from "react-router-dom";
 import { formatDistanceToNow } from "date-fns";
 import { useSystemSettingsContext } from "@/contexts/SystemSettingsContext";
+import { cn } from "@/lib/utils";
 
 interface OverdueFollowUpsWidgetProps {
   academicYear?: string;
   onViewLead?: (leadId: string) => void;
 }
 
-export function OverdueFollowUpsWidget({ 
+function overdueLeadHref(leadId: string) {
+  return `/leads?lead=${leadId}&tab=followups`;
+}
+
+export function OverdueFollowUpsWidget({
   academicYear,
-  onViewLead 
+  onViewLead,
 }: OverdueFollowUpsWidgetProps) {
   const { data: overdueFollowups, isLoading } = useOverdueFollowups(academicYear);
   const { formatCurrency } = useSystemSettingsContext();
@@ -39,6 +44,67 @@ export function OverdueFollowUpsWidget({
 
   const overdueCount = overdueFollowups?.length || 0;
   const urgentCount = overdueFollowups?.filter((item) => item.daysOverdue >= 3).length || 0;
+
+  const rowClassName = (isUrgent: boolean) =>
+    cn(
+      "group flex w-full items-start justify-between gap-3 rounded-lg border p-3 text-left transition-colors",
+      "cursor-pointer hover:opacity-90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2",
+      isUrgent
+        ? "border-red-200 bg-red-50 dark:border-red-900 dark:bg-red-950"
+        : "border-yellow-200 bg-yellow-50 dark:border-yellow-900 dark:bg-yellow-950",
+    );
+
+  const renderOverdueRow = (item: NonNullable<typeof overdueFollowups>[number]) => {
+    const isUrgent = item.daysOverdue >= 3;
+    const content = (
+      <>
+        <div className="flex-1 min-w-0">
+          <div className="flex items-center gap-2 mb-1">
+            <p className="font-medium truncate">{item.lead.full_name}</p>
+            <Badge variant={isUrgent ? "destructive" : "secondary"} className="text-xs">
+              {item.daysOverdue} {item.daysOverdue === 1 ? "day" : "days"} overdue
+            </Badge>
+          </div>
+          <div className="flex items-center gap-4 text-sm text-muted-foreground">
+            <span className="flex items-center gap-1">
+              <PhoneCall className="h-3 w-3" />
+              {item.followUpCount}/3 follow-ups
+            </span>
+            {item.nextFollowUpDate && (
+              <span>
+                Due: {formatDistanceToNow(new Date(item.nextFollowUpDate), { addSuffix: true })}
+              </span>
+            )}
+          </div>
+          {item.lead.potential_revenue > 0 && (
+            <p className="text-xs text-muted-foreground mt-1">
+              {formatCurrency(item.lead.potential_revenue)} potential
+            </p>
+          )}
+        </div>
+        <ChevronRight className="h-4 w-4 shrink-0 text-muted-foreground transition-transform group-hover:translate-x-0.5" />
+      </>
+    );
+
+    if (onViewLead) {
+      return (
+        <button
+          key={item.lead.id}
+          type="button"
+          onClick={() => onViewLead(item.lead.id)}
+          className={rowClassName(isUrgent)}
+        >
+          {content}
+        </button>
+      );
+    }
+
+    return (
+      <Link key={item.lead.id} to={overdueLeadHref(item.lead.id)} className={rowClassName(isUrgent)}>
+        {content}
+      </Link>
+    );
+  };
 
   return (
     <Card className="shadow-card">
@@ -66,65 +132,7 @@ export function OverdueFollowUpsWidget({
           </div>
         ) : (
           <div className="space-y-3">
-            {overdueFollowups?.slice(0, 5).map((item) => {
-              const isUrgent = item.daysOverdue >= 3;
-              return (
-                <div
-                  key={item.lead.id}
-                  className={`p-3 rounded-lg border ${
-                    isUrgent
-                      ? "border-red-200 bg-red-50 dark:border-red-900 dark:bg-red-950"
-                      : "border-yellow-200 bg-yellow-50 dark:border-yellow-900 dark:bg-yellow-950"
-                  }`}
-                >
-                  <div className="flex items-start justify-between gap-3">
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2 mb-1">
-                        <p className="font-medium truncate">{item.lead.full_name}</p>
-                        <Badge
-                          variant={isUrgent ? "destructive" : "secondary"}
-                          className="text-xs"
-                        >
-                          {item.daysOverdue} {item.daysOverdue === 1 ? "day" : "days"} overdue
-                        </Badge>
-                      </div>
-                      <div className="flex items-center gap-4 text-sm text-muted-foreground">
-                        <span className="flex items-center gap-1">
-                          <PhoneCall className="h-3 w-3" />
-                          {item.followUpCount}/3 follow-ups
-                        </span>
-                        {item.nextFollowUpDate && (
-                          <span>
-                            Due: {formatDistanceToNow(new Date(item.nextFollowUpDate), { addSuffix: true })}
-                          </span>
-                        )}
-                      </div>
-                      {item.lead.potential_revenue > 0 && (
-                        <p className="text-xs text-muted-foreground mt-1">
-                          {formatCurrency(item.lead.potential_revenue)} potential
-                        </p>
-                      )}
-                    </div>
-                    {onViewLead ? (
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => onViewLead(item.lead.id)}
-                        className="shrink-0"
-                      >
-                        <ChevronRight className="h-4 w-4" />
-                      </Button>
-                    ) : (
-                      <Link to={`/leads?lead=${item.lead.id}`}>
-                        <Button variant="ghost" size="sm" className="shrink-0">
-                          <ChevronRight className="h-4 w-4" />
-                        </Button>
-                      </Link>
-                    )}
-                  </div>
-                </div>
-              );
-            })}
+            {overdueFollowups?.slice(0, 5).map((item) => renderOverdueRow(item))}
             {overdueCount > 5 && (
               <div className="pt-2 border-t">
                 <Link to="/leads?filter=overdue">
@@ -140,4 +148,3 @@ export function OverdueFollowUpsWidget({
     </Card>
   );
 }
-

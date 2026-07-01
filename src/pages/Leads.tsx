@@ -1,11 +1,12 @@
-import { useState, useMemo, useEffect } from "react";
+import { useState, useMemo, useEffect, useCallback } from "react";
+import { useSearchParams } from "react-router-dom";
 import { AppLayout } from "@/components/layout/AppLayout";
 import { pageTitleClass } from "@/lib/typography";
 import { LeadTable } from "@/components/leads/LeadTable";
 import { CreateLeadForm } from "@/components/leads/CreateLeadForm";
 import { LeadDetailDialog } from "@/components/leads/LeadDetailDialog";
 import { SkeletonTable } from "@/components/ui/skeleton-loader";
-import { useLeads } from "@/hooks/useLeads";
+import { useLeads, useLead } from "@/hooks/useLeads";
 import { usePagination } from "@/hooks/usePagination";
 import { LEAD_STATUS_CONFIG } from "@/types/crm";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -39,6 +40,26 @@ export default function Leads() {
   );
   const [selectedLead, setSelectedLead] = useState<Lead | null>(null);
   const [activeTab, setActiveTab] = useState("all");
+  const [searchParams, setSearchParams] = useSearchParams();
+  const leadIdFromUrl = searchParams.get("lead");
+  const detailTabFromUrl = searchParams.get("tab");
+  const { data: leadFromUrl } = useLead(leadIdFromUrl ?? "");
+
+  useEffect(() => {
+    if (leadFromUrl) {
+      setSelectedLead(leadFromUrl);
+    }
+  }, [leadFromUrl]);
+
+  const handleCloseLead = useCallback(() => {
+    setSelectedLead(null);
+    if (leadIdFromUrl) {
+      const next = new URLSearchParams(searchParams);
+      next.delete("lead");
+      next.delete("tab");
+      setSearchParams(next, { replace: true });
+    }
+  }, [leadIdFromUrl, searchParams, setSearchParams]);
 
   const filterLeads = (status: string) => {
     if (status === "all") return salesLeads;
@@ -177,9 +198,10 @@ export default function Leads() {
           </TabsContent>
         </Tabs>
 
-        <LeadDetailDialog 
-          lead={selectedLead} 
-          onClose={() => setSelectedLead(null)} 
+        <LeadDetailDialog
+          lead={selectedLead}
+          onClose={handleCloseLead}
+          initialTab={detailTabFromUrl ?? undefined}
         />
       </div>
     </AppLayout>

@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { LEAD_STATUS_CONFIG, getSourceConfig } from "@/types/crm";
 import { SourceIcon } from "@/utils/sourceIcons";
 import { cn } from "@/lib/utils";
@@ -65,16 +65,23 @@ type LeadStatus = Database["public"]["Enums"]["lead_status"];
 interface LeadDetailDialogProps {
   lead: Lead | null;
   onClose: () => void;
+  initialTab?: string;
 }
 
-export function LeadDetailDialog({ lead, onClose }: LeadDetailDialogProps) {
+export function LeadDetailDialog({ lead, onClose, initialTab }: LeadDetailDialogProps) {
   const isMobile = useIsMobile();
   const [newNote, setNewNote] = useState("");
   const [showFollowUpForm, setShowFollowUpForm] = useState(false);
   const [showCloseWarning, setShowCloseWarning] = useState(false);
   const [showExceptionDialog, setShowExceptionDialog] = useState(false);
   const [pendingStatus, setPendingStatus] = useState<LeadStatus | null>(null);
-  const [activeTab, setActiveTab] = useState("details");
+  const [activeTab, setActiveTab] = useState(initialTab ?? "details");
+
+  useEffect(() => {
+    if (lead) {
+      setActiveTab(initialTab ?? "details");
+    }
+  }, [lead?.id, initialTab]);
   const { hasElevatedRole, isAdmin } = useAuth();
   const { formatCurrency, getRoomLabel } = useSystemSettingsContext();
   
