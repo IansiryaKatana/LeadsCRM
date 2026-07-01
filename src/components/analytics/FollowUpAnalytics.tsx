@@ -1,4 +1,4 @@
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { useFollowUpAnalytics } from "@/hooks/useFollowUpAnalytics";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Progress } from "@/components/ui/progress";
@@ -10,9 +10,7 @@ import {
   PhoneCall,
   BarChart3 
 } from "lucide-react";
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell } from "recharts";
-
-import { CHART_PALETTE, chartTickStyle, chartTooltipStyle } from "@/constants/chartTheme";
+import { FollowUpTypeChart } from "@/components/charts/analytics-charts";
 
 interface FollowUpAnalyticsProps {
   academicYear?: string;
@@ -43,6 +41,7 @@ export function FollowUpAnalytics({ academicYear, startDate, endDate }: FollowUp
   if (!analytics) return null;
 
   const chartData = analytics.followupTypeEffectiveness.map((item) => ({
+    typeKey: item.type,
     name: item.type.charAt(0).toUpperCase() + item.type.slice(1).replace("_", " "),
     count: item.count,
     conversionRate: item.conversionRate,
@@ -50,7 +49,6 @@ export function FollowUpAnalytics({ academicYear, startDate, endDate }: FollowUp
 
   return (
     <div className="space-y-6">
-      {/* Key Metrics */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
         <Card className="shadow-card">
           <CardContent className="pt-6">
@@ -117,7 +115,6 @@ export function FollowUpAnalytics({ academicYear, startDate, endDate }: FollowUp
         </Card>
       </div>
 
-      {/* Alerts */}
       {(analytics.overdueFollowups > 0 || analytics.upcomingFollowups > 0) && (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           {analytics.overdueFollowups > 0 && (
@@ -156,7 +153,6 @@ export function FollowUpAnalytics({ academicYear, startDate, endDate }: FollowUp
         </div>
       )}
 
-      {/* Follow-up Type Effectiveness */}
       {chartData.length > 0 && (
         <Card className="shadow-card">
           <CardHeader>
@@ -164,36 +160,13 @@ export function FollowUpAnalytics({ academicYear, startDate, endDate }: FollowUp
               <BarChart3 className="h-5 w-5" />
               Follow-up Type Effectiveness
             </CardTitle>
+            <CardDescription>Conversion rate by follow-up channel</CardDescription>
           </CardHeader>
-          <CardContent>
-            <div className="h-72">
-              <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={chartData}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="hsl(210, 20%, 92%)" vertical={false} />
-                  <XAxis 
-                    dataKey="name" 
-                    tick={chartTickStyle}
-                    angle={-45}
-                    textAnchor="end"
-                    height={80}
-                  />
-                  <YAxis tick={chartTickStyle} />
-                  <Tooltip
-                    contentStyle={chartTooltipStyle}
-                    formatter={(value: number) => [`${value.toFixed(1)}%`, "Conversion Rate"]}
-                  />
-                  <Bar dataKey="conversionRate" radius={[6, 6, 0, 0]}>
-                    {chartData.map((_, index) => (
-                      <Cell key={`cell-${index}`} fill={CHART_PALETTE[index % CHART_PALETTE.length]} />
-                    ))}
-                  </Bar>
-                </BarChart>
-              </ResponsiveContainer>
-            </div>
+          <CardContent className="pt-0">
+            <FollowUpTypeChart data={chartData} />
           </CardContent>
         </Card>
       )}
     </div>
   );
 }
-

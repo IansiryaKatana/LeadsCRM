@@ -1,4 +1,5 @@
 import { AppLayout } from "@/components/layout/AppLayout";
+import { pageTitleClass } from "@/lib/typography";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -39,7 +40,7 @@ export default function Settings() {
       <div className="space-y-6 animate-fade-in">
         {/* Header */}
         <div>
-          <h1 className="font-display text-3xl sm:text-4xl font-bold">Settings</h1>
+          <h1 className={pageTitleClass}>Settings</h1>
           <p className="text-muted-foreground mt-1">
             Manage your account and application preferences
           </p>

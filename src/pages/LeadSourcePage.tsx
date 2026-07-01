@@ -1,6 +1,7 @@
 import { useState, useMemo, useEffect } from "react";
 import { useParams } from "react-router-dom";
 import { AppLayout } from "@/components/layout/AppLayout";
+import { pageTitleClass } from "@/lib/typography";
 import { LeadTable } from "@/components/leads/LeadTable";
 import { CreateLeadForm } from "@/components/leads/CreateLeadForm";
 import { LeadDetailDialog } from "@/components/leads/LeadDetailDialog";
@@ -135,7 +136,7 @@ export default function LeadSourcePage() {
       <div className="space-y-6 animate-fade-in">
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
           <div>
-            <h1 className="font-display text-3xl sm:text-4xl font-bold">
+            <h1 className={pageTitleClass}>
               {source.name}
             </h1>
             <p className="text-muted-foreground mt-1">

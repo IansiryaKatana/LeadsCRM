@@ -1,5 +1,6 @@
 import { useState, useCallback } from "react";
 import { AppLayout } from "@/components/layout/AppLayout";
+import { pageTitleClass } from "@/lib/typography";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
@@ -421,7 +422,7 @@ export default function BulkUpload() {
       <div className="space-y-6 animate-fade-in">
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
           <div>
-            <h1 className="font-display text-3xl sm:text-4xl font-bold">Bulk Upload</h1>
+            <h1 className={pageTitleClass}>Bulk Upload</h1>
             <p className="text-muted-foreground mt-1">Import leads from CSV files</p>
           </div>
           <div className="flex items-center gap-3">

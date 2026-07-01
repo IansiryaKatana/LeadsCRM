@@ -3,7 +3,7 @@ import { AppLayout } from "@/components/layout/AppLayout";
 import { StatCard } from "@/components/dashboard/StatCard";
 import { ChannelPerformanceChart } from "@/components/dashboard/ChannelPerformance";
 import { SkeletonChart, SkeletonCard } from "@/components/ui/skeleton-loader";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import {
   Select,
@@ -20,19 +20,6 @@ import {
   Target,
   DollarSign,
 } from "lucide-react";
-import {
-  BarChart,
-  Bar,
-  XAxis,
-  YAxis,
-  CartesianGrid,
-  Tooltip,
-  ResponsiveContainer,
-  PieChart,
-  Pie,
-  Cell,
-  Legend,
-} from "recharts";
 import { LEAD_STATUS_CONFIG, ROOM_CHOICE_CONFIG } from "@/types/crm";
 import { useDashboardStats, useChannelPerformance } from "@/hooks/useDashboardStats";
 import { useMonthlyLeadData, useRoomDistribution, useStatusDistribution } from "@/hooks/useMonthlyData";
@@ -49,24 +36,16 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useFollowUpAnalytics } from "@/hooks/useFollowUpAnalytics";
 import { useTeamPerformance } from "@/hooks/useTeamPerformance";
 import {
+  LeadVolumeChart,
+  PipelineStatusChart,
+  RoomDistributionChart,
+} from "@/components/charts/analytics-charts";
+import {
   getReportDateBounds,
   type ReportDateRangeKey,
 } from "@/utils/reportDateRange";
-import {
-  CHART_COLORS,
-  CHART_PALETTE,
-  chartTickStyle,
-  chartTooltipStyle,
-} from "@/constants/chartTheme";
-
-const STATUS_CHART_COLORS: Record<string, string> = {
-  new: CHART_COLORS.primary,
-  awaiting_outreach: "hsl(211, 70%, 78%)",
-  low_engagement: CHART_COLORS.mutedForeground,
-  high_interest: CHART_COLORS.accent,
-  converted: CHART_COLORS.success,
-  closed: CHART_COLORS.destructive,
-};
+import { pageTitleClass } from "@/lib/typography";
+import { CHART_PALETTE } from "@/constants/chartTheme";
 
 export default function Reports() {
   const [dateRange, setDateRange] = useState<ReportDateRangeKey>("30d");
@@ -110,7 +89,7 @@ export default function Reports() {
   const statusDistribution = Object.entries(LEAD_STATUS_CONFIG).map(([key, config]) => ({
     name: config.label,
     value: statusData?.[key] || 0,
-    fill: STATUS_CHART_COLORS[key] ?? CHART_PALETTE[4],
+    fill: CHART_PALETTE[Object.keys(LEAD_STATUS_CONFIG).indexOf(key) % CHART_PALETTE.length],
   }));
 
   const filterSummary = [
@@ -274,14 +253,14 @@ export default function Reports() {
         <div className="flex flex-col gap-4">
           <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
             <div>
-              <h1 className="font-display text-3xl sm:text-4xl font-bold tracking-tight">Reports</h1>
+              <h1 className={pageTitleClass}>Reports</h1>
               <p className="text-muted-foreground mt-1 font-body">
                 Live analytics from your CRM — filtered by period and academic year
               </p>
             </div>
             <div className="flex flex-wrap gap-2 sm:gap-3 items-center w-full sm:w-auto">
               <div className="flex items-center gap-2 flex-1 sm:flex-initial min-w-[140px]">
-                <Calendar className="h-4 w-4 text-muted-foreground shrink-0" />
+                <Calendar className="hidden sm:block h-4 w-4 text-muted-foreground shrink-0" />
                 <Select
                   value={(currentAcademicYear ?? "") || "all"}
                   onValueChange={(value) => setCurrentAcademicYear(value === "all" ? "" : value)}
@@ -319,23 +298,27 @@ export default function Reports() {
         </div>
 
         <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-          <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-            <TabsList className="bg-muted/50 p-1 w-full md:w-auto h-auto flex-wrap">
-              <TabsTrigger value="analytics" className="gap-2 shrink-0 font-body">
+          <div className="flex w-full flex-col gap-3 md:flex-row md:items-center md:justify-between md:gap-4">
+            <TabsList
+              fullWidth
+              className="grid w-full grid-cols-3 bg-muted/50 p-1 h-auto sm:inline-flex sm:w-auto sm:grid-cols-none"
+            >
+              <TabsTrigger value="analytics" className="gap-1.5 sm:gap-2 flex-1 sm:flex-initial text-xs sm:text-sm font-body">
                 <TrendingUp className="h-4 w-4 shrink-0" />
                 Analytics
               </TabsTrigger>
-              <TabsTrigger value="followups" className="gap-2 shrink-0 font-body">
+              <TabsTrigger value="followups" className="gap-1.5 sm:gap-2 flex-1 sm:flex-initial text-xs sm:text-sm font-body">
                 <BarChart3 className="h-4 w-4 shrink-0" />
                 Follow-Ups
               </TabsTrigger>
-              <TabsTrigger value="team" className="gap-2 shrink-0 font-body">
+              <TabsTrigger value="team" className="gap-1.5 sm:gap-2 flex-1 sm:flex-initial text-xs sm:text-sm font-body">
                 <Users className="h-4 w-4 shrink-0" />
                 Team
               </TabsTrigger>
             </TabsList>
 
             <ExportFormatBar
+              className="w-full sm:w-auto"
               disabled={
                 (activeTab === "analytics" && (analyticsLoading || !stats)) ||
                 (activeTab === "followups" && (followUpLoading || !followUpAnalytics)) ||
@@ -427,31 +410,13 @@ export default function Reports() {
 
                 <div className="grid grid-cols-1 xl:grid-cols-2 gap-6 items-stretch">
                   <Card className="shadow-card rounded-2xl border-0 h-full flex flex-col">
-                      <CardHeader className="pb-2 shrink-0">
-                        <CardTitle className="font-display text-xl">Lead Volume</CardTitle>
-                        <p className="text-sm text-muted-foreground font-body">Leads vs conversions by month</p>
-                      </CardHeader>
-                      <CardContent className="flex flex-1 flex-col min-h-0">
-                        <div className="flex-1 min-h-48 w-full">
-                          {!monthlyData?.length ? (
-                            <div className="h-full flex items-center justify-center text-muted-foreground font-body">
-                              No leads in this period
-                            </div>
-                          ) : (
-                            <ResponsiveContainer width="100%" height="100%">
-                              <BarChart data={monthlyData} margin={{ top: 10, right: 10, left: 0, bottom: 0 }} barCategoryGap="24%" barGap={8}>
-                                <CartesianGrid vertical={false} stroke={CHART_COLORS.grid} strokeDasharray="4 4" />
-                                <XAxis dataKey="month" tick={chartTickStyle} axisLine={false} tickLine={false} />
-                                <YAxis tick={chartTickStyle} axisLine={false} tickLine={false} />
-                                <Tooltip cursor={{ fill: "hsl(210, 20%, 95%)" }} contentStyle={chartTooltipStyle} labelStyle={{ fontWeight: 600, fontFamily: chartTickStyle.fontFamily }} />
-                                <Legend wrapperStyle={{ fontFamily: chartTickStyle.fontFamily, fontSize: 12 }} />
-                                <Bar dataKey="leads" name="Leads" fill={CHART_COLORS.primary} radius={[6, 6, 0, 0]} />
-                                <Bar dataKey="converted" name="Converted" fill={CHART_COLORS.successMuted} radius={[6, 6, 0, 0]} />
-                              </BarChart>
-                            </ResponsiveContainer>
-                          )}
-                        </div>
-                      </CardContent>
+                    <CardHeader className="pb-2 shrink-0">
+                      <CardTitle className="font-display text-xl">Lead Volume</CardTitle>
+                      <CardDescription className="font-body">Leads vs conversions by month</CardDescription>
+                    </CardHeader>
+                    <CardContent className="flex flex-1 flex-col min-h-0 pt-0">
+                      <LeadVolumeChart data={monthlyData} />
+                    </CardContent>
                   </Card>
                   <ChannelPerformanceChart data={channels} className="h-full" />
                 </div>
@@ -460,65 +425,20 @@ export default function Reports() {
                   <Card className="shadow-card rounded-2xl border-0">
                     <CardHeader className="pb-2">
                       <CardTitle className="font-display text-xl">Room Distribution</CardTitle>
-                      <p className="text-sm text-muted-foreground font-body">Preference mix in selected period</p>
+                      <CardDescription className="font-body">Preference mix in selected period</CardDescription>
                     </CardHeader>
-                    <CardContent>
-                      <div className="h-72 flex items-center justify-center">
-                        {roomDistribution.every((r) => r.value === 0) ? (
-                          <p className="text-muted-foreground font-body">No room data in this period</p>
-                        ) : (
-                          <ResponsiveContainer width="100%" height="100%">
-                            <PieChart>
-                              <Pie
-                                data={roomDistribution.filter((r) => r.value > 0)}
-                                cx="50%"
-                                cy="50%"
-                                innerRadius={56}
-                                outerRadius={96}
-                                paddingAngle={4}
-                                dataKey="value"
-                                label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
-                                style={{ fontFamily: chartTickStyle.fontFamily, fontSize: 11 }}
-                              >
-                                {roomDistribution.map((_, index) => (
-                                  <Cell key={`room-${index}`} fill={CHART_PALETTE[index % CHART_PALETTE.length]} />
-                                ))}
-                              </Pie>
-                              <Tooltip contentStyle={chartTooltipStyle} />
-                            </PieChart>
-                          </ResponsiveContainer>
-                        )}
-                      </div>
+                    <CardContent className="pt-0">
+                      <RoomDistributionChart roomData={roomData} />
                     </CardContent>
                   </Card>
 
                   <Card className="shadow-card rounded-2xl border-0">
                     <CardHeader className="pb-2">
                       <CardTitle className="font-display text-xl">Pipeline Status</CardTitle>
-                      <p className="text-sm text-muted-foreground font-body">Lead status breakdown</p>
+                      <CardDescription className="font-body">Lead status breakdown</CardDescription>
                     </CardHeader>
-                    <CardContent>
-                      <div className="h-72">
-                        {statusDistribution.every((s) => s.value === 0) ? (
-                          <div className="h-full flex items-center justify-center text-muted-foreground font-body">
-                            No status data in this period
-                          </div>
-                        ) : (
-                          <ResponsiveContainer width="100%" height="100%">
-                            <BarChart data={statusDistribution.filter((s) => s.value > 0)} layout="vertical" margin={{ left: 8, right: 16 }}>
-                              <CartesianGrid strokeDasharray="3 3" stroke={CHART_COLORS.grid} horizontal vertical={false} />
-                              <XAxis type="number" tick={chartTickStyle} />
-                              <YAxis type="category" dataKey="name" width={118} tick={chartTickStyle} />
-                              <Tooltip contentStyle={chartTooltipStyle} />
-                              <Bar dataKey="value" name="Leads" radius={[0, 8, 8, 0]} barSize={22}>
-                                {statusDistribution.filter((s) => s.value > 0).map((entry, index) => (
-                                  <Cell key={`status-${index}`} fill={entry.fill} />
-                                ))}
-                              </Bar>
-                            </BarChart>
-                          </ResponsiveContainer>
-                        )}
-                      </div>
+                    <CardContent className="pt-0">
+                      <PipelineStatusChart statusData={statusData} />
                     </CardContent>
                   </Card>
                 </div>

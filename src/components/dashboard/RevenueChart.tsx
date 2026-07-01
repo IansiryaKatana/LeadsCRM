@@ -1,8 +1,24 @@
-import { XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Area, AreaChart } from "recharts";
+import { Area, AreaChart, CartesianGrid, XAxis, YAxis } from "recharts";
 import { useMonthlyLeadData } from "@/hooks/useMonthlyData";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  ChartContainer,
+  ChartLegend,
+  ChartLegendContent,
+  ChartTooltip,
+  ChartTooltipContent,
+  type ChartConfig,
+} from "@/components/ui/chart";
 import { useSystemSettingsContext } from "@/contexts/SystemSettingsContext";
+import { CHART_COLORS } from "@/constants/chartTheme";
+import { ChartEmptyState } from "@/components/charts/chart-empty-state";
 import { cn } from "@/lib/utils";
+
+const revenueChartConfig = {
+  revenue: { label: "Revenue", color: CHART_COLORS.primary },
+  converted: { label: "Converted value", color: CHART_COLORS.success },
+} satisfies ChartConfig;
 
 interface RevenueChartProps {
   academicYear?: string | null;
@@ -15,91 +31,78 @@ export function RevenueChart({ academicYear, className }: RevenueChartProps) {
 
   if (isLoading) {
     return (
-      <div className={cn("bg-card rounded-2xl p-6 shadow-card flex flex-col h-full min-h-[420px]", className)}>
-        <Skeleton className="h-6 w-48 mb-2 shrink-0" />
-        <Skeleton className="h-4 w-32 mb-6 shrink-0" />
-        <Skeleton className="flex-1 min-h-48 w-full" />
-      </div>
+      <Card className={cn("shadow-card rounded-2xl border-0 flex flex-col h-full min-h-[420px]", className)}>
+        <CardHeader className="shrink-0">
+          <Skeleton className="h-6 w-48" />
+          <Skeleton className="h-4 w-32 mt-2" />
+        </CardHeader>
+        <CardContent className="flex-1">
+          <Skeleton className="h-full min-h-48 w-full" />
+        </CardContent>
+      </Card>
     );
   }
 
   const chartData = data || [];
+  const formatCurrency = (value: number) => `${currency.symbol}${value.toLocaleString()}`;
 
   return (
-    <div className={cn("bg-card rounded-2xl p-6 shadow-card flex flex-col h-full min-h-[420px]", className)}>
-      <div className="flex items-center justify-between mb-6 shrink-0">
-        <div>
-          <h3 className="font-display text-xl font-bold">Revenue Forecast</h3>
-          <p className="text-sm text-muted-foreground">Monthly revenue trends</p>
-        </div>
-        <div className="flex gap-4 text-sm">
-          <div className="flex items-center gap-2">
-            <div className="w-3 h-3 rounded-full bg-primary" />
-            <span className="text-muted-foreground">Revenue</span>
-          </div>
-          <div className="flex items-center gap-2">
-            <div className="w-3 h-3 rounded-full bg-success" />
-            <span className="text-muted-foreground">Converted</span>
-          </div>
-        </div>
-      </div>
-      
-      <div className="flex-1 min-h-48 w-full">
+    <Card className={cn("shadow-card rounded-2xl border-0 flex flex-col h-full min-h-[420px]", className)}>
+      <CardHeader className="shrink-0 pb-2">
+        <CardTitle className="font-display text-xl">Revenue Forecast</CardTitle>
+        <CardDescription className="font-body">Monthly revenue trends</CardDescription>
+      </CardHeader>
+      <CardContent className="flex flex-1 flex-col min-h-0 pt-0">
         {chartData.length === 0 ? (
-          <div className="h-full flex items-center justify-center text-muted-foreground">
-            No data available yet
-          </div>
+          <ChartEmptyState message="No data available yet" />
         ) : (
-          <ResponsiveContainer width="100%" height="100%">
-            <AreaChart data={chartData} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
+          <ChartContainer config={revenueChartConfig} className="h-full min-h-[12rem] w-full aspect-auto">
+            <AreaChart data={chartData} margin={{ top: 8, right: 8, left: 0, bottom: 0 }}>
               <defs>
-                <linearGradient id="colorRevenue" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="5%" stopColor="hsl(211, 100%, 66%)" stopOpacity={0.3} />
-                  <stop offset="95%" stopColor="hsl(211, 100%, 66%)" stopOpacity={0} />
+                <linearGradient id="fillRevenue" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="5%" stopColor="var(--color-revenue)" stopOpacity={0.35} />
+                  <stop offset="95%" stopColor="var(--color-revenue)" stopOpacity={0.02} />
                 </linearGradient>
-                <linearGradient id="colorConverted" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="5%" stopColor="hsl(166, 58%, 47%)" stopOpacity={0.3} />
-                  <stop offset="95%" stopColor="hsl(166, 58%, 47%)" stopOpacity={0} />
+                <linearGradient id="fillConverted" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="5%" stopColor="var(--color-converted)" stopOpacity={0.3} />
+                  <stop offset="95%" stopColor="var(--color-converted)" stopOpacity={0.02} />
                 </linearGradient>
               </defs>
-              <CartesianGrid strokeDasharray="3 3" stroke="hsl(0, 0%, 88%)" />
-              <XAxis 
-                dataKey="month" 
-                tick={{ fill: "hsl(0, 0%, 40%)", fontSize: 12 }}
-                axisLine={{ stroke: "hsl(0, 0%, 88%)" }}
-              />
-              <YAxis 
-                tick={{ fill: "hsl(0, 0%, 40%)", fontSize: 12 }}
-                axisLine={{ stroke: "hsl(0, 0%, 88%)" }}
+              <CartesianGrid vertical={false} />
+              <XAxis dataKey="month" tickLine={false} axisLine={false} tickMargin={8} />
+              <YAxis
+                tickLine={false}
+                axisLine={false}
+                tickMargin={8}
+                width={48}
                 tickFormatter={(value) => `${(value / 1000).toFixed(0)}k`}
               />
-              <Tooltip
-                contentStyle={{
-                  backgroundColor: "hsl(0, 0%, 100%)",
-                  border: "1px solid hsl(0, 0%, 88%)",
-                  borderRadius: "12px",
-                  boxShadow: "0 4px 24px -4px rgba(0,0,0,0.1)",
-                }}
-                formatter={(value: number) => [`${currency.symbol}${value.toLocaleString()}`, ""]}
+              <ChartTooltip
+                content={
+                  <ChartTooltipContent
+                    formatter={(value) => formatCurrency(Number(value))}
+                  />
+                }
               />
+              <ChartLegend content={<ChartLegendContent />} />
               <Area
                 type="monotone"
                 dataKey="revenue"
-                stroke="hsl(211, 100%, 66%)"
-                strokeWidth={3}
-                fill="url(#colorRevenue)"
+                stroke="var(--color-revenue)"
+                strokeWidth={2}
+                fill="url(#fillRevenue)"
               />
               <Area
                 type="monotone"
                 dataKey="converted"
-                stroke="hsl(166, 58%, 47%)"
+                stroke="var(--color-converted)"
                 strokeWidth={2}
-                fill="url(#colorConverted)"
+                fill="url(#fillConverted)"
               />
             </AreaChart>
-          </ResponsiveContainer>
+          </ChartContainer>
         )}
-      </div>
-    </div>
+      </CardContent>
+    </Card>
   );
 }

@@ -26,12 +26,12 @@ export function ExportFormatBar({
   onPdf,
 }: ExportFormatBarProps) {
   const btnClass =
-    "h-9 gap-2 rounded-lg border-border/80 bg-card font-body text-xs sm:text-sm shadow-sm hover:bg-muted/50";
+    "h-9 min-w-0 flex-1 gap-2 rounded-lg border-border/80 bg-card font-body text-xs sm:flex-initial sm:text-sm shadow-sm hover:bg-muted/50";
 
   return (
     <div
       className={cn(
-        "flex flex-wrap items-center justify-end gap-2 rounded-xl border border-border/60 bg-muted/20 p-2",
+        "flex w-full items-stretch justify-stretch gap-2 rounded-xl border border-border/60 bg-muted/20 p-2 sm:w-auto sm:items-center sm:justify-end",
         className
       )}
     >

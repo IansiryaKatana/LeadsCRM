@@ -1,5 +1,6 @@
 import { useState, useMemo, useEffect } from "react";
 import { AppLayout } from "@/components/layout/AppLayout";
+import { pageTitleClass } from "@/lib/typography";
 import { LeadTable } from "@/components/leads/LeadTable";
 import { CreateLeadForm } from "@/components/leads/CreateLeadForm";
 import { LeadDetailDialog } from "@/components/leads/LeadDetailDialog";
@@ -134,7 +135,7 @@ export function SegmentLeadsPage({
       <div className="space-y-6 animate-fade-in">
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
           <div>
-            <h1 className="font-display text-3xl sm:text-4xl font-bold">{title}</h1>
+            <h1 className={pageTitleClass}>{title}</h1>
             <p className="text-muted-foreground mt-1">{subtitle}</p>
           </div>
           <div className="flex items-center gap-3 flex-wrap">

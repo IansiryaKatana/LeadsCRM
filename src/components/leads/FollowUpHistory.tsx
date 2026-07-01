@@ -2,7 +2,8 @@ import { formatDistanceToNow } from "date-fns";
 import { cn } from "@/lib/utils";
 import { FOLLOWUP_TYPE_CONFIG, FOLLOWUP_OUTCOME_CONFIG } from "@/types/crm";
 import type { LeadFollowUp } from "@/types/crm";
-import { Phone, Mail, MessageSquare, User, Calendar, Trash2 } from "lucide-react";
+import { FollowUpOutcomeIcon, FollowUpTypeIcon } from "@/utils/followUpIcons";
+import { Calendar, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/hooks/useAuth";
 import { useDeleteFollowUp } from "@/hooks/useFollowUps";
@@ -28,21 +29,6 @@ export function FollowUpHistory({ followUps, leadId }: FollowUpHistoryProps) {
   const deleteFollowUp = useDeleteFollowUp();
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [followUpToDelete, setFollowUpToDelete] = useState<string | null>(null);
-
-  const getTypeIcon = (type: string) => {
-    switch (type) {
-      case "call":
-        return <Phone className="h-4 w-4" />;
-      case "email":
-        return <Mail className="h-4 w-4" />;
-      case "whatsapp":
-        return <MessageSquare className="h-4 w-4" />;
-      case "in_person":
-        return <User className="h-4 w-4" />;
-      default:
-        return <Calendar className="h-4 w-4" />;
-    }
-  };
 
   const handleDelete = (followUpId: string) => {
     setFollowUpToDelete(followUpId);
@@ -86,7 +72,7 @@ export function FollowUpHistory({ followUps, leadId }: FollowUpHistoryProps) {
                     #{followUp.followup_number}
                   </span>
                   <div className="flex items-center gap-1.5">
-                    {getTypeIcon(followUp.followup_type)}
+                    <FollowUpTypeIcon type={followUp.followup_type} />
                     <span className="text-sm font-medium">{typeConfig.label}</span>
                   </div>
                   <span className="text-xs text-muted-foreground">
@@ -95,8 +81,9 @@ export function FollowUpHistory({ followUps, leadId }: FollowUpHistoryProps) {
                 </div>
 
                 <div className="flex items-center gap-2">
-                  <span className={cn("text-sm font-medium", outcomeConfig.color)}>
-                    {outcomeConfig.icon} {outcomeConfig.label}
+                  <span className={cn("flex items-center gap-1.5 text-sm font-medium", outcomeConfig.color)}>
+                    <FollowUpOutcomeIcon outcome={followUp.outcome} />
+                    {outcomeConfig.label}
                   </span>
                 </div>
 

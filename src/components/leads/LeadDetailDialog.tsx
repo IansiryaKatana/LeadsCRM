@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { LEAD_STATUS_CONFIG, getSourceConfig } from "@/types/crm";
+import { SourceIcon } from "@/utils/sourceIcons";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
@@ -171,7 +172,8 @@ export function LeadDetailDialog({ lead, onClose }: LeadDetailDialogProps) {
             {statusConfig.label}
           </span>
           <span className="px-4 py-2 rounded-full text-sm font-semibold bg-muted flex items-center gap-2">
-            {sourceConfig.icon} {sourceConfig.label}
+            <SourceIcon slug={leadData.source} />
+            {sourceConfig.label}
           </span>
           <FollowUpBadge count={followUpCount} />
         </div>

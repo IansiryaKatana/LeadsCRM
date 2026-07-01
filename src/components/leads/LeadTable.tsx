@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { LEAD_STATUS_CONFIG, LEAD_STATUS_CONFIG as STATUS_CONFIG, getSourceConfig } from "@/types/crm";
 import { cn } from "@/lib/utils";
+import { SourceIcon } from "@/utils/sourceIcons";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -660,7 +661,7 @@ export function LeadTable({
                     </TableCell>
                     <TableCell>
                       <div className="flex items-center gap-2">
-                        <span>{sourceConfig.icon}</span>
+                        <SourceIcon slug={lead.source} className="text-muted-foreground" />
                         <span className="text-sm">{sourceConfig.label}</span>
                       </div>
                     </TableCell>

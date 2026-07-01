@@ -13,17 +13,6 @@ import {
   PhoneCall,
   Award
 } from "lucide-react";
-import { 
-  BarChart, 
-  Bar, 
-  XAxis, 
-  YAxis, 
-  CartesianGrid, 
-  Tooltip, 
-  ResponsiveContainer,
-  Cell,
-  Legend
-} from "recharts";
 import { useSystemSettingsContext } from "@/contexts/SystemSettingsContext";
 import {
   Table,
@@ -33,8 +22,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-
-import { CHART_COLORS, chartTickStyle, chartTooltipStyle } from "@/constants/chartTheme";
+import { TeamConversionChart, TeamRevenueChart } from "@/components/charts/analytics-charts";
 
 interface TeamPerformanceAnalyticsProps {
   academicYear?: string;
@@ -289,20 +277,8 @@ export function TeamPerformanceAnalytics({ academicYear, startDate, endDate }: T
           <CardHeader>
             <CardTitle className="font-display">Revenue by Team Member</CardTitle>
           </CardHeader>
-          <CardContent>
-            <ResponsiveContainer width="100%" height={300}>
-              <BarChart data={revenueChartData}>
-                <CartesianGrid strokeDasharray="3 3" stroke="hsl(210, 20%, 92%)" vertical={false} />
-                <XAxis dataKey="name" tick={chartTickStyle} />
-                <YAxis tick={chartTickStyle} />
-                <Tooltip
-                  contentStyle={chartTooltipStyle}
-                  formatter={(value: number) => formatCurrency(value)}
-                />
-                <Legend wrapperStyle={{ fontFamily: chartTickStyle.fontFamily, fontSize: 12 }} />
-                <Bar dataKey="revenue" fill={CHART_COLORS.primary} name="Revenue" radius={[6, 6, 0, 0]} />
-              </BarChart>
-            </ResponsiveContainer>
+          <CardContent className="pt-0">
+            <TeamRevenueChart data={revenueChartData} formatValue={formatCurrency} />
           </CardContent>
         </Card>
 
@@ -310,19 +286,8 @@ export function TeamPerformanceAnalytics({ academicYear, startDate, endDate }: T
           <CardHeader>
             <CardTitle className="font-display">Conversion Rate by Team Member</CardTitle>
           </CardHeader>
-          <CardContent>
-            <ResponsiveContainer width="100%" height={300}>
-              <BarChart data={conversionChartData}>
-                <CartesianGrid strokeDasharray="3 3" stroke="hsl(210, 20%, 92%)" vertical={false} />
-                <XAxis dataKey="name" tick={chartTickStyle} />
-                <YAxis tick={chartTickStyle} />
-                <Tooltip
-                  contentStyle={chartTooltipStyle}
-                  formatter={(value: number) => `${value.toFixed(1)}%`}
-                />
-                <Bar dataKey="rate" fill={CHART_COLORS.success} name="Conversion Rate %" radius={[6, 6, 0, 0]} />
-              </BarChart>
-            </ResponsiveContainer>
+          <CardContent className="pt-0">
+            <TeamConversionChart data={conversionChartData} />
           </CardContent>
         </Card>
       </div>

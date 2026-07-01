@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { AppLayout } from "@/components/layout/AppLayout";
+import { pageTitleClass } from "@/lib/typography";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -149,7 +150,7 @@ export default function Tasks() {
       <div className="space-y-6 animate-fade-in">
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
           <div>
-            <h1 className="font-display text-3xl sm:text-4xl font-bold">Tasks</h1>
+            <h1 className={pageTitleClass}>Tasks</h1>
             <p className="text-muted-foreground mt-1">
               Manage and track your tasks
             </p>

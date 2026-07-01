@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useCreateFollowUp } from "@/hooks/useFollowUps";
 import { FOLLOWUP_TYPE_CONFIG, FOLLOWUP_OUTCOME_CONFIG, type FollowUpType, type FollowUpOutcome } from "@/types/crm";
+import { FollowUpOutcomeIcon, FollowUpTypeIcon } from "@/utils/followUpIcons";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import {
@@ -127,7 +128,7 @@ export function FollowUpForm({ leadId, currentFollowUpCount, open, onClose }: Fo
                 {Object.entries(FOLLOWUP_TYPE_CONFIG).map(([key, config]) => (
                   <SelectItem key={key} value={key}>
                     <span className="flex items-center gap-2">
-                      <span>{config.icon}</span>
+                      <FollowUpTypeIcon type={key as FollowUpType} />
                       <span>{config.label}</span>
                     </span>
                   </SelectItem>
@@ -157,7 +158,7 @@ export function FollowUpForm({ leadId, currentFollowUpCount, open, onClose }: Fo
                 {Object.entries(FOLLOWUP_OUTCOME_CONFIG).map(([key, config]) => (
                   <SelectItem key={key} value={key}>
                     <span className="flex items-center gap-2">
-                      <span>{config.icon}</span>
+                      <FollowUpOutcomeIcon outcome={key as FollowUpOutcome} />
                       <span>{config.label}</span>
                     </span>
                   </SelectItem>

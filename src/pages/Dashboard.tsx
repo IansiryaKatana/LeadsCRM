@@ -11,6 +11,7 @@ import { SkeletonDashboard } from "@/components/ui/skeleton-loader";
 import { useLeads } from "@/hooks/useLeads";
 import { useDashboardStats, useChannelPerformance } from "@/hooks/useDashboardStats";
 import { useSystemSettingsContext } from "@/contexts/SystemSettingsContext";
+import { pageTitleClass } from "@/lib/typography";
 import { LeadStatus } from "@/types/crm";
 import {
   Users,
@@ -96,7 +97,7 @@ export default function Dashboard() {
         {/* Header */}
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
           <div>
-            <h1 className="font-display text-3xl sm:text-4xl font-bold">Dashboard</h1>
+            <h1 className={pageTitleClass}>Dashboard</h1>
             <p className="text-muted-foreground mt-1">
               Welcome back! Here's your lead overview.
             </p>

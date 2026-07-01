@@ -47,6 +47,7 @@ import {
 } from "@/components/ui/collapsible";
 import { ChevronDown, ChevronRight } from "lucide-react";
 import { getSourceIcon } from "@/utils/sourceIcons";
+import { sidebarBrandTitleClass } from "@/lib/typography";
 
 const WEB_SOURCE_SLUGS = [
   "web_booking",
@@ -135,7 +136,7 @@ export function Sidebar() {
   const [logoutDialogOpen, setLogoutDialogOpen] = useState(false);
   const [sourcesExpanded, setSourcesExpanded] = useState(false);
   const { profile, role, signOut, isAdmin } = useAuth();
-  const { settings, systemName, defaultAcademicYear, currentAcademicYear } = useSystemSettingsContext();
+  const { settings, defaultAcademicYear, currentAcademicYear } = useSystemSettingsContext();
   const navigate = useNavigate();
   const location = useLocation();
   const { data: sources = [] } = useLeadSources();
@@ -242,16 +243,16 @@ export function Sidebar() {
           {/* Logo */}
           <div className="p-6 border-b border-border">
             <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-xl bg-primary flex items-center justify-center overflow-hidden shrink-0">
+              <div className="size-10 rounded bg-primary flex items-center justify-center overflow-hidden shrink-0">
                 <img
                   src={faviconUrl || logoUrl || "/favicon.png"}
                   alt="Urban Hub"
-                  className="w-full h-full object-contain"
+                  className="size-full object-contain"
                 />
               </div>
-              <div>
-                <h1 className="font-display text-xl font-bold">{systemName.split(' ')[0]}</h1>
-                <p className="text-xs text-muted-foreground">{systemName.split(' ').slice(1).join(' ')}</p>
+              <div className="min-w-0">
+                <h1 className={sidebarBrandTitleClass}>Urban Hub</h1>
+                <p className="text-xs text-muted-foreground font-body">Leads CRM</p>
               </div>
             </div>
           </div>

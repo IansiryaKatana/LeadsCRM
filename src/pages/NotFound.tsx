@@ -4,6 +4,7 @@ import { AppLayout } from "@/components/layout/AppLayout";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Home, ArrowLeft, Search, AlertCircle } from "lucide-react";
+import { pageTitleClass } from "@/lib/typography";
 
 const NotFound = () => {
   const location = useLocation();
@@ -31,7 +32,7 @@ const NotFound = () => {
 
               {/* Title and Description */}
               <div className="space-y-3">
-                <h2 className="font-display text-3xl sm:text-4xl font-bold">
+                <h2 className={pageTitleClass}>
                   Page Not Found
                 </h2>
                 <p className="text-muted-foreground text-lg max-w-md mx-auto">
