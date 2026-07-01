@@ -58,8 +58,8 @@ export default function BulkUpload() {
   
   const { user } = useAuth();
   const queryClient = useQueryClient();
-  const { academicYears, defaultAcademicYear } = useSystemSettingsContext();
-  const [selectedYear, setSelectedYear] = useState(defaultAcademicYear);
+  const { academicYears, currentAcademicYear, defaultAcademicYear, setCurrentAcademicYear } = useSystemSettingsContext();
+  const uploadYear = currentAcademicYear ?? defaultAcademicYear;
   const { data: uploadHistory = [], isLoading: historyLoading } = useBulkUploadHistory();
 
   const handleDrag = useCallback((e: React.DragEvent) => {
@@ -311,7 +311,7 @@ export default function BulkUpload() {
           rows: validRows,
           importId: importRecord.id,
           userId: user.id,
-          academicYear: selectedYear,
+          academicYear: uploadYear,
         },
       });
 
@@ -332,11 +332,11 @@ export default function BulkUpload() {
       queryClient.invalidateQueries({ queryKey: ["bulk-upload-history"] });
       
       // Force refetch the current academic year's leads
-      queryClient.refetchQueries({ queryKey: ["leads", selectedYear] });
+      queryClient.refetchQueries({ queryKey: ["leads", uploadYear] });
 
       toast({
         title: "Upload Complete",
-        description: `Successfully imported ${data.successCount} leads for ${selectedYear}.`,
+        description: `Successfully imported ${data.successCount} leads for ${uploadYear}.`,
       });
     } catch (error: any) {
       console.error("Upload error:", error);
@@ -427,7 +427,7 @@ export default function BulkUpload() {
           <div className="flex items-center gap-3">
             <div className="flex items-center gap-2">
               <Calendar className="h-4 w-4 text-muted-foreground" />
-              <Select value={selectedYear} onValueChange={setSelectedYear}>
+              <Select value={uploadYear} onValueChange={setCurrentAcademicYear}>
                 <SelectTrigger className="w-[140px]">
                   <SelectValue placeholder="Academic Year" />
                 </SelectTrigger>
@@ -491,7 +491,7 @@ export default function BulkUpload() {
                   or click to browse your files
                 </p>
                 <p className="text-sm text-muted-foreground mb-6">
-                  Uploading to: <span className="font-semibold text-primary">{selectedYear}</span>
+                  Uploading to: <span className="font-semibold text-primary">{uploadYear}</span>
                 </p>
                 <label>
                   <input
@@ -522,7 +522,7 @@ export default function BulkUpload() {
                     <div>
                       <p className="font-semibold">{file.name}</p>
                       <p className="text-sm text-muted-foreground">
-                        {(file.size / 1024).toFixed(1)} KB • {preview.length} rows • Academic Year: {selectedYear}
+                        {(file.size / 1024).toFixed(1)} KB • {preview.length} rows • Academic Year: {uploadYear}
                       </p>
                     </div>
                   </div>
@@ -627,7 +627,7 @@ export default function BulkUpload() {
                     <div className="flex items-center gap-3 text-success">
                       <CheckCircle className="h-6 w-6" />
                       <span className="font-semibold">
-                        Successfully imported {importResults.success} leads to {selectedYear}
+                        Successfully imported {importResults.success} leads to {uploadYear}
                         {importResults.failed > 0 && ` (${importResults.failed} failed)`}
                       </span>
                     </div>
@@ -636,7 +636,7 @@ export default function BulkUpload() {
                 ) : (
                   <div className="flex items-center justify-between">
                     <p className="text-muted-foreground">
-                      Ready to import {validCount} valid leads to {selectedYear}
+                      Ready to import {validCount} valid leads to {uploadYear}
                     </p>
                     <div className="flex gap-3">
                       <Button variant="outline" onClick={resetUpload}>

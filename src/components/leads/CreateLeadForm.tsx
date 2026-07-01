@@ -47,8 +47,8 @@ export function CreateLeadForm() {
   const [open, setOpen] = useState(false);
   const [estimatedRevenue, setEstimatedRevenue] = useState(0);
   const createLead = useCreateLead();
-  const { getRoomLabel, getRoomPrice, formatCurrency, roomLabels, roomPrices, academicYears, defaultAcademicYear } = useSystemSettingsContext();
-  const [selectedAcademicYear, setSelectedAcademicYear] = useState(defaultAcademicYear);
+  const { getRoomLabel, getRoomPrice, formatCurrency, roomLabels, roomPrices, academicYears, currentAcademicYear, defaultAcademicYear } = useSystemSettingsContext();
+  const [selectedAcademicYear, setSelectedAcademicYear] = useState(currentAcademicYear || defaultAcademicYear);
   const { data: sources = [] } = useLeadSources();
 
   const {
@@ -113,7 +113,7 @@ export function CreateLeadForm() {
     console.log("Submitting lead with data:", {
       ...data,
       source: validSource,
-      academic_year: selectedAcademicYear || defaultAcademicYear,
+      academic_year: selectedAcademicYear || currentAcademicYear || defaultAcademicYear,
       sourcesAvailable: sources.map(s => s.slug),
     });
     
@@ -128,11 +128,11 @@ export function CreateLeadForm() {
       potential_revenue: 0,
       lead_status: "new",
       is_hot: false,
-      academic_year: selectedAcademicYear || defaultAcademicYear,
+      academic_year: selectedAcademicYear || currentAcademicYear || defaultAcademicYear,
     }, {
       onSuccess: () => {
         reset();
-        setSelectedAcademicYear(defaultAcademicYear);
+        setSelectedAcademicYear(currentAcademicYear || defaultAcademicYear);
         setOpen(false);
       },
     });
@@ -140,14 +140,14 @@ export function CreateLeadForm() {
 
   useEffect(() => {
     if (open) {
-      setSelectedAcademicYear(defaultAcademicYear);
+      setSelectedAcademicYear(currentAcademicYear || defaultAcademicYear);
       // Ensure source is set when dialog opens
       const defaultSource = sources.find(s => s.slug === "website")?.slug || sources[0]?.slug || "website";
       if (!watch("source") || !sources.find(s => s.slug === watch("source"))) {
         setValue("source", defaultSource, { shouldValidate: false });
       }
     }
-  }, [open, defaultAcademicYear, sources, setValue, watch]);
+  }, [open, currentAcademicYear, defaultAcademicYear, sources, setValue, watch]);
 
   const roomKeys: RoomChoice[] = ["platinum", "gold", "silver", "bronze", "standard"];
 

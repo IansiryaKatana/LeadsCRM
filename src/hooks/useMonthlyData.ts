@@ -41,7 +41,7 @@ function buildMonthBuckets(startDate: Date | null, endDate: Date): Date[] {
 }
 
 export function useMonthlyLeadData(
-  academicYear?: string,
+  academicYear?: string | null,
   startDate?: Date | null,
   endDate?: Date | null
 ) {
@@ -99,12 +99,12 @@ export function useMonthlyLeadData(
         };
       });
     },
-    enabled: !!user,
+    enabled: !!user && academicYear !== null,
   });
 }
 
 export function useRoomDistribution(
-  academicYear?: string,
+  academicYear?: string | null,
   startDate?: Date | null,
   endDate?: Date | null
 ) {
@@ -133,12 +133,12 @@ export function useRoomDistribution(
 
       return counts;
     },
-    enabled: !!user,
+    enabled: !!user && academicYear !== null,
   });
 }
 
 export function useStatusDistribution(
-  academicYear?: string,
+  academicYear?: string | null,
   startDate?: Date | null,
   endDate?: Date | null
 ) {
@@ -167,6 +167,6 @@ export function useStatusDistribution(
 
       return counts;
     },
-    enabled: !!user,
+    enabled: !!user && academicYear !== null,
   });
 }

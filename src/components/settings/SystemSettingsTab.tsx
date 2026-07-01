@@ -6,9 +6,10 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Separator } from "@/components/ui/separator";
 import { useSystemSettings, CURRENCY_OPTIONS, RoomPrices, RoomLabels } from "@/hooks/useSystemSettings";
-import { toast } from "@/hooks/use-toast";
+import { getLatestAcademicYear } from "@/utils/academicYear";
 import { Loader2, Upload, Image, DollarSign, Tag, Calendar, Plus, X, Building2, Mail, Bell } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
+import { toast } from "@/hooks/use-toast";
 
 export function SystemSettingsTab() {
   const { settings, isLoading, updateSetting } = useSystemSettings();
@@ -20,6 +21,9 @@ export function SystemSettingsTab() {
   const [faviconUrl, setFaviconUrl] = useState(settings.branding.favicon_url || "");
   const [systemName, setSystemName] = useState(settings.system_name || "Urban Hub Students Accommodations");
   const [emailFromAddress, setEmailFromAddress] = useState(settings.email_from_address || "Urban Hub <noreply@send.portal.urbanhub.uk>");
+  const [emailReplyToAddress, setEmailReplyToAddress] = useState(settings.email_reply_to_address || "operations@urbanhub.uk");
+  const [emailCcAddresses, setEmailCcAddresses] = useState<string[]>(settings.email_cc_addresses || ["Leads@urbanhub.uk"]);
+  const [newEmailCcAddress, setNewEmailCcAddress] = useState("");
   const [notificationEmails, setNotificationEmails] = useState<string[]>(settings.notification_emails || []);
   const [newNotificationEmail, setNewNotificationEmail] = useState("");
   const [academicYears, setAcademicYears] = useState<string[]>(settings.academic_years || []);
@@ -40,6 +44,8 @@ export function SystemSettingsTab() {
     setFaviconUrl(settings.branding.favicon_url || "");
     setSystemName(settings.system_name || "Urban Hub Students Accommodations");
     setEmailFromAddress(settings.email_from_address || "Urban Hub <noreply@send.portal.urbanhub.uk>");
+    setEmailReplyToAddress(settings.email_reply_to_address || "operations@urbanhub.uk");
+    setEmailCcAddresses(settings.email_cc_addresses || ["Leads@urbanhub.uk"]);
     setNotificationEmails(settings.notification_emails || []);
     setAcademicYears(settings.academic_years || []);
     setDefaultAcademicYear(settings.default_academic_year || "");
@@ -157,18 +163,61 @@ export function SystemSettingsTab() {
       toast({ title: "Error", description: "Invalid email format. Use 'Name <email@domain.com>' or 'email@domain.com'", variant: "destructive" });
       return;
     }
+    if (!emailReplyToAddress.trim()) {
+      toast({ title: "Error", description: "Reply-to address cannot be empty", variant: "destructive" });
+      return;
+    }
+    const replyToRegex = /^(.+?)\s*<(.+?)>$|^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!replyToRegex.test(emailReplyToAddress.trim())) {
+      toast({ title: "Error", description: "Invalid reply-to format. Use 'Name <email@domain.com>' or 'email@domain.com'", variant: "destructive" });
+      return;
+    }
     setSaving(true);
     try {
-      await updateSetting.mutateAsync({ 
-        key: "email_from_address", 
-        value: emailFromAddress.trim() 
+      await updateSetting.mutateAsync({
+        key: "email_from_address",
+        value: emailFromAddress.trim(),
       });
-      toast({ title: "Email From Address Updated", description: "Email from address saved successfully" });
+      await updateSetting.mutateAsync({
+        key: "email_reply_to_address",
+        value: emailReplyToAddress.trim(),
+      });
+      await updateSetting.mutateAsync({
+        key: "email_cc_addresses",
+        value: emailCcAddresses,
+      });
+      toast({
+        title: "Email Settings Updated",
+        description: "From, reply-to, and CC addresses saved. Student replies will go to the reply-to address.",
+      });
     } catch (error) {
-      toast({ title: "Error", description: "Failed to update email from address", variant: "destructive" });
+      toast({ title: "Error", description: "Failed to update email settings", variant: "destructive" });
     } finally {
       setSaving(false);
     }
+  };
+
+  const handleAddEmailCcAddress = () => {
+    const email = newEmailCcAddress.trim().toLowerCase();
+    if (!email) return;
+
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(email)) {
+      toast({ title: "Invalid email", description: "Please enter a valid email address", variant: "destructive" });
+      return;
+    }
+
+    if (emailCcAddresses.includes(email)) {
+      toast({ title: "Already exists", description: "This email is already in the CC list", variant: "destructive" });
+      return;
+    }
+
+    setEmailCcAddresses([...emailCcAddresses, email]);
+    setNewEmailCcAddress("");
+  };
+
+  const handleRemoveEmailCcAddress = (email: string) => {
+    setEmailCcAddresses(emailCcAddresses.filter((entry) => entry !== email));
   };
 
   const handleAddNotificationEmail = () => {
@@ -254,11 +303,7 @@ export function SystemSettingsTab() {
     const updatedYears = [...academicYears, year].sort();
     setAcademicYears(updatedYears);
     setNewYearInput("");
-    
-    // If this is the first year, set it as default
-    if (updatedYears.length === 1) {
-      setDefaultAcademicYear(year);
-    }
+    setDefaultAcademicYear(getLatestAcademicYear(updatedYears));
   };
 
   const handleRemoveAcademicYear = (year: string) => {
@@ -272,7 +317,7 @@ export function SystemSettingsTab() {
     
     // If removing the default year, set the first remaining year as default
     if (defaultAcademicYear === year && updatedYears.length > 0) {
-      setDefaultAcademicYear(updatedYears[0]);
+      setDefaultAcademicYear(getLatestAcademicYear(updatedYears));
     }
   };
 
@@ -568,11 +613,13 @@ export function SystemSettingsTab() {
         <CardHeader>
           <CardTitle className="font-display flex items-center gap-2">
             <Mail className="h-5 w-5" />
-            Email From Address
+            Student Email Settings
           </CardTitle>
-          <CardDescription>Set the email address used when sending emails from the CRM (must use your verified Resend domain)</CardDescription>
+          <CardDescription>
+            Configure outbound student emails. The reply-to address is used when students click Reply in their inbox.
+          </CardDescription>
         </CardHeader>
-        <CardContent className="space-y-4">
+        <CardContent className="space-y-6">
           <div className="space-y-2">
             <Label htmlFor="email-from-address">From Address</Label>
             <Input 
@@ -585,13 +632,71 @@ export function SystemSettingsTab() {
               Format: "Name &lt;email@your-verified-domain.com&gt;" or just "email@your-verified-domain.com"
             </p>
             <p className="text-xs text-warning">
-              ⚠️ Must use an email address from your verified Resend domain (e.g., send.portal.urbanhub.uk)
+              Must use an email address from your verified Resend domain (e.g., send.portal.urbanhub.uk)
             </p>
           </div>
+
+          <Separator />
+
+          <div className="space-y-2">
+            <Label htmlFor="email-reply-to-address">Reply-To Address</Label>
+            <Input
+              id="email-reply-to-address"
+              placeholder="operations@urbanhub.uk"
+              value={emailReplyToAddress}
+              onChange={(e) => setEmailReplyToAddress(e.target.value)}
+            />
+            <p className="text-xs text-muted-foreground">
+              When a student clicks Reply, their email app will address replies to this inbox.
+            </p>
+          </div>
+
+          <div className="space-y-3">
+            <Label>CC Addresses</Label>
+            <p className="text-xs text-muted-foreground">
+              Internal team addresses copied on every student email (CRM sends and website confirmations).
+            </p>
+            <div className="flex gap-2">
+              <Input
+                placeholder="Add CC email address"
+                value={newEmailCcAddress}
+                onChange={(e) => setNewEmailCcAddress(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") {
+                    e.preventDefault();
+                    handleAddEmailCcAddress();
+                  }
+                }}
+              />
+              <Button type="button" variant="outline" onClick={handleAddEmailCcAddress}>
+                <Plus className="h-4 w-4" />
+              </Button>
+            </div>
+            <div className="space-y-2">
+              {emailCcAddresses.length === 0 ? (
+                <p className="text-sm text-muted-foreground">No CC addresses configured.</p>
+              ) : (
+                emailCcAddresses.map((email) => (
+                  <div key={email} className="flex items-center justify-between rounded-md border px-3 py-2">
+                    <span className="text-sm">{email}</span>
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="icon"
+                      onClick={() => handleRemoveEmailCcAddress(email)}
+                    >
+                      <X className="h-4 w-4" />
+                    </Button>
+                  </div>
+                ))
+              )}
+            </div>
+          </div>
+
           <div className="flex justify-end">
             <Button onClick={handleSaveEmailFromAddress} disabled={saving}>
               {saving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-              Save Email From Address
+              Save Email Settings
             </Button>
           </div>
         </CardContent>

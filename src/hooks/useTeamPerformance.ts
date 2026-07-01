@@ -19,7 +19,7 @@ export interface TeamPerformanceMetrics {
 }
 
 export function useTeamPerformance(
-  academicYear?: string,
+  academicYear?: string | null,
   startDate?: Date,
   endDate?: Date
 ) {
@@ -41,7 +41,7 @@ export function useTeamPerformance(
 
       return (data || []) as TeamPerformanceMetrics[];
     },
-    enabled: !!user,
+    enabled: !!user && academicYear !== null,
   });
 }
 

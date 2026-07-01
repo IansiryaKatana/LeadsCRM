@@ -90,6 +90,40 @@ function resolveLeadSubjectType(lead: any): string {
   return toTitleWords(source || "Lead");
 }
 
+function normalizeEmailAddress(value: unknown): string | null {
+  if (typeof value !== "string") return null;
+  const trimmed = value.trim();
+  if (!trimmed) return null;
+
+  const bracketMatch = trimmed.match(/^(.+?)\s*<([^>]+)>$/);
+  const email = (bracketMatch ? bracketMatch[2] : trimmed).trim().toLowerCase();
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return null;
+
+  return bracketMatch
+    ? `${bracketMatch[1].trim()} <${email}>`
+    : email;
+}
+
+function normalizeEmailList(value: unknown): string[] {
+  if (!Array.isArray(value)) return [];
+
+  const seen = new Set<string>();
+  const normalized: string[] = [];
+
+  for (const entry of value) {
+    const address = normalizeEmailAddress(entry);
+    if (!address) continue;
+    const dedupeKey = address.includes("<")
+      ? address.slice(address.indexOf("<") + 1, -1).toLowerCase()
+      : address.toLowerCase();
+    if (seen.has(dedupeKey)) continue;
+    seen.add(dedupeKey);
+    normalized.push(address);
+  }
+
+  return normalized;
+}
+
 function formatLeadPaymentSummaryHtml(lead: any): string {
   const meta = lead?.metadata;
   if (!meta || typeof meta !== "object") return "";
@@ -124,7 +158,14 @@ serve(async (req) => {
     const { data: settingsData, error: settingsError } = await supabase
       .from("system_settings")
       .select("setting_key, setting_value")
-      .in("setting_key", ["system_name", "currency", "email_from_address", "notification_emails"]);
+      .in("setting_key", [
+        "system_name",
+        "currency",
+        "email_from_address",
+        "email_reply_to_address",
+        "email_cc_addresses",
+        "notification_emails",
+      ]);
 
     if (settingsError) {
       console.error("Error fetching system settings:", settingsError);
@@ -137,6 +178,8 @@ serve(async (req) => {
     const systemName = settingsMap.get("system_name") as string || "Urban Hub Students Accommodations";
     const currency = settingsMap.get("currency") as { code: string, symbol: string } || { code: "KES", symbol: "KES" };
     const fromAddress = settingsMap.get("email_from_address") as string || `${systemName} <noreply@send.portal.urbanhub.uk>`;
+    const replyToAddress = normalizeEmailAddress(settingsMap.get("email_reply_to_address")) || "operations@urbanhub.uk";
+    const studentEmailCc = normalizeEmailList(settingsMap.get("email_cc_addresses"));
     const configuredNotificationEmails = settingsMap.get("notification_emails") as string[] || [];
 
     // Handle direct email sending (with optional template support)
@@ -202,6 +245,8 @@ serve(async (req) => {
       const emailResponse = await resendClient.emails.send({
         from: fromAddress,
         to: [to],
+        reply_to: replyToAddress,
+        ...(studentEmailCc.length > 0 ? { cc: studentEmailCc } : {}),
         subject: finalSubject,
         html: finalBodyHtml,
         text: finalBodyText || undefined,

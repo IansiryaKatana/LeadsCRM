@@ -7,13 +7,20 @@ const Tabs = TabsPrimitive.Root;
 
 const TabsList = React.forwardRef<
   React.ElementRef<typeof TabsPrimitive.List>,
-  React.ComponentPropsWithoutRef<typeof TabsPrimitive.List>
->(({ className, ...props }, ref) => (
-  <div className="overflow-x-auto -mx-4 px-4 sm:mx-0 sm:px-0 scrollbar-hide" style={{ WebkitOverflowScrolling: 'touch' }}>
+  React.ComponentPropsWithoutRef<typeof TabsPrimitive.List> & { fullWidth?: boolean }
+>(({ className, fullWidth, ...props }, ref) => (
+  <div
+    className={cn(
+      "overflow-x-auto -mx-4 px-4 sm:mx-0 sm:px-0 scrollbar-hide max-w-full",
+      fullWidth ? "w-full" : "w-fit",
+    )}
+    style={{ WebkitOverflowScrolling: "touch" }}
+  >
     <TabsPrimitive.List
       ref={ref}
       className={cn(
-        "inline-flex h-10 items-center justify-center rounded-md bg-muted p-1 text-muted-foreground min-w-max",
+        "h-10 max-w-full items-center justify-center rounded-md bg-muted p-1 text-muted-foreground",
+        fullWidth ? "flex w-full" : "inline-flex w-fit",
         "sm:flex-wrap sm:h-auto",
         className,
       )}

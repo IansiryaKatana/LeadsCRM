@@ -48,7 +48,7 @@ function saveViewedSet(userId: string | null | undefined, set: Set<string>) {
   }
 }
 
-export function useUnreadWebLeadsCount(academicYear?: string) {
+export function useUnreadWebLeadsCount(academicYear?: string | null) {
   const { user } = useAuth();
 
   return useQuery({
@@ -73,7 +73,7 @@ export function useUnreadWebLeadsCount(academicYear?: string) {
       const unreadCount = data.filter((lead) => !viewed.has(lead.id as string)).length;
       return unreadCount;
     },
-    enabled: !!user,
+    enabled: !!user && academicYear !== null,
     refetchInterval: 30000,
   });
 }
@@ -82,7 +82,7 @@ export function useUnreadInquiriesCount(academicYear?: string) {
   return useUnreadWebLeadsCountBySource("web_contact", academicYear);
 }
 
-export function useUnreadWebLeadsCountBySource(sourceSlug: string, academicYear?: string) {
+export function useUnreadWebLeadsCountBySource(sourceSlug: string, academicYear?: string | null) {
   const { user } = useAuth();
 
   return useQuery({
@@ -107,7 +107,7 @@ export function useUnreadWebLeadsCountBySource(sourceSlug: string, academicYear?
       const unreadCount = data.filter((lead) => !viewed.has(lead.id as string)).length;
       return unreadCount;
     },
-    enabled: !!user && WEB_SOURCES.includes(sourceSlug),
+    enabled: !!user && academicYear !== null && WEB_SOURCES.includes(sourceSlug),
     refetchInterval: 30000,
   });
 }

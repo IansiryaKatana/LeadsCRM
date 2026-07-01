@@ -2,6 +2,7 @@ import { useState } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { PasswordInput } from "@/components/ui/password-input";
 import { Label } from "@/components/ui/label";
 import {
   Select,
@@ -341,8 +342,7 @@ export function UsersSettingsTab() {
                   </div>
                   <div className="space-y-2">
                     <Label>Password</Label>
-                    <Input
-                      type="password"
+                    <PasswordInput
                       value={newUserData.password}
                       onChange={(e) => setNewUserData({ ...newUserData, password: e.target.value })}
                       placeholder="Minimum 6 characters"

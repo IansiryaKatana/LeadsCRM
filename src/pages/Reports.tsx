@@ -79,16 +79,14 @@ export default function Reports() {
   const [exportingTeamExcel, setExportingTeamExcel] = useState(false);
   const [exportingTeamPDF, setExportingTeamPDF] = useState(false);
 
-  const { currency, academicYears, defaultAcademicYear, formatCurrency } = useSystemSettingsContext();
-  const [selectedYear, setSelectedYear] = useState<string>(defaultAcademicYear || "");
+  const { currency, academicYears, currentAcademicYear, setCurrentAcademicYear, formatCurrency } = useSystemSettingsContext();
   const { data: sources = [] } = useLeadSources();
+  const yearFilter = currentAcademicYear === null ? null : (currentAcademicYear || undefined);
 
   const { startDate, endDate, label: dateRangeLabel } = useMemo(
     () => getReportDateBounds(dateRange),
     [dateRange]
   );
-
-  const yearFilter = selectedYear || undefined;
 
   const { data: stats, isLoading: statsLoading } = useDashboardStats(yearFilter, startDate, endDate);
   const { data: channels = [], isLoading: channelsLoading } = useChannelPerformance(yearFilter, startDate, endDate);
@@ -117,7 +115,7 @@ export default function Reports() {
 
   const filterSummary = [
     dateRangeLabel,
-    selectedYear ? `AY ${selectedYear}` : "All academic years",
+    currentAcademicYear ? `AY ${currentAcademicYear}` : "All academic years",
   ].join(" · ");
 
   const formatCompactCurrency = (value: number) =>
@@ -285,8 +283,8 @@ export default function Reports() {
               <div className="flex items-center gap-2 flex-1 sm:flex-initial min-w-[140px]">
                 <Calendar className="h-4 w-4 text-muted-foreground shrink-0" />
                 <Select
-                  value={selectedYear || "all"}
-                  onValueChange={(value) => setSelectedYear(value === "all" ? "" : value)}
+                  value={(currentAcademicYear ?? "") || "all"}
+                  onValueChange={(value) => setCurrentAcademicYear(value === "all" ? "" : value)}
                 >
                   <SelectTrigger className="w-full sm:w-[150px]">
                     <SelectValue placeholder="Academic Year" />
@@ -428,13 +426,13 @@ export default function Reports() {
                 </div>
 
                 <div className="grid grid-cols-1 xl:grid-cols-2 gap-6 items-stretch">
-                  <Card className="shadow-card rounded-2xl border-0 h-full">
-                      <CardHeader className="pb-2">
+                  <Card className="shadow-card rounded-2xl border-0 h-full flex flex-col">
+                      <CardHeader className="pb-2 shrink-0">
                         <CardTitle className="font-display text-xl">Lead Volume</CardTitle>
                         <p className="text-sm text-muted-foreground font-body">Leads vs conversions by month</p>
                       </CardHeader>
-                      <CardContent>
-                        <div className="h-72">
+                      <CardContent className="flex flex-1 flex-col min-h-0">
+                        <div className="flex-1 min-h-48 w-full">
                           {!monthlyData?.length ? (
                             <div className="h-full flex items-center justify-center text-muted-foreground font-body">
                               No leads in this period

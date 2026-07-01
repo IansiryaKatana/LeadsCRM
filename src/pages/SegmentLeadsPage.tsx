@@ -49,25 +49,13 @@ export function SegmentLeadsPage({
   showExport = true,
   showCreateLead = true,
 }: SegmentLeadsPageProps) {
-  const { academicYears, defaultAcademicYear, currentAcademicYear, setCurrentAcademicYear, currency } =
+  const { academicYears, currentAcademicYear, setCurrentAcademicYear, currency } =
     useSystemSettingsContext();
-  const [hasUserChangedYear, setHasUserChangedYear] = useState(false);
-  const [selectedYear, setSelectedYear] = useState("");
-  const { data: allLeads = [], isLoading } = useLeads(selectedYear || undefined);
+  const { data: allLeads = [], isLoading } = useLeads(currentAcademicYear);
   const [selectedLead, setSelectedLead] = useState<Lead | null>(null);
   const [activeTab, setActiveTab] = useState("all");
   const [exportDialogOpen, setExportDialogOpen] = useState(false);
   const [isExporting, setIsExporting] = useState(false);
-
-  useEffect(() => {
-    if (!hasUserChangedYear) {
-      setSelectedYear(currentAcademicYear || defaultAcademicYear || "");
-    }
-  }, [currentAcademicYear, defaultAcademicYear, hasUserChangedYear]);
-
-  useEffect(() => {
-    setCurrentAcademicYear(selectedYear);
-  }, [selectedYear, setCurrentAcademicYear]);
 
   const segmentLeads = useMemo(
     () => allLeads.filter((lead) => lead.source === sourceSlug),
@@ -153,10 +141,9 @@ export function SegmentLeadsPage({
             <div className="flex items-center gap-2">
               <Calendar className="h-4 w-4 text-muted-foreground" />
               <Select
-                value={selectedYear || "all"}
+                value={(currentAcademicYear ?? "") || "all"}
                 onValueChange={(value) => {
-                  setSelectedYear(value === "all" ? "" : value);
-                  setHasUserChangedYear(true);
+                  setCurrentAcademicYear(value === "all" ? "" : value);
                 }}
               >
                 <SelectTrigger className="w-[140px]">

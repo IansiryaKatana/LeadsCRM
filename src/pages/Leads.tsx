@@ -28,27 +28,9 @@ import {
 type Lead = Database["public"]["Tables"]["leads"]["Row"];
 
 export default function Leads() {
-  const { academicYears, defaultAcademicYear, currentAcademicYear, setCurrentAcademicYear } = useSystemSettingsContext();
+  const { academicYears, currentAcademicYear, setCurrentAcademicYear } = useSystemSettingsContext();
 
-  // Track whether the user has manually changed the year in this session
-  const [hasUserChangedYear, setHasUserChangedYear] = useState(false);
-  const [selectedYear, setSelectedYear] = useState<string>("");
-
-  // When settings/context change and the user hasn't changed the year yet,
-  // keep the local selection in sync with the configured default/current year.
-  useEffect(() => {
-    if (!hasUserChangedYear) {
-      const baseYear = currentAcademicYear || defaultAcademicYear || "";
-      setSelectedYear(baseYear);
-    }
-  }, [currentAcademicYear, defaultAcademicYear, hasUserChangedYear]);
-
-  // Keep shared currentAcademicYear in sync when local selection changes
-  useEffect(() => {
-    setCurrentAcademicYear(selectedYear);
-  }, [selectedYear, setCurrentAcademicYear]);
-
-  const { data: leads = [], isLoading } = useLeads(selectedYear || undefined);
+  const { data: leads = [], isLoading } = useLeads(currentAcademicYear);
 
   const salesLeads = useMemo(
     () => leads.filter((lead) => !isExcludedFromAllLeads(lead.source)),
@@ -109,11 +91,9 @@ export default function Leads() {
             <div className="flex items-center gap-2">
               <Calendar className="h-4 w-4 text-muted-foreground" />
               <Select
-                value={selectedYear || "all"}
+                value={(currentAcademicYear ?? "") || "all"}
                 onValueChange={(value) => {
-                  const year = value === "all" ? "" : value;
-                  setSelectedYear(year);
-                  setHasUserChangedYear(true);
+                  setCurrentAcademicYear(value === "all" ? "" : value);
                 }}
               >
                 <SelectTrigger className="w-[140px]">

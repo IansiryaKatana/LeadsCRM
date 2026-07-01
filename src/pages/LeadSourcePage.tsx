@@ -32,9 +32,8 @@ type Lead = Database["public"]["Tables"]["leads"]["Row"];
 
 export default function LeadSourcePage() {
   const { sourceSlug } = useParams<{ sourceSlug: string }>();
-  const { academicYears, defaultAcademicYear, currency } = useSystemSettingsContext();
-  const [selectedYear, setSelectedYear] = useState<string>(defaultAcademicYear || "");
-  const { data: allLeads = [], isLoading } = useLeads(selectedYear || undefined);
+  const { academicYears, currentAcademicYear, setCurrentAcademicYear, currency } = useSystemSettingsContext();
+  const { data: allLeads = [], isLoading } = useLeads(currentAcademicYear);
   const { data: sources = [] } = useLeadSources();
   const [selectedLead, setSelectedLead] = useState<Lead | null>(null);
   const [activeTab, setActiveTab] = useState("all");
@@ -146,7 +145,7 @@ export default function LeadSourcePage() {
           <div className="flex items-center gap-3">
             <div className="flex items-center gap-2">
               <Calendar className="h-4 w-4 text-muted-foreground" />
-              <Select value={selectedYear || undefined} onValueChange={(value) => setSelectedYear(value === "all" ? "" : value)}>
+              <Select value={(currentAcademicYear ?? "") || "all"} onValueChange={(value) => setCurrentAcademicYear(value === "all" ? "" : value)}>
                 <SelectTrigger className="w-[140px]">
                   <SelectValue placeholder="Academic Year" />
                 </SelectTrigger>

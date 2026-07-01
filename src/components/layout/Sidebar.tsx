@@ -10,7 +10,6 @@ import {
   Upload,
   Settings,
   LogOut,
-  Building2,
   Menu,
   X,
   CheckSquare,
@@ -144,11 +143,10 @@ export function Sidebar() {
 
   // Only show sources that actually have leads in the current academic year
   const { data: sourceCounts } = useQuery({
-    queryKey: ["sidebar-source-counts", currentAcademicYear || "all"],
+    queryKey: ["sidebar-source-counts", currentAcademicYear],
     queryFn: async () => {
       let query = supabase.from("leads").select("source");
 
-      // Filter by current academic year
       if (currentAcademicYear && currentAcademicYear.trim() !== "") {
         query = query.eq("academic_year", currentAcademicYear);
       }
@@ -161,12 +159,14 @@ export function Sidebar() {
       });
       return counts;
     },
+    enabled: currentAcademicYear !== null,
   });
 
   const activeSources = sources.filter(
     (s) => (sourceCounts?.get(s.slug) || 0) > 0 && !isExcludedFromAllLeads(s.slug),
   );
   
+  const faviconUrl = settings.branding?.favicon_url;
   const logoUrl = settings.branding?.logo_url;
   
   // Check if we're on a source page
@@ -243,11 +243,11 @@ export function Sidebar() {
           <div className="p-6 border-b border-border">
             <div className="flex items-center gap-3">
               <div className="w-10 h-10 rounded-xl bg-primary flex items-center justify-center overflow-hidden shrink-0">
-                {logoUrl ? (
-                  <img src={logoUrl} alt="Logo" className="w-full h-full object-contain p-1.5" />
-                ) : (
-                  <Building2 className="h-6 w-6 text-primary-foreground" />
-                )}
+                <img
+                  src={faviconUrl || logoUrl || "/favicon.png"}
+                  alt="Urban Hub"
+                  className="w-full h-full object-contain"
+                />
               </div>
               <div>
                 <h1 className="font-display text-xl font-bold">{systemName.split(' ')[0]}</h1>

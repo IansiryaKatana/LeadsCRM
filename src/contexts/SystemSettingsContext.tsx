@@ -1,5 +1,16 @@
-import React, { createContext, useContext, ReactNode, useState, useEffect } from "react";
+import React, {
+  createContext,
+  useContext,
+  ReactNode,
+  useState,
+  useEffect,
+  useRef,
+  useCallback,
+  useMemo,
+} from "react";
+import { useAuth } from "@/hooks/useAuth";
 import { useSystemSettings, SystemSettings, CurrencySettings, RoomLabels, RoomPrices } from "@/hooks/useSystemSettings";
+import { resolveDefaultAcademicYear } from "@/utils/academicYear";
 
 interface SystemSettingsContextValue {
   settings: SystemSettings;
@@ -12,7 +23,7 @@ interface SystemSettingsContextValue {
   roomPrices: RoomPrices;
   academicYears: string[];
   defaultAcademicYear: string;
-  currentAcademicYear: string;
+  currentAcademicYear: string | null;
   setCurrentAcademicYear: (year: string) => void;
   systemName: string;
 }
@@ -20,16 +31,59 @@ interface SystemSettingsContextValue {
 const SystemSettingsContext = createContext<SystemSettingsContextValue | undefined>(undefined);
 
 export function SystemSettingsProvider({ children }: { children: ReactNode }) {
+  const { user } = useAuth();
   const { settings, isLoading } = useSystemSettings();
 
-  // Track the currently selected academic year across the app.
-  // Always initialise/sync from the value stored in system settings,
-  // so refreshes and settings changes reflect the configured default.
-  const [currentAcademicYear, setCurrentAcademicYear] = useState<string>("");
+  const academicYears = settings.academic_years ?? [];
+  const defaultAcademicYear = useMemo(
+    () => resolveDefaultAcademicYear(academicYears, settings.default_academic_year),
+    [academicYears, settings.default_academic_year],
+  );
+
+  const [currentAcademicYear, setCurrentAcademicYearState] = useState<string | null>(null);
+  const userChangedYearRef = useRef(false);
+  const lastUserIdRef = useRef<string | null>(null);
+
+  const setCurrentAcademicYear = useCallback((year: string) => {
+    userChangedYearRef.current = true;
+    setCurrentAcademicYearState(year);
+  }, []);
 
   useEffect(() => {
-    setCurrentAcademicYear(settings.default_academic_year || "");
-  }, [settings.default_academic_year]);
+    if (!user) {
+      setCurrentAcademicYearState(null);
+      userChangedYearRef.current = false;
+      lastUserIdRef.current = null;
+      return;
+    }
+
+    const isNewSession = lastUserIdRef.current !== user.id;
+    if (isNewSession) {
+      lastUserIdRef.current = user.id;
+      userChangedYearRef.current = false;
+    }
+
+    if (isLoading) {
+      return;
+    }
+
+    if (userChangedYearRef.current && !isNewSession) {
+      return;
+    }
+
+    const resolvedYear = resolveDefaultAcademicYear(academicYears, settings.default_academic_year);
+    setCurrentAcademicYearState((previous) => {
+      if (!resolvedYear) {
+        return previous;
+      }
+
+      if (isNewSession || !previous || !academicYears.includes(previous)) {
+        return resolvedYear;
+      }
+
+      return previous;
+    });
+  }, [user, isLoading, academicYears, settings.default_academic_year]);
 
   const getRoomLabel = (roomKey: string): string => {
     return settings.room_labels[roomKey as keyof RoomLabels] || roomKey;
@@ -54,8 +108,8 @@ export function SystemSettingsProvider({ children }: { children: ReactNode }) {
         currency: settings.currency,
         roomLabels: settings.room_labels,
         roomPrices: settings.room_prices,
-        academicYears: settings.academic_years ?? [],
-        defaultAcademicYear: settings.default_academic_year || "",
+        academicYears,
+        defaultAcademicYear,
         currentAcademicYear,
         setCurrentAcademicYear,
         systemName: settings.system_name ?? "Urban Hub Students Accommodations",

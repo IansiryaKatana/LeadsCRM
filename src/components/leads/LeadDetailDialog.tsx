@@ -193,7 +193,7 @@ export function LeadDetailDialog({ lead, onClose }: LeadDetailDialogProps) {
                         ? "grid-cols-7"
                         : "grid-cols-6",
                   )
-                : "inline-flex h-auto w-full flex-nowrap justify-start gap-0.5",
+                : "inline-flex h-auto w-fit max-w-full flex-wrap justify-start gap-0.5",
             )}
           >
             <TabsTrigger value="details">
@@ -734,7 +734,7 @@ export function LeadDetailDialog({ lead, onClose }: LeadDetailDialogProps) {
         <Dialog open={!!leadData} onOpenChange={() => onClose()}>
           <DialogContent className="sm:max-w-2xl overflow-hidden flex flex-col pb-6">
             <div className="mx-auto mt-2 mb-2 h-1.5 w-12 rounded-full bg-muted" aria-hidden />
-            <DialogHeader className="sm:pt-0">
+            <DialogHeader className="sm:pt-0 mb-4">
               <DialogTitle>{leadTitle}</DialogTitle>
               <DialogDescription className="sr-only">
                 Lead details, follow-ups, tasks, and activity for {leadData.full_name}
@@ -755,7 +755,7 @@ export function LeadDetailDialog({ lead, onClose }: LeadDetailDialogProps) {
                 Lead details, follow-ups, tasks, and activity for {leadData.full_name}
               </SheetDescription>
             </SheetHeader>
-            <div className="flex min-h-0 flex-1 flex-col overflow-hidden px-6 pb-6">
+            <div className="flex min-h-0 flex-1 flex-col overflow-hidden px-6 pt-4 pb-6">
               {leadDetailBody}
             </div>
           </SheetContent>

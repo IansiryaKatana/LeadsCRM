@@ -1,6 +1,6 @@
 import {
   Search,
-  Facebook,
+  Share2,
   Globe,
   Users,
   MessageCircle,
@@ -13,7 +13,7 @@ import {
 // Map source slugs to Lucide React icons
 export const SOURCE_ICON_MAP: Record<string, LucideIcon> = {
   google_ads: Search,
-  meta: Facebook,
+  meta: Share2,
   website: Globe,
   referral: Users,
   whatsapp: MessageCircle,

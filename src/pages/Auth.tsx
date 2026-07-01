@@ -8,11 +8,12 @@ import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { PasswordInput } from "@/components/ui/password-input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { toast } from "@/hooks/use-toast";
-import { Building2, Loader2 } from "lucide-react";
+import { Loader2 } from "lucide-react";
 import { useSystemSettingsContext } from "@/contexts/SystemSettingsContext";
 
 const loginSchema = z.object({
@@ -173,13 +174,11 @@ export default function Auth() {
               transition={{ type: "spring", stiffness: 260, damping: 20, delay: 0.2 }}
               className="mx-auto w-20 h-20 flex items-center justify-center overflow-hidden mb-2"
             >
-              {faviconUrl ? (
-                <img src={faviconUrl} alt="Favicon" className="w-full h-full object-contain" />
-              ) : logoUrl ? (
-                <img src={logoUrl} alt="Logo" className="w-full h-full object-contain" />
-              ) : (
-                <Building2 className="h-14 w-14 text-primary" />
-              )}
+              <img
+                src={faviconUrl || logoUrl || "/favicon.png"}
+                alt="Urban Hub"
+                className="w-full h-full object-contain"
+              />
             </motion.div>
             <motion.div
               initial={{ opacity: 0, y: 10 }}
@@ -207,9 +206,8 @@ export default function Auth() {
                 >
                   <div className="space-y-2">
                     <Label htmlFor="new-password">New Password</Label>
-                    <Input
+                    <PasswordInput
                       id="new-password"
-                      type="password"
                       placeholder="••••••••"
                       {...updatePasswordForm.register("password")}
                       className={updatePasswordForm.formState.errors.password ? "border-destructive" : ""}
@@ -222,9 +220,8 @@ export default function Auth() {
                   </div>
                   <div className="space-y-2">
                     <Label htmlFor="confirm-password">Confirm Password</Label>
-                    <Input
+                    <PasswordInput
                       id="confirm-password"
-                      type="password"
                       placeholder="••••••••"
                       {...updatePasswordForm.register("confirmPassword")}
                       className={updatePasswordForm.formState.errors.confirmPassword ? "border-destructive" : ""}
@@ -248,7 +245,7 @@ export default function Auth() {
                 </motion.form>
               ) : (
                 <Tabs value={activeTab} onValueChange={setActiveTab}>
-                  <TabsList className="grid w-full grid-cols-2 mb-6 bg-muted/50">
+                  <TabsList fullWidth className="grid w-full grid-cols-2 mb-6 bg-muted/50">
                     <TabsTrigger value="login" className="data-[state=active]:bg-white data-[state=active]:shadow-sm">Login</TabsTrigger>
                     <TabsTrigger value="forgot-password" className="data-[state=active]:bg-white data-[state=active]:shadow-sm">Forgot Password</TabsTrigger>
                   </TabsList>
@@ -268,7 +265,7 @@ export default function Auth() {
                             <Input
                               id="login-email"
                               type="email"
-                              placeholder="you@email.com"
+                              placeholder="youemail@urbanhub.uk"
                               {...loginForm.register("email")}
                               className={loginForm.formState.errors.email ? "border-destructive" : ""}
                             />
@@ -289,9 +286,8 @@ export default function Auth() {
                                 Forgot password?
                               </button>
                             </div>
-                            <Input
+                            <PasswordInput
                               id="login-password"
-                              type="password"
                               placeholder="••••••••"
                               {...loginForm.register("password")}
                               className={loginForm.formState.errors.password ? "border-destructive" : ""}

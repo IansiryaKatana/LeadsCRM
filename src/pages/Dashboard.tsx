@@ -35,15 +35,14 @@ import {
 } from "@/components/ui/select";
 
 export default function Dashboard() {
-  const { academicYears, defaultAcademicYear, currency } = useSystemSettingsContext();
-  const [selectedYear, setSelectedYear] = useState<string>(defaultAcademicYear || "");
-  const { data: stats, isLoading: statsLoading } = useDashboardStats(selectedYear || undefined);
-  const { data: leads = [] } = useLeads(selectedYear || undefined);
-  const { data: channels = [] } = useChannelPerformance(selectedYear || undefined);
+  const { academicYears, currentAcademicYear, setCurrentAcademicYear, currency, isLoading: settingsLoading } = useSystemSettingsContext();
+  const { data: stats, isLoading: statsLoading } = useDashboardStats(currentAcademicYear);
+  const { data: leads = [] } = useLeads(currentAcademicYear);
+  const { data: channels = [] } = useChannelPerformance(currentAcademicYear);
   const [exportDialogOpen, setExportDialogOpen] = useState(false);
   const [isExporting, setIsExporting] = useState(false);
 
-  const loading = statsLoading;
+  const loading = settingsLoading || currentAcademicYear === null || statsLoading;
 
   const handleExport = async (format: ExportFormat, startDate: Date, endDate: Date) => {
     setIsExporting(true);
@@ -105,7 +104,7 @@ export default function Dashboard() {
           <div className="flex items-center gap-3">
             <div className="flex items-center gap-2">
               <Calendar className="h-4 w-4 text-muted-foreground" />
-              <Select value={selectedYear || undefined} onValueChange={(value) => setSelectedYear(value === "all" ? "" : value)}>
+              <Select value={(currentAcademicYear ?? "") || "all"} onValueChange={(value) => setCurrentAcademicYear(value === "all" ? "" : value)}>
                 <SelectTrigger className="w-[140px]">
                   <SelectValue placeholder="Academic Year" />
                 </SelectTrigger>
@@ -184,17 +183,17 @@ export default function Dashboard() {
         </div>
 
         {/* Charts Row */}
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          <div className="lg:col-span-2">
-            <RevenueChart academicYear={selectedYear || undefined} />
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 items-stretch">
+          <div className="lg:col-span-2 h-full min-h-0">
+            <RevenueChart academicYear={currentAcademicYear ?? undefined} className="h-full" />
           </div>
-          <div>
-            <ChannelPerformanceChart data={channels} />
+          <div className="h-full min-h-0">
+            <ChannelPerformanceChart data={channels} className="h-full" />
           </div>
         </div>
 
         {/* Overdue Follow-Ups Widget */}
-        <OverdueFollowUpsWidget academicYear={selectedYear || undefined} />
+        <OverdueFollowUpsWidget academicYear={currentAcademicYear ?? undefined} />
 
         <ExportDialog
           open={exportDialogOpen}

@@ -20,7 +20,7 @@ export interface FollowUpAnalytics {
 }
 
 export function useFollowUpAnalytics(
-  academicYear?: string,
+  academicYear?: string | null,
   startDate?: Date | null,
   endDate?: Date | null
 ) {
@@ -184,7 +184,7 @@ export function useFollowUpAnalytics(
         upcomingFollowups,
       };
     },
-    enabled: !!user,
+    enabled: !!user && academicYear !== null,
   });
 }
 

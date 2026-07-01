@@ -12,7 +12,7 @@ export interface OverdueFollowUp {
   followUpCount: number;
 }
 
-export function useOverdueFollowups(academicYear?: string) {
+export function useOverdueFollowups(academicYear?: string | null) {
   const { user } = useAuth();
 
   return useQuery({
@@ -70,7 +70,7 @@ export function useOverdueFollowups(academicYear?: string) {
         .filter((item) => item.daysOverdue > 0 || (item.followUpCount === 0 && item.lead.created_at && new Date(item.lead.created_at) < new Date(now.getTime() - 24 * 60 * 60 * 1000)))
         .sort((a, b) => b.daysOverdue - a.daysOverdue);
     },
-    enabled: !!user,
+    enabled: !!user && academicYear !== null,
     refetchInterval: 5 * 60 * 1000, // Refetch every 5 minutes
   });
 }

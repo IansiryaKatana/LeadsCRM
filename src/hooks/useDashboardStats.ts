@@ -37,7 +37,7 @@ function applyLeadDateFilters<T extends { gte: (col: string, val: string) => T; 
 }
 
 export function useDashboardStats(
-  academicYear?: string,
+  academicYear?: string | null,
   startDate?: Date | null,
   endDate?: Date | null
 ) {
@@ -90,12 +90,12 @@ export function useDashboardStats(
         forecastRevenue,
       };
     },
-    enabled: !!user,
+    enabled: !!user && academicYear !== null,
   });
 }
 
 export function useChannelPerformance(
-  academicYear?: string,
+  academicYear?: string | null,
   startDate?: Date | null,
   endDate?: Date | null
 ) {
@@ -134,7 +134,7 @@ export function useChannelPerformance(
         ...stats,
       }));
     },
-    enabled: !!user,
+    enabled: !!user && academicYear !== null,
   });
 }
 

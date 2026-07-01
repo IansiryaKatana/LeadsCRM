@@ -9,7 +9,7 @@ type LeadInsert = Database["public"]["Tables"]["leads"]["Insert"];
 type LeadUpdate = Database["public"]["Tables"]["leads"]["Update"];
 type LeadStatus = Database["public"]["Enums"]["lead_status"];
 
-export function useLeads(academicYear?: string) {
+export function useLeads(academicYear?: string | null) {
   const { user } = useAuth();
 
   return useQuery({
@@ -29,7 +29,7 @@ export function useLeads(academicYear?: string) {
       if (error) throw error;
       return data as Lead[];
     },
-    enabled: !!user,
+    enabled: !!user && academicYear !== null,
     retry: 1,
     // Poll periodically so new webhook leads appear without manual refresh
     refetchInterval: 30000, // 30 seconds

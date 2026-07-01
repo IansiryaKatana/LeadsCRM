@@ -2,21 +2,23 @@ import { XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Area, AreaCh
 import { useMonthlyLeadData } from "@/hooks/useMonthlyData";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useSystemSettingsContext } from "@/contexts/SystemSettingsContext";
+import { cn } from "@/lib/utils";
 
 interface RevenueChartProps {
-  academicYear?: string;
+  academicYear?: string | null;
+  className?: string;
 }
 
-export function RevenueChart({ academicYear }: RevenueChartProps) {
+export function RevenueChart({ academicYear, className }: RevenueChartProps) {
   const { data, isLoading } = useMonthlyLeadData(academicYear);
   const { currency } = useSystemSettingsContext();
 
   if (isLoading) {
     return (
-      <div className="bg-card rounded-2xl p-6 shadow-card">
-        <Skeleton className="h-6 w-48 mb-2" />
-        <Skeleton className="h-4 w-32 mb-6" />
-        <Skeleton className="h-72 w-full" />
+      <div className={cn("bg-card rounded-2xl p-6 shadow-card flex flex-col h-full min-h-[420px]", className)}>
+        <Skeleton className="h-6 w-48 mb-2 shrink-0" />
+        <Skeleton className="h-4 w-32 mb-6 shrink-0" />
+        <Skeleton className="flex-1 min-h-48 w-full" />
       </div>
     );
   }
@@ -24,8 +26,8 @@ export function RevenueChart({ academicYear }: RevenueChartProps) {
   const chartData = data || [];
 
   return (
-    <div className="bg-card rounded-2xl p-6 shadow-card">
-      <div className="flex items-center justify-between mb-6">
+    <div className={cn("bg-card rounded-2xl p-6 shadow-card flex flex-col h-full min-h-[420px]", className)}>
+      <div className="flex items-center justify-between mb-6 shrink-0">
         <div>
           <h3 className="font-display text-xl font-bold">Revenue Forecast</h3>
           <p className="text-sm text-muted-foreground">Monthly revenue trends</p>
@@ -42,7 +44,7 @@ export function RevenueChart({ academicYear }: RevenueChartProps) {
         </div>
       </div>
       
-      <div className="h-72">
+      <div className="flex-1 min-h-48 w-full">
         {chartData.length === 0 ? (
           <div className="h-full flex items-center justify-center text-muted-foreground">
             No data available yet

@@ -1,6 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
+import { resolveDefaultAcademicYear } from "@/utils/academicYear";
 
 export interface CurrencySettings {
   code: string;
@@ -38,6 +39,8 @@ export interface SystemSettings {
   default_academic_year?: string;
   system_name?: string;
   email_from_address?: string;
+  email_reply_to_address?: string;
+  email_cc_addresses?: string[];
   notification_emails?: string[];
 }
 
@@ -62,6 +65,8 @@ const DEFAULT_SETTINGS: SystemSettings = {
   default_academic_year: "2025/2026",
   system_name: "Urban Hub Students Accommodations",
   email_from_address: "Urban Hub <noreply@send.portal.urbanhub.uk>",
+  email_reply_to_address: "operations@urbanhub.uk",
+  email_cc_addresses: ["Leads@urbanhub.uk"],
   notification_emails: [],
 };
 
@@ -81,6 +86,7 @@ export function useSystemSettings() {
 
   const { data: settings, isLoading, error } = useQuery({
     queryKey: ["system-settings"],
+    enabled: !!user,
     queryFn: async (): Promise<SystemSettings> => {
       const { data, error } = await supabase
         .from("system_settings")
@@ -95,12 +101,17 @@ export function useSystemSettings() {
 
       data?.forEach((row) => {
         const key = row.setting_key;
-        if (key === "system_name" || key === "email_from_address") {
+        if (key === "system_name" || key === "email_from_address" || key === "email_reply_to_address") {
           settingsMap[key] = row.setting_value as string;
         } else if (key in settingsMap) {
           settingsMap[key as keyof SystemSettings] = row.setting_value as any;
         }
       });
+
+      settingsMap.default_academic_year = resolveDefaultAcademicYear(
+        settingsMap.academic_years ?? DEFAULT_SETTINGS.academic_years!,
+        settingsMap.default_academic_year,
+      );
 
       return settingsMap;
     },
@@ -169,6 +180,9 @@ export function useRoomConfig() {
     roomLabels: settings.room_labels,
     roomPrices: settings.room_prices,
     academicYears: settings.academic_years ?? DEFAULT_SETTINGS.academic_years!,
-    defaultAcademicYear: settings.default_academic_year ?? DEFAULT_SETTINGS.default_academic_year!,
+    defaultAcademicYear: resolveDefaultAcademicYear(
+      settings.academic_years ?? DEFAULT_SETTINGS.academic_years!,
+      settings.default_academic_year ?? DEFAULT_SETTINGS.default_academic_year,
+    ),
   };
 }
