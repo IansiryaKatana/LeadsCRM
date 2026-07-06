@@ -942,7 +942,7 @@ export function LeadDetailDialog({ lead, onClose, initialTab }: LeadDetailDialog
         </Sheet>
       )}
 
-      {/* Follow-Up Form Dialog */}
+      {/* Follow-Up Form Sheet */}
       <FollowUpForm
           leadId={leadData.id}
           currentFollowUpCount={followUpCount}

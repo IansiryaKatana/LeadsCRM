@@ -18,6 +18,8 @@ import {
   CalendarEventOutcomeForm,
   type OutcomeAction,
 } from "@/components/calendar/CalendarEventOutcomeForm";
+import { subsectionTitleClass } from "@/lib/typography";
+import { cn } from "@/lib/utils";
 
 interface DayEventsSheetProps {
   open: boolean;
@@ -116,7 +118,7 @@ export function DayEventsSheet({
         ) : (
           <>
             <SheetHeader className="p-6 pb-4 border-b shrink-0">
-              <SheetTitle className="font-display text-left">
+              <SheetTitle className={cn(subsectionTitleClass, "text-left")}>
                 {date ? format(date, "EEEE, d MMMM yyyy") : "Events"}
               </SheetTitle>
               <SheetDescription className="text-left">
