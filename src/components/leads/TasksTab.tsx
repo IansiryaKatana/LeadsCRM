@@ -5,12 +5,13 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogDescription,
-} from "@/components/ui/dialog";
+  ResponsivePanel,
+  ResponsivePanelBody,
+  ResponsivePanelDescription,
+  ResponsivePanelFooter,
+  ResponsivePanelHeader,
+  ResponsivePanelTitle,
+} from "@/components/ui/responsive-panel";
 import {
   Select,
   SelectContent,
@@ -278,16 +279,16 @@ export function TasksTab({ leadId }: TasksTabProps) {
         </div>
       )}
 
-      {/* Create Task Dialog */}
-      <Dialog open={createDialogOpen} onOpenChange={setCreateDialogOpen}>
-        <DialogContent className="max-w-2xl">
-          <DialogHeader>
-            <DialogTitle>Create Task</DialogTitle>
-            <DialogDescription>
-              Create a follow-up task linked to this lead so your team can track next actions.
-            </DialogDescription>
-          </DialogHeader>
-          <div className="space-y-4 mt-4">
+      {/* Create Task */}
+      <ResponsivePanel open={createDialogOpen} onOpenChange={setCreateDialogOpen} size="wide">
+        <ResponsivePanelHeader>
+          <ResponsivePanelTitle>Create Task</ResponsivePanelTitle>
+          <ResponsivePanelDescription>
+            Create a follow-up task linked to this lead so your team can track next actions.
+          </ResponsivePanelDescription>
+        </ResponsivePanelHeader>
+        <ResponsivePanelBody>
+          <div className="space-y-4">
             <div className="space-y-2">
               <Label>Task Title *</Label>
               <Input
@@ -359,33 +360,33 @@ export function TasksTab({ leadId }: TasksTabProps) {
                 </div>
               </RadioGroup>
             </div>
-            <div className="flex gap-3 pt-4">
-              <Button variant="outline" onClick={() => setCreateDialogOpen(false)} className="flex-1">
-                Cancel
-              </Button>
-              <Button
-                onClick={handleCreate}
-                disabled={!newTask.title.trim() || createTask.isPending}
-                className="flex-1"
-              >
-                {createTask.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                Create Task
-              </Button>
-            </div>
           </div>
-        </DialogContent>
-      </Dialog>
+        </ResponsivePanelBody>
+        <ResponsivePanelFooter>
+          <Button variant="outline" onClick={() => setCreateDialogOpen(false)} className="w-full sm:w-auto">
+            Cancel
+          </Button>
+          <Button
+            onClick={handleCreate}
+            disabled={!newTask.title.trim() || createTask.isPending}
+            className="w-full sm:w-auto"
+          >
+            {createTask.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+            Create Task
+          </Button>
+        </ResponsivePanelFooter>
+      </ResponsivePanel>
 
-      {/* Edit Task Dialog */}
-      <Dialog open={editDialogOpen} onOpenChange={setEditDialogOpen}>
-        <DialogContent className="max-w-2xl">
-          <DialogHeader>
-            <DialogTitle>Edit Task</DialogTitle>
-            <DialogDescription>
-              Update task details or reassign it to another team member.
-            </DialogDescription>
-          </DialogHeader>
-          <div className="space-y-4 mt-4">
+      {/* Edit Task */}
+      <ResponsivePanel open={editDialogOpen} onOpenChange={setEditDialogOpen} size="wide">
+        <ResponsivePanelHeader>
+          <ResponsivePanelTitle>Edit Task</ResponsivePanelTitle>
+          <ResponsivePanelDescription>
+            Update task details or reassign it to another team member.
+          </ResponsivePanelDescription>
+        </ResponsivePanelHeader>
+        <ResponsivePanelBody>
+          <div className="space-y-4">
             <div className="space-y-2">
               <Label>Task Title *</Label>
               <Input
@@ -457,22 +458,22 @@ export function TasksTab({ leadId }: TasksTabProps) {
                 </div>
               </RadioGroup>
             </div>
-            <div className="flex gap-3 pt-4">
-              <Button variant="outline" onClick={() => setEditDialogOpen(false)} className="flex-1">
-                Cancel
-              </Button>
-              <Button
-                onClick={handleUpdate}
-                disabled={!newTask.title.trim() || updateTask.isPending}
-                className="flex-1"
-              >
-                {updateTask.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                Update Task
-              </Button>
-            </div>
           </div>
-        </DialogContent>
-      </Dialog>
+        </ResponsivePanelBody>
+        <ResponsivePanelFooter>
+          <Button variant="outline" onClick={() => setEditDialogOpen(false)} className="w-full sm:w-auto">
+            Cancel
+          </Button>
+          <Button
+            onClick={handleUpdate}
+            disabled={!newTask.title.trim() || updateTask.isPending}
+            className="w-full sm:w-auto"
+          >
+            {updateTask.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+            Update Task
+          </Button>
+        </ResponsivePanelFooter>
+      </ResponsivePanel>
 
       {/* Delete Confirmation */}
       <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>

@@ -13,14 +13,13 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from "@/components/ui/dialog";
+  ResponsivePanel,
+  ResponsivePanelBody,
+  ResponsivePanelDescription,
+  ResponsivePanelFooter,
+  ResponsivePanelHeader,
+  ResponsivePanelTitle,
+} from "@/components/ui/responsive-panel";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -227,109 +226,16 @@ export function EmailTemplatesSettingsTab() {
                 Create and manage email templates for automated and manual communications
               </CardDescription>
             </div>
-            <Dialog open={createDialogOpen} onOpenChange={setCreateDialogOpen}>
-              <DialogTrigger asChild>
-                <Button className="gap-2" onClick={resetForm}>
-                  <Plus className="h-4 w-4" />
-                  <span className="hidden sm:inline">New Template</span>
-                </Button>
-              </DialogTrigger>
-              <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
-                <DialogHeader>
-                  <DialogTitle>Create Email Template</DialogTitle>
-                  <DialogDescription>
-                    Create a new email template for your communications
-                  </DialogDescription>
-                </DialogHeader>
-                <div className="space-y-4 py-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="name">Template Name *</Label>
-                    <Input
-                      id="name"
-                      value={formData.name}
-                      onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                      placeholder="e.g., Welcome Email"
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="category">Category *</Label>
-                    <Select
-                      value={formData.category}
-                      onValueChange={(value) => setFormData({ ...formData, category: value })}
-                    >
-                      <SelectTrigger>
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {TEMPLATE_CATEGORIES.map((cat) => (
-                          <SelectItem key={cat.value} value={cat.value}>
-                            {cat.label}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="subject">Subject *</Label>
-                    <Input
-                      id="subject"
-                      value={formData.subject}
-                      onChange={(e) => handleSubjectChange(e.target.value)}
-                      placeholder="e.g., Welcome {{lead_name}}!"
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="body_html">Email Body (HTML) *</Label>
-                    <Textarea
-                      id="body_html"
-                      value={formData.body_html}
-                      onChange={(e) => handleBodyHtmlChange(e.target.value)}
-                      placeholder="<h2>Hello {{lead_name}},</h2><p>Your message here...</p>"
-                      rows={10}
-                      className="font-mono text-sm"
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="body_text">Email Body (Plain Text) - Optional</Label>
-                    <Textarea
-                      id="body_text"
-                      value={formData.body_text}
-                      onChange={(e) => setFormData({ ...formData, body_text: e.target.value })}
-                      placeholder="Plain text version of your email"
-                      rows={6}
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label>Available Variables</Label>
-                    <div className="flex flex-wrap gap-2 p-3 bg-muted rounded-md">
-                      {AVAILABLE_VARIABLES.map((variable) => (
-                        <Badge key={variable.key} variant="outline" className="text-xs">
-                          {variable.key}
-                        </Badge>
-                      ))}
-                    </div>
-                    <p className="text-xs text-muted-foreground">
-                      Detected variables: {formData.variables?.join(", ") || "None"}
-                    </p>
-                  </div>
-                </div>
-                <DialogFooter>
-                  <Button variant="outline" onClick={() => setCreateDialogOpen(false)}>
-                    Cancel
-                  </Button>
-                  <Button onClick={handleCreate} disabled={createTemplate.isPending}>
-                    {createTemplate.isPending ? (
-                      <>
-                        <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                        Creating...
-                      </>
-                    ) : (
-                      "Create Template"
-                    )}
-                  </Button>
-                </DialogFooter>
-              </DialogContent>
-            </Dialog>
+            <Button
+              className="gap-2"
+              onClick={() => {
+                resetForm();
+                setCreateDialogOpen(true);
+              }}
+            >
+              <Plus className="h-4 w-4" />
+              <span className="hidden sm:inline">New Template</span>
+            </Button>
           </div>
         </CardHeader>
         <CardContent>
@@ -414,16 +320,114 @@ export function EmailTemplatesSettingsTab() {
           </CardContent>
         </Card>
 
-        {/* Edit Dialog */}
-        <Dialog open={editDialogOpen} onOpenChange={setEditDialogOpen}>
-          <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
-            <DialogHeader>
-              <DialogTitle>Edit Email Template</DialogTitle>
-              <DialogDescription>
-                Update the email template details
-              </DialogDescription>
-            </DialogHeader>
-            <div className="space-y-4 py-4">
+        <ResponsivePanel open={createDialogOpen} onOpenChange={setCreateDialogOpen} size="wide">
+          <ResponsivePanelHeader>
+            <ResponsivePanelTitle>Create Email Template</ResponsivePanelTitle>
+            <ResponsivePanelDescription>
+              Create a new email template for your communications
+            </ResponsivePanelDescription>
+          </ResponsivePanelHeader>
+          <ResponsivePanelBody>
+            <div className="space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="name">Template Name *</Label>
+                <Input
+                  id="name"
+                  value={formData.name}
+                  onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                  placeholder="e.g., Welcome Email"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="category">Category *</Label>
+                <Select
+                  value={formData.category}
+                  onValueChange={(value) => setFormData({ ...formData, category: value })}
+                >
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {TEMPLATE_CATEGORIES.map((cat) => (
+                      <SelectItem key={cat.value} value={cat.value}>
+                        {cat.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="subject">Subject *</Label>
+                <Input
+                  id="subject"
+                  value={formData.subject}
+                  onChange={(e) => handleSubjectChange(e.target.value)}
+                  placeholder="e.g., Welcome {{lead_name}}!"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="body_html">Email Body (HTML) *</Label>
+                <Textarea
+                  id="body_html"
+                  value={formData.body_html}
+                  onChange={(e) => handleBodyHtmlChange(e.target.value)}
+                  placeholder="<h2>Hello {{lead_name}},</h2><p>Your message here...</p>"
+                  rows={10}
+                  className="font-mono text-sm resize-none"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="body_text">Email Body (Plain Text) - Optional</Label>
+                <Textarea
+                  id="body_text"
+                  value={formData.body_text}
+                  onChange={(e) => setFormData({ ...formData, body_text: e.target.value })}
+                  placeholder="Plain text version of your email"
+                  rows={6}
+                  className="resize-none"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label>Available Variables</Label>
+                <div className="flex flex-wrap gap-2 p-3 bg-muted rounded-md">
+                  {AVAILABLE_VARIABLES.map((variable) => (
+                    <Badge key={variable.key} variant="outline" className="text-xs">
+                      {variable.key}
+                    </Badge>
+                  ))}
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  Detected variables: {formData.variables?.join(", ") || "None"}
+                </p>
+              </div>
+            </div>
+          </ResponsivePanelBody>
+          <ResponsivePanelFooter>
+            <Button variant="outline" onClick={() => setCreateDialogOpen(false)} className="w-full sm:w-auto">
+              Cancel
+            </Button>
+            <Button onClick={handleCreate} disabled={createTemplate.isPending} className="w-full sm:w-auto">
+              {createTemplate.isPending ? (
+                <>
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  Creating...
+                </>
+              ) : (
+                "Create Template"
+              )}
+            </Button>
+          </ResponsivePanelFooter>
+        </ResponsivePanel>
+
+        <ResponsivePanel open={editDialogOpen} onOpenChange={setEditDialogOpen} size="wide">
+          <ResponsivePanelHeader>
+            <ResponsivePanelTitle>Edit Email Template</ResponsivePanelTitle>
+            <ResponsivePanelDescription>
+              Update the email template details
+            </ResponsivePanelDescription>
+          </ResponsivePanelHeader>
+          <ResponsivePanelBody>
+            <div className="space-y-4">
               <div className="space-y-2">
                 <Label htmlFor="edit-name">Template Name *</Label>
                 <Input
@@ -509,25 +513,25 @@ export function EmailTemplatesSettingsTab() {
                 </p>
               </div>
             </div>
-            <DialogFooter>
-              <Button variant="outline" onClick={() => setEditDialogOpen(false)}>
-                Cancel
-              </Button>
-              <Button onClick={handleUpdate} disabled={updateTemplate.isPending}>
-                {updateTemplate.isPending ? (
-                  <>
-                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                    Updating...
-                  </>
-                ) : (
-                  "Update Template"
-                )}
-              </Button>
-            </DialogFooter>
-          </DialogContent>
-        </Dialog>
+          </ResponsivePanelBody>
+          <ResponsivePanelFooter>
+            <Button variant="outline" onClick={() => setEditDialogOpen(false)} className="w-full sm:w-auto">
+              Cancel
+            </Button>
+            <Button onClick={handleUpdate} disabled={updateTemplate.isPending} className="w-full sm:w-auto">
+              {updateTemplate.isPending ? (
+                <>
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  Updating...
+                </>
+              ) : (
+                "Update Template"
+              )}
+            </Button>
+          </ResponsivePanelFooter>
+        </ResponsivePanel>
 
-        {/* Delete Confirmation Dialog */}
+        {/* Delete Confirmation */}
         <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
           <AlertDialogContent>
             <AlertDialogHeader>

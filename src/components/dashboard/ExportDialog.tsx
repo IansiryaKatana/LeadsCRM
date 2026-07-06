@@ -1,11 +1,12 @@
 import { useState } from "react";
 import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
+  ResponsivePanel,
+  ResponsivePanelBody,
+  ResponsivePanelDescription,
+  ResponsivePanelFooter,
+  ResponsivePanelHeader,
+  ResponsivePanelTitle,
+} from "@/components/ui/responsive-panel";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Calendar } from "@/components/ui/calendar";
@@ -60,14 +61,14 @@ export function ExportDialog({
   const isDateRangeValid = startDate && endDate && startDate <= endDate;
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-lg p-0 gap-0 overflow-hidden">
-        <DialogHeader className="px-6 pt-6 pb-4 border-b bg-muted/30">
-          <DialogTitle className="font-display text-xl sm:text-2xl">{title}</DialogTitle>
-          <DialogDescription className="text-sm leading-relaxed pt-1">{description}</DialogDescription>
-        </DialogHeader>
+    <ResponsivePanel open={open} onOpenChange={onOpenChange}>
+      <ResponsivePanelHeader className="bg-muted/30">
+        <ResponsivePanelTitle>{title}</ResponsivePanelTitle>
+        <ResponsivePanelDescription>{description}</ResponsivePanelDescription>
+      </ResponsivePanelHeader>
 
-        <div className="px-6 py-5 space-y-6">
+      <ResponsivePanelBody>
+        <div className="space-y-6">
           <div className="space-y-3">
             <Label className="text-sm font-semibold text-foreground">Export format</Label>
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
@@ -83,7 +84,7 @@ export function ExportDialog({
                       "flex flex-col items-start gap-2 rounded-xl border-2 p-3 text-left transition-all",
                       selected
                         ? "border-primary bg-primary/5 shadow-sm"
-                        : "border-border bg-card hover:border-primary/40 hover:bg-muted/40"
+                        : "border-border bg-card hover:border-primary/40 hover:bg-muted/40",
                     )}
                   >
                     <Icon
@@ -93,7 +94,7 @@ export function ExportDialog({
                       <p
                         className={cn(
                           "text-sm font-semibold",
-                          selected ? "text-primary" : "text-foreground"
+                          selected ? "text-primary" : "text-foreground",
                         )}
                       >
                         {option.label}
@@ -119,7 +120,7 @@ export function ExportDialog({
                       variant="outline"
                       className={cn(
                         "w-full justify-start text-left font-normal h-10",
-                        !startDate && "text-muted-foreground"
+                        !startDate && "text-muted-foreground",
                       )}
                     >
                       <CalendarIcon className="mr-2 h-4 w-4 shrink-0 opacity-70" />
@@ -139,7 +140,7 @@ export function ExportDialog({
                       variant="outline"
                       className={cn(
                         "w-full justify-start text-left font-normal h-10",
-                        !endDate && "text-muted-foreground"
+                        !endDate && "text-muted-foreground",
                       )}
                     >
                       <CalendarIcon className="mr-2 h-4 w-4 shrink-0 opacity-70" />
@@ -157,39 +158,39 @@ export function ExportDialog({
             )}
           </div>
         </div>
+      </ResponsivePanelBody>
 
-        <div className="flex gap-2 px-6 py-4 border-t bg-muted/20">
-          <Button
-            type="button"
-            variant="outline"
-            className="flex-1"
-            onClick={() => onOpenChange(false)}
-            disabled={isExporting}
-          >
-            Cancel
-          </Button>
-          <Button
-            type="button"
-            className="flex-1"
-            onClick={handleExport}
-            disabled={!isDateRangeValid || isExporting}
-          >
-            {isExporting ? (
-              <>
-                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                Exporting…
-              </>
-            ) : (
-              <>
-                {exportFormat === "excel" && <FileSpreadsheet className="mr-2 h-4 w-4" />}
-                {exportFormat === "pdf" && <FileText className="mr-2 h-4 w-4" />}
-                {exportFormat === "csv" && <Table2 className="mr-2 h-4 w-4" />}
-                Download {exportFormat.toUpperCase()}
-              </>
-            )}
-          </Button>
-        </div>
-      </DialogContent>
-    </Dialog>
+      <ResponsivePanelFooter className="bg-muted/20">
+        <Button
+          type="button"
+          variant="outline"
+          onClick={() => onOpenChange(false)}
+          disabled={isExporting}
+          className="w-full sm:w-auto"
+        >
+          Cancel
+        </Button>
+        <Button
+          type="button"
+          onClick={handleExport}
+          disabled={!isDateRangeValid || isExporting}
+          className="w-full sm:w-auto"
+        >
+          {isExporting ? (
+            <>
+              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              Exporting…
+            </>
+          ) : (
+            <>
+              {exportFormat === "excel" && <FileSpreadsheet className="mr-2 h-4 w-4" />}
+              {exportFormat === "pdf" && <FileText className="mr-2 h-4 w-4" />}
+              {exportFormat === "csv" && <Table2 className="mr-2 h-4 w-4" />}
+              Download {exportFormat.toUpperCase()}
+            </>
+          )}
+        </Button>
+      </ResponsivePanelFooter>
+    </ResponsivePanel>
   );
 }

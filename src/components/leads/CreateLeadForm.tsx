@@ -13,13 +13,13 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from "@/components/ui/dialog";
+  ResponsivePanel,
+  ResponsivePanelBody,
+  ResponsivePanelDescription,
+  ResponsivePanelFooter,
+  ResponsivePanelHeader,
+  ResponsivePanelTitle,
+} from "@/components/ui/responsive-panel";
 import { 
   LeadSource, 
   RoomChoice, 
@@ -159,25 +159,25 @@ export function CreateLeadForm() {
   const roomKeys: RoomChoice[] = ["platinum", "gold", "silver", "bronze", "standard"];
 
   return (
-    <Dialog open={open} onOpenChange={setOpen}>
-      <DialogTrigger asChild>
-        <Button className="gap-2" size="sm">
-          <Plus className="h-4 w-4" />
-          <span className="hidden sm:inline">Add Lead</span>
-        </Button>
-      </DialogTrigger>
-      <DialogContent className="sm:max-w-lg">
-        <DialogHeader>
-          <DialogTitle className="flex items-center gap-2 font-display text-2xl">
-            <UserPlus className="h-6 w-6 text-primary" />
-            Create New Lead
-          </DialogTitle>
-          <DialogDescription>
-            Add a new lead to your CRM system. All fields marked with * are required.
-          </DialogDescription>
-        </DialogHeader>
+    <>
+      <Button className="gap-2" size="sm" onClick={() => setOpen(true)}>
+        <Plus className="h-4 w-4" />
+        <span className="hidden sm:inline">Add Lead</span>
+      </Button>
 
-        <form onSubmit={handleSubmit(handleFormSubmit)} className="space-y-5 mt-4">
+      <ResponsivePanel open={open} onOpenChange={setOpen}>
+        <ResponsivePanelHeader>
+          <ResponsivePanelTitle className="flex items-center gap-2">
+            <UserPlus className="h-5 w-5 text-primary shrink-0" />
+            Create New Lead
+          </ResponsivePanelTitle>
+          <ResponsivePanelDescription>
+            Add a new lead to your CRM system. All fields marked with * are required.
+          </ResponsivePanelDescription>
+        </ResponsivePanelHeader>
+
+        <ResponsivePanelBody>
+          <form id="create-lead-form" onSubmit={handleSubmit(handleFormSubmit)} className="space-y-5">
           <div className="space-y-2">
             <Label htmlFor="full_name">Full Name *</Label>
             <Input
@@ -331,23 +331,29 @@ export function CreateLeadForm() {
                 : `Select Book Viewing or Schedule Callback source for a revenue estimate`}
             </p>
           </div>
+          </form>
+        </ResponsivePanelBody>
 
-          <div className="flex gap-3 pt-4">
-            <Button
-              type="button"
-              variant="outline"
-              className="flex-1"
-              onClick={() => setOpen(false)}
-            >
-              Cancel
-            </Button>
-            <Button type="submit" className="flex-1" disabled={createLead.isPending}>
-              {createLead.isPending && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
-              Create Lead
-            </Button>
-          </div>
-        </form>
-      </DialogContent>
-    </Dialog>
+        <ResponsivePanelFooter>
+          <Button
+            type="button"
+            variant="outline"
+            onClick={() => setOpen(false)}
+            className="w-full sm:w-auto"
+          >
+            Cancel
+          </Button>
+          <Button
+            type="submit"
+            form="create-lead-form"
+            disabled={createLead.isPending}
+            className="w-full sm:w-auto"
+          >
+            {createLead.isPending && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
+            Create Lead
+          </Button>
+        </ResponsivePanelFooter>
+      </ResponsivePanel>
+    </>
   );
 }

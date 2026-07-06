@@ -1,12 +1,12 @@
 import { useState } from "react";
 import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
+  ResponsivePanel,
+  ResponsivePanelBody,
+  ResponsivePanelDescription,
+  ResponsivePanelFooter,
+  ResponsivePanelHeader,
+  ResponsivePanelTitle,
+} from "@/components/ui/responsive-panel";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
@@ -50,6 +50,10 @@ export function ExceptionRequestDialog({
   const [justification, setJustification] = useState("");
   const createRequest = useCreateExceptionRequest();
 
+  const handleOpenChange = (next: boolean) => {
+    if (!next) onClose();
+  };
+
   const handleSubmit = async () => {
     if (!reason) {
       toast({
@@ -85,27 +89,28 @@ export function ExceptionRequestDialog({
       setJustification("");
       onClose();
       onSuccess?.();
-    } catch (error: any) {
+    } catch (error: unknown) {
+      const message = error instanceof Error ? error.message : "Failed to submit exception request";
       toast({
         title: "Error",
-        description: error.message || "Failed to submit exception request",
+        description: message,
         variant: "destructive",
       });
     }
   };
 
   return (
-    <Dialog open={open} onOpenChange={onClose}>
-      <DialogContent className="sm:max-w-[500px]">
-        <DialogHeader>
-          <DialogTitle className="font-display">Request Exception to Close Lead</DialogTitle>
-          <DialogDescription>
-            You're attempting to close <strong>{leadName}</strong> without completing 3 follow-ups.
-            Please provide a reason for requesting an exception.
-          </DialogDescription>
-        </DialogHeader>
+    <ResponsivePanel open={open} onOpenChange={handleOpenChange}>
+      <ResponsivePanelHeader>
+        <ResponsivePanelTitle>Request Exception to Close Lead</ResponsivePanelTitle>
+        <ResponsivePanelDescription>
+          You&apos;re attempting to close <strong>{leadName}</strong> without completing 3
+          follow-ups. Please provide a reason for requesting an exception.
+        </ResponsivePanelDescription>
+      </ResponsivePanelHeader>
 
-        <div className="space-y-4 py-4">
+      <ResponsivePanelBody>
+        <div className="space-y-4">
           <div className="space-y-2">
             <Label htmlFor="reason">Reason for Exception *</Label>
             <Select value={reason} onValueChange={setReason}>
@@ -136,6 +141,7 @@ export function ExceptionRequestDialog({
               value={justification}
               onChange={(e) => setJustification(e.target.value)}
               rows={4}
+              className="resize-none"
             />
             <p className="text-xs text-muted-foreground">
               {reason === "other"
@@ -144,25 +150,24 @@ export function ExceptionRequestDialog({
             </p>
           </div>
 
-          <div className="rounded-lg bg-muted/50 p-4">
-            <p className="text-sm text-muted-foreground">
-              <strong>Note:</strong> This request will be reviewed by an administrator. You will
-              be notified once a decision has been made.
+          <div className="rounded-xl border bg-muted/30 p-4">
+            <p className="text-sm text-muted-foreground font-body">
+              <strong>Note:</strong> This request will be reviewed by an administrator. You will be
+              notified once a decision has been made.
             </p>
           </div>
         </div>
+      </ResponsivePanelBody>
 
-        <DialogFooter>
-          <Button variant="outline" onClick={onClose} disabled={createRequest.isPending}>
-            Cancel
-          </Button>
-          <Button onClick={handleSubmit} disabled={createRequest.isPending || !reason}>
-            {createRequest.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-            Submit Request
-          </Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
+      <ResponsivePanelFooter>
+        <Button variant="outline" onClick={onClose} disabled={createRequest.isPending} className="w-full sm:w-auto">
+          Cancel
+        </Button>
+        <Button onClick={handleSubmit} disabled={createRequest.isPending || !reason} className="w-full sm:w-auto">
+          {createRequest.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+          Submit Request
+        </Button>
+      </ResponsivePanelFooter>
+    </ResponsivePanel>
   );
 }
-

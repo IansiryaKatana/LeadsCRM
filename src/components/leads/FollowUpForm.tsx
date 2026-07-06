@@ -10,14 +10,13 @@ import { FollowUpOutcomeIcon, FollowUpTypeIcon } from "@/utils/followUpIcons";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import {
-  Sheet,
-  SheetContent,
-  SheetDescription,
-  SheetFooter,
-  SheetHeader,
-  SheetTitle,
-} from "@/components/ui/sheet";
-import { ScrollArea } from "@/components/ui/scroll-area";
+  ResponsivePanel,
+  ResponsivePanelBody,
+  ResponsivePanelDescription,
+  ResponsivePanelFooter,
+  ResponsivePanelHeader,
+  ResponsivePanelTitle,
+} from "@/components/ui/responsive-panel";
 import {
   Select,
   SelectContent,
@@ -29,9 +28,6 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Loader2 } from "lucide-react";
-import { useIsMobile } from "@/hooks/use-mobile";
-import { detailSectionTitleClass } from "@/lib/typography";
-import { cn } from "@/lib/utils";
 
 interface FollowUpFormProps {
   leadId: string;
@@ -46,7 +42,6 @@ export function FollowUpForm({
   open,
   onClose,
 }: FollowUpFormProps) {
-  const isMobile = useIsMobile();
   const [followupType, setFollowupType] = useState<FollowUpType>("call");
   const [followupDate, setFollowupDate] = useState(() => {
     const now = new Date();
@@ -131,31 +126,18 @@ export function FollowUpForm({
   };
 
   return (
-    <Sheet open={open} onOpenChange={handleOpenChange}>
-      <SheetContent
-        side={isMobile ? "bottom" : "right"}
-        className={cn(
-          "flex flex-col gap-0 p-0",
-          isMobile
-            ? "h-[min(92vh,720px)] rounded-t-xl"
-            : "w-full sm:max-w-lg",
-        )}
-      >
-        <SheetHeader className="shrink-0 border-b px-6 py-4 text-left">
-          <SheetTitle className={cn(detailSectionTitleClass, "text-left")}>
-            Record Follow-Up #{nextFollowUpNumber}
-          </SheetTitle>
-          <SheetDescription className="text-left font-body">
-            Log the contact outcome and optionally schedule the next touchpoint.
-          </SheetDescription>
-        </SheetHeader>
+    <ResponsivePanel open={open} onOpenChange={handleOpenChange}>
+      <ResponsivePanelHeader>
+        <ResponsivePanelTitle>
+          Record Follow-Up #{nextFollowUpNumber}
+        </ResponsivePanelTitle>
+        <ResponsivePanelDescription>
+          Log the contact outcome and optionally schedule the next touchpoint.
+        </ResponsivePanelDescription>
+      </ResponsivePanelHeader>
 
-        <ScrollArea className="flex-1 min-h-0">
-          <form
-            id="follow-up-form"
-            onSubmit={handleSubmit}
-            className="space-y-5 px-6 py-5"
-          >
+      <ResponsivePanelBody>
+        <form id="follow-up-form" onSubmit={handleSubmit} className="space-y-5">
             <div className="grid gap-4 sm:grid-cols-2">
               <div className="space-y-2 sm:col-span-2">
                 <Label htmlFor="followup-type">Follow-up type</Label>
@@ -266,10 +248,10 @@ export function FollowUpForm({
                 </div>
               )}
             </div>
-          </form>
-        </ScrollArea>
+        </form>
+      </ResponsivePanelBody>
 
-        <SheetFooter className="shrink-0 border-t px-6 py-4 gap-3 sm:justify-between">
+      <ResponsivePanelFooter>
           <Button
             type="button"
             variant="outline"
@@ -290,8 +272,7 @@ export function FollowUpForm({
             )}
             Save Follow-Up
           </Button>
-        </SheetFooter>
-      </SheetContent>
-    </Sheet>
+      </ResponsivePanelFooter>
+    </ResponsivePanel>
   );
 }

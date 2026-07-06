@@ -2,11 +2,12 @@ import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
+  ResponsivePanel,
+  ResponsivePanelBody,
+  ResponsivePanelFooter,
+  ResponsivePanelHeader,
+  ResponsivePanelTitle,
+} from "@/components/ui/responsive-panel";
 import {
   Select,
   SelectContent,
@@ -234,13 +235,13 @@ export function CalendarTab({ leadId, leadName }: CalendarTabProps) {
         </div>
       )}
 
-      {/* Create Event Dialog */}
-      <Dialog open={createDialogOpen} onOpenChange={setCreateDialogOpen}>
-        <DialogContent className="max-w-2xl">
-          <DialogHeader>
-            <DialogTitle>Schedule Event</DialogTitle>
-          </DialogHeader>
-          <div className="space-y-4 mt-4">
+      {/* Create Event */}
+      <ResponsivePanel open={createDialogOpen} onOpenChange={setCreateDialogOpen} size="wide">
+        <ResponsivePanelHeader>
+          <ResponsivePanelTitle>Schedule Event</ResponsivePanelTitle>
+        </ResponsivePanelHeader>
+        <ResponsivePanelBody>
+          <div className="space-y-4">
             <div className="space-y-2">
               <Label>Event Type *</Label>
               <RadioGroup
@@ -309,30 +310,30 @@ export function CalendarTab({ leadId, leadName }: CalendarTabProps) {
                 />
               </div>
             </div>
-            <div className="flex gap-3 pt-4">
-              <Button variant="outline" onClick={() => setCreateDialogOpen(false)} className="flex-1">
-                Cancel
-              </Button>
-              <Button
-                onClick={handleCreate}
-                disabled={!newEvent.title.trim() || !newEvent.start_date || createEvent.isPending}
-                className="flex-1"
-              >
-                {createEvent.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                Create Event
-              </Button>
-            </div>
           </div>
-        </DialogContent>
-      </Dialog>
+        </ResponsivePanelBody>
+        <ResponsivePanelFooter>
+          <Button variant="outline" onClick={() => setCreateDialogOpen(false)} className="w-full sm:w-auto">
+            Cancel
+          </Button>
+          <Button
+            onClick={handleCreate}
+            disabled={!newEvent.title.trim() || !newEvent.start_date || createEvent.isPending}
+            className="w-full sm:w-auto"
+          >
+            {createEvent.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+            Create Event
+          </Button>
+        </ResponsivePanelFooter>
+      </ResponsivePanel>
 
-      {/* Edit Event Dialog */}
-      <Dialog open={editDialogOpen} onOpenChange={setEditDialogOpen}>
-        <DialogContent className="max-w-2xl">
-          <DialogHeader>
-            <DialogTitle>Edit Event</DialogTitle>
-          </DialogHeader>
-          <div className="space-y-4 mt-4">
+      {/* Edit Event */}
+      <ResponsivePanel open={editDialogOpen} onOpenChange={setEditDialogOpen} size="wide">
+        <ResponsivePanelHeader>
+          <ResponsivePanelTitle>Edit Event</ResponsivePanelTitle>
+        </ResponsivePanelHeader>
+        <ResponsivePanelBody>
+          <div className="space-y-4">
             <div className="space-y-2">
               <Label>Event Type *</Label>
               <RadioGroup
@@ -399,22 +400,22 @@ export function CalendarTab({ leadId, leadName }: CalendarTabProps) {
                 />
               </div>
             </div>
-            <div className="flex gap-3 pt-4">
-              <Button variant="outline" onClick={() => setEditDialogOpen(false)} className="flex-1">
-                Cancel
-              </Button>
-              <Button
-                onClick={handleUpdate}
-                disabled={!newEvent.title.trim() || !newEvent.start_date || updateEvent.isPending}
-                className="flex-1"
-              >
-                {updateEvent.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                Update Event
-              </Button>
-            </div>
           </div>
-        </DialogContent>
-      </Dialog>
+        </ResponsivePanelBody>
+        <ResponsivePanelFooter>
+          <Button variant="outline" onClick={() => setEditDialogOpen(false)} className="w-full sm:w-auto">
+            Cancel
+          </Button>
+          <Button
+            onClick={handleUpdate}
+            disabled={!newEvent.title.trim() || !newEvent.start_date || updateEvent.isPending}
+            className="w-full sm:w-auto"
+          >
+            {updateEvent.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+            Update Event
+          </Button>
+        </ResponsivePanelFooter>
+      </ResponsivePanel>
 
 
       <Sheet

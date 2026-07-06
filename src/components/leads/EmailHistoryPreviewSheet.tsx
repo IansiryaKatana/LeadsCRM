@@ -9,7 +9,6 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { useIsMobile } from "@/hooks/use-mobile";
-import { detailSectionTitleClass } from "@/lib/typography";
 import { cn } from "@/lib/utils";
 import { Mail } from "lucide-react";
 import type { Database } from "@/integrations/supabase/types";
@@ -41,7 +40,7 @@ export function EmailHistoryPreviewSheet({
         )}
       >
         <SheetHeader className="shrink-0 border-b px-6 py-4 text-left">
-          <SheetTitle className={cn(detailSectionTitleClass, "text-left line-clamp-2")}>
+          <SheetTitle className="text-left line-clamp-2">
             {email?.subject || "Sent email"}
           </SheetTitle>
           <SheetDescription className="text-left font-body space-y-1">

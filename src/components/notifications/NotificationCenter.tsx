@@ -62,7 +62,7 @@ export function NotificationCenter() {
         <SheetHeader className="p-6 pb-4 border-b">
           <div className="flex items-center justify-between">
             <div>
-              <SheetTitle className="font-display">Notifications</SheetTitle>
+              <SheetTitle>Notifications</SheetTitle>
               <SheetDescription>
                 {unreadCount > 0
                   ? `${unreadCount} unread notification${unreadCount !== 1 ? "s" : ""}`

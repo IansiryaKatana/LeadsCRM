@@ -3,6 +3,7 @@ import { cva, type VariantProps } from "class-variance-authority";
 import { X } from "lucide-react";
 import * as React from "react";
 
+import { pageTitleClass } from "@/lib/typography";
 import { cn } from "@/lib/utils";
 
 const Sheet = SheetPrimitive.Root;
@@ -81,7 +82,7 @@ const SheetTitle = React.forwardRef<
   React.ElementRef<typeof SheetPrimitive.Title>,
   React.ComponentPropsWithoutRef<typeof SheetPrimitive.Title>
 >(({ className, ...props }, ref) => (
-  <SheetPrimitive.Title ref={ref} className={cn("text-lg font-semibold text-foreground", className)} {...props} />
+  <SheetPrimitive.Title ref={ref} className={cn(pageTitleClass, className)} {...props} />
 ));
 SheetTitle.displayName = SheetPrimitive.Title.displayName;
 

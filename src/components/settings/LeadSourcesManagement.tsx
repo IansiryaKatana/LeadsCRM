@@ -4,12 +4,12 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from "@/components/ui/dialog";
+  ResponsivePanel,
+  ResponsivePanelBody,
+  ResponsivePanelFooter,
+  ResponsivePanelHeader,
+  ResponsivePanelTitle,
+} from "@/components/ui/responsive-panel";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -146,100 +146,10 @@ export function LeadSourcesManagement() {
               Add, edit, or remove lead source categories
             </CardDescription>
           </div>
-          <Dialog open={createDialogOpen} onOpenChange={setCreateDialogOpen}>
-            <DialogTrigger asChild>
-              <Button className="gap-2">
-                <Plus className="h-4 w-4" />
-                Add Source
-              </Button>
-            </DialogTrigger>
-            <DialogContent>
-              <DialogHeader>
-                <DialogTitle>Create New Lead Source</DialogTitle>
-              </DialogHeader>
-              <div className="space-y-4 mt-4">
-                <div className="space-y-2">
-                  <Label>Name</Label>
-                  <Input
-                    value={newSourceData.name}
-                    onChange={(e) => {
-                      const name = e.target.value;
-                      setNewSourceData({
-                        ...newSourceData,
-                        name,
-                        slug: newSourceData.slug || generateSlug(name),
-                      });
-                    }}
-                    placeholder="e.g., Instagram Ads"
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label>Slug (URL-friendly identifier)</Label>
-                  <Input
-                    value={newSourceData.slug}
-                    onChange={(e) => setNewSourceData({ ...newSourceData, slug: e.target.value })}
-                    placeholder="e.g., instagram_ads"
-                  />
-                  <p className="text-xs text-muted-foreground">
-                    Auto-generated from name if left empty
-                  </p>
-                </div>
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label>Icon (Emoji)</Label>
-                    <Input
-                      value={newSourceData.icon}
-                      onChange={(e) => setNewSourceData({ ...newSourceData, icon: e.target.value })}
-                      placeholder="📱"
-                      maxLength={2}
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label>Color</Label>
-                    <div className="flex gap-2">
-                      <Input
-                        type="color"
-                        value={newSourceData.color}
-                        onChange={(e) => setNewSourceData({ ...newSourceData, color: e.target.value })}
-                        className="w-20 h-10"
-                      />
-                      <Input
-                        value={newSourceData.color}
-                        onChange={(e) => setNewSourceData({ ...newSourceData, color: e.target.value })}
-                        placeholder="#6366f1"
-                      />
-                    </div>
-                  </div>
-                </div>
-                <div className="space-y-2">
-                  <Label>Display Order</Label>
-                  <Input
-                    type="number"
-                    value={newSourceData.display_order}
-                    onChange={(e) => setNewSourceData({ ...newSourceData, display_order: parseInt(e.target.value) || 0 })}
-                    placeholder="0"
-                  />
-                </div>
-                <div className="flex gap-3 pt-4">
-                  <Button
-                    variant="outline"
-                    className="flex-1"
-                    onClick={() => setCreateDialogOpen(false)}
-                  >
-                    Cancel
-                  </Button>
-                  <Button
-                    className="flex-1"
-                    onClick={handleCreateSource}
-                    disabled={createSource.isPending || !newSourceData.name.trim()}
-                  >
-                    {createSource.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                    Create Source
-                  </Button>
-                </div>
-              </div>
-            </DialogContent>
-          </Dialog>
+          <Button className="gap-2" onClick={() => setCreateDialogOpen(true)}>
+            <Plus className="h-4 w-4" />
+            Add Source
+          </Button>
         </div>
       </CardHeader>
       <CardContent>
@@ -344,14 +254,99 @@ export function LeadSourcesManagement() {
         )}
       </CardContent>
 
-      {/* Edit Dialog */}
-      <Dialog open={editDialogOpen} onOpenChange={setEditDialogOpen}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Edit Lead Source</DialogTitle>
-          </DialogHeader>
+      <ResponsivePanel open={createDialogOpen} onOpenChange={setCreateDialogOpen}>
+        <ResponsivePanelHeader>
+          <ResponsivePanelTitle>Create New Lead Source</ResponsivePanelTitle>
+        </ResponsivePanelHeader>
+        <ResponsivePanelBody>
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <Label>Name</Label>
+              <Input
+                value={newSourceData.name}
+                onChange={(e) => {
+                  const name = e.target.value;
+                  setNewSourceData({
+                    ...newSourceData,
+                    name,
+                    slug: newSourceData.slug || generateSlug(name),
+                  });
+                }}
+                placeholder="e.g., Instagram Ads"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label>Slug (URL-friendly identifier)</Label>
+              <Input
+                value={newSourceData.slug}
+                onChange={(e) => setNewSourceData({ ...newSourceData, slug: e.target.value })}
+                placeholder="e.g., instagram_ads"
+              />
+              <p className="text-xs text-muted-foreground">
+                Auto-generated from name if left empty
+              </p>
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label>Icon (Emoji)</Label>
+                <Input
+                  value={newSourceData.icon}
+                  onChange={(e) => setNewSourceData({ ...newSourceData, icon: e.target.value })}
+                  placeholder="📱"
+                  maxLength={2}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label>Color</Label>
+                <div className="flex gap-2">
+                  <Input
+                    type="color"
+                    value={newSourceData.color}
+                    onChange={(e) => setNewSourceData({ ...newSourceData, color: e.target.value })}
+                    className="w-20 h-10"
+                  />
+                  <Input
+                    value={newSourceData.color}
+                    onChange={(e) => setNewSourceData({ ...newSourceData, color: e.target.value })}
+                    placeholder="#6366f1"
+                  />
+                </div>
+              </div>
+            </div>
+            <div className="space-y-2">
+              <Label>Display Order</Label>
+              <Input
+                type="number"
+                value={newSourceData.display_order}
+                onChange={(e) => setNewSourceData({ ...newSourceData, display_order: parseInt(e.target.value) || 0 })}
+                placeholder="0"
+              />
+            </div>
+          </div>
+        </ResponsivePanelBody>
+        <ResponsivePanelFooter>
+          <Button variant="outline" onClick={() => setCreateDialogOpen(false)} className="w-full sm:w-auto">
+            Cancel
+          </Button>
+          <Button
+            onClick={handleCreateSource}
+            disabled={createSource.isPending || !newSourceData.name.trim()}
+            className="w-full sm:w-auto"
+          >
+            {createSource.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+            Create Source
+          </Button>
+        </ResponsivePanelFooter>
+      </ResponsivePanel>
+
+      {/* Edit */}
+      <ResponsivePanel open={editDialogOpen} onOpenChange={setEditDialogOpen}>
+        <ResponsivePanelHeader>
+          <ResponsivePanelTitle>Edit Lead Source</ResponsivePanelTitle>
+        </ResponsivePanelHeader>
+        <ResponsivePanelBody>
           {selectedSource && (
-            <div className="space-y-4 mt-4">
+            <div className="space-y-4">
               <div className="space-y-2">
                 <Label>Name</Label>
                 <Input
@@ -413,27 +408,23 @@ export function LeadSourcesManagement() {
                   Active (visible in dropdowns and navigation)
                 </Label>
               </div>
-              <div className="flex gap-3 pt-4">
-                <Button
-                  variant="outline"
-                  className="flex-1"
-                  onClick={() => setEditDialogOpen(false)}
-                >
-                  Cancel
-                </Button>
-                <Button
-                  className="flex-1"
-                  onClick={handleUpdateSource}
-                  disabled={updateSource.isPending}
-                >
-                  {updateSource.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                  Update Source
-                </Button>
-              </div>
             </div>
           )}
-        </DialogContent>
-      </Dialog>
+        </ResponsivePanelBody>
+        <ResponsivePanelFooter>
+          <Button variant="outline" onClick={() => setEditDialogOpen(false)} className="w-full sm:w-auto">
+            Cancel
+          </Button>
+          <Button
+            onClick={handleUpdateSource}
+            disabled={updateSource.isPending}
+            className="w-full sm:w-auto"
+          >
+            {updateSource.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+            Update Source
+          </Button>
+        </ResponsivePanelFooter>
+      </ResponsivePanel>
     </Card>
   );
 }

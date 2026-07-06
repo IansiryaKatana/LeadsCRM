@@ -12,12 +12,12 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from "@/components/ui/dialog";
+  ResponsivePanel,
+  ResponsivePanelBody,
+  ResponsivePanelFooter,
+  ResponsivePanelHeader,
+  ResponsivePanelTitle,
+} from "@/components/ui/responsive-panel";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -308,85 +308,10 @@ export function UsersSettingsTab() {
               </CardDescription>
             </div>
             {role === "super_admin" && (
-              <Dialog open={createDialogOpen} onOpenChange={setCreateDialogOpen}>
-                <DialogTrigger asChild>
-                  <Button className="gap-2">
-                    <UserPlus className="h-4 w-4" />
-                    <span className="hidden sm:inline">Add User</span>
-                  </Button>
-                </DialogTrigger>
-              <DialogContent>
-                <DialogHeader>
-                  <DialogTitle>Create New User</DialogTitle>
-                </DialogHeader>
-                <div className="space-y-4 mt-4">
-                  <div className="space-y-2">
-                    <Label>Full Name</Label>
-                    <Input
-                      value={newUserData.full_name}
-                      onChange={(e) => setNewUserData({ ...newUserData, full_name: e.target.value })}
-                      placeholder="John Doe"
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label>Email</Label>
-                    <Input
-                      type="email"
-                      value={newUserData.email}
-                      onChange={(e) => setNewUserData({ ...newUserData, email: e.target.value })}
-                      placeholder="john@example.com"
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label>Password</Label>
-                    <PasswordInput
-                      value={newUserData.password}
-                      onChange={(e) => setNewUserData({ ...newUserData, password: e.target.value })}
-                      placeholder="Minimum 6 characters"
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label>Role</Label>
-                    <Select
-                      value={newUserData.role}
-                      onValueChange={(value) => setNewUserData({ ...newUserData, role: value as UserRole })}
-                    >
-                      <SelectTrigger>
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {ROLE_OPTIONS.filter(opt => {
-                          // Admin cannot create super_admin
-                          if (role === "admin" && opt.value === "super_admin") return false;
-                          return true;
-                        }).map((option) => (
-                          <SelectItem key={option.value} value={option.value}>
-                            {option.label}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  <div className="flex gap-3 pt-4">
-                    <Button
-                      variant="outline"
-                      className="flex-1"
-                      onClick={() => setCreateDialogOpen(false)}
-                    >
-                      Cancel
-                    </Button>
-                    <Button
-                      className="flex-1"
-                      onClick={handleCreateUser}
-                      disabled={isCreating || !newUserData.email || !newUserData.password || !newUserData.full_name}
-                    >
-                      {isCreating && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                      Create User
-                    </Button>
-                  </div>
-                </div>
-              </DialogContent>
-            </Dialog>
+              <Button className="gap-2" onClick={() => setCreateDialogOpen(true)}>
+                <UserPlus className="h-4 w-4" />
+                <span className="hidden sm:inline">Add User</span>
+              </Button>
             )}
           </div>
         </CardHeader>
@@ -469,14 +394,82 @@ export function UsersSettingsTab() {
         </CardContent>
       </Card>
 
-      {/* Edit User Dialog */}
-      <Dialog open={editDialogOpen} onOpenChange={setEditDialogOpen}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Edit User</DialogTitle>
-          </DialogHeader>
+      <ResponsivePanel open={createDialogOpen} onOpenChange={setCreateDialogOpen}>
+        <ResponsivePanelHeader>
+          <ResponsivePanelTitle>Create New User</ResponsivePanelTitle>
+        </ResponsivePanelHeader>
+        <ResponsivePanelBody>
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <Label>Full Name</Label>
+              <Input
+                value={newUserData.full_name}
+                onChange={(e) => setNewUserData({ ...newUserData, full_name: e.target.value })}
+                placeholder="John Doe"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label>Email</Label>
+              <Input
+                type="email"
+                value={newUserData.email}
+                onChange={(e) => setNewUserData({ ...newUserData, email: e.target.value })}
+                placeholder="john@example.com"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label>Password</Label>
+              <PasswordInput
+                value={newUserData.password}
+                onChange={(e) => setNewUserData({ ...newUserData, password: e.target.value })}
+                placeholder="Minimum 6 characters"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label>Role</Label>
+              <Select
+                value={newUserData.role}
+                onValueChange={(value) => setNewUserData({ ...newUserData, role: value as UserRole })}
+              >
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {ROLE_OPTIONS.filter((opt) => {
+                    if (role === "admin" && opt.value === "super_admin") return false;
+                    return true;
+                  }).map((option) => (
+                    <SelectItem key={option.value} value={option.value}>
+                      {option.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+        </ResponsivePanelBody>
+        <ResponsivePanelFooter>
+          <Button variant="outline" onClick={() => setCreateDialogOpen(false)} className="w-full sm:w-auto">
+            Cancel
+          </Button>
+          <Button
+            onClick={handleCreateUser}
+            disabled={isCreating || !newUserData.email || !newUserData.password || !newUserData.full_name}
+            className="w-full sm:w-auto"
+          >
+            {isCreating && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+            Create User
+          </Button>
+        </ResponsivePanelFooter>
+      </ResponsivePanel>
+
+      <ResponsivePanel open={editDialogOpen} onOpenChange={setEditDialogOpen}>
+        <ResponsivePanelHeader>
+          <ResponsivePanelTitle>Edit User</ResponsivePanelTitle>
+        </ResponsivePanelHeader>
+        <ResponsivePanelBody>
           {selectedUser && (
-            <div className="space-y-4 mt-4">
+            <div className="space-y-4">
               <div className="space-y-2">
                 <Label>Full Name</Label>
                 <Input
@@ -499,8 +492,7 @@ export function UsersSettingsTab() {
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    {ROLE_OPTIONS.filter(opt => {
-                      // Admin cannot assign super_admin
+                    {ROLE_OPTIONS.filter((opt) => {
                       if (role === "admin" && opt.value === "super_admin") return false;
                       return true;
                     }).map((option) => (
@@ -511,27 +503,19 @@ export function UsersSettingsTab() {
                   </SelectContent>
                 </Select>
               </div>
-              <div className="flex gap-3 pt-4">
-                <Button
-                  variant="outline"
-                  className="flex-1"
-                  onClick={() => setEditDialogOpen(false)}
-                >
-                  Cancel
-                </Button>
-                <Button
-                  className="flex-1"
-                  onClick={handleUpdateUser}
-                  disabled={isUpdating}
-                >
-                  {isUpdating && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                  Update User
-                </Button>
-              </div>
             </div>
           )}
-        </DialogContent>
-      </Dialog>
+        </ResponsivePanelBody>
+        <ResponsivePanelFooter>
+          <Button variant="outline" onClick={() => setEditDialogOpen(false)} className="w-full sm:w-auto">
+            Cancel
+          </Button>
+          <Button onClick={handleUpdateUser} disabled={isUpdating} className="w-full sm:w-auto">
+            {isUpdating && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+            Update User
+          </Button>
+        </ResponsivePanelFooter>
+      </ResponsivePanel>
     </div>
   );
 }
