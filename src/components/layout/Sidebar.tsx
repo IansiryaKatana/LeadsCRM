@@ -47,6 +47,7 @@ import {
 import { ChevronDown, ChevronRight } from "lucide-react";
 import { getSourceIcon } from "@/utils/sourceIcons";
 import { sidebarBrandTitleClass, pageTitleClass } from "@/lib/typography";
+import { SIDEBAR_WIDTH_CLASS } from "@/components/layout/sidebarLayout";
 
 const WEB_SOURCE_SLUGS = [
   "web_booking",
@@ -100,13 +101,13 @@ function UnreadCountBadgeForSource({ sourceSlug }: { sourceSlug: string }) {
 }
 
 // Component for individual source nav item
-function SourceNavItem({ 
-  source, 
-  isActive, 
-  IconComponent, 
-  isWebSource, 
-  onNavigate 
-}: { 
+function SourceNavItem({
+  source,
+  isActive,
+  IconComponent,
+  isWebSource,
+  onNavigate,
+}: {
   source: { slug: string; name: string };
   isActive: boolean;
   IconComponent: React.ComponentType<{ className?: string }>;
@@ -116,15 +117,27 @@ function SourceNavItem({
   return (
     <NavLink
       to={`/leads/source/${source.slug}`}
+      title={source.name}
       className={cn(
-        "flex items-center gap-3 px-4 py-2 rounded-lg text-sm text-muted-foreground transition-all duration-200 hover:bg-muted hover:text-foreground",
-        isActive && "bg-primary/10 text-primary font-medium"
+        "group flex items-center gap-2 rounded-md py-2 pl-2.5 pr-2 text-[13px] leading-none text-muted-foreground transition-colors",
+        "hover:bg-muted/70 hover:text-foreground",
+        isActive &&
+          "bg-primary/10 text-primary font-medium shadow-[inset_2px_0_0_0_hsl(var(--primary))]",
       )}
       onClick={onNavigate}
     >
-      <IconComponent className="h-4 w-4 shrink-0" />
-      <span className="flex-1">{source.name}</span>
-      {isWebSource && <UnreadCountBadgeForSource sourceSlug={source.slug} />}
+      <IconComponent
+        className={cn(
+          "h-3.5 w-3.5 shrink-0 opacity-70 transition-opacity",
+          isActive ? "text-primary opacity-100" : "group-hover:opacity-100",
+        )}
+      />
+      <span className="min-w-0 flex-1 whitespace-nowrap">{source.name}</span>
+      {isWebSource && (
+        <span className="shrink-0 pl-1">
+          <UnreadCountBadgeForSource sourceSlug={source.slug} />
+        </span>
+      )}
     </NavLink>
   );
 }
@@ -241,8 +254,9 @@ export function Sidebar() {
       {/* Sidebar */}
       <aside
         className={cn(
-          "fixed inset-y-0 left-0 z-40 w-[calc(18rem+50px)] bg-card shadow-elevated transform transition-transform duration-300 lg:translate-x-0 lg:shadow-card",
-          isOpen ? "translate-x-0" : "-translate-x-full"
+          SIDEBAR_WIDTH_CLASS,
+          "fixed inset-y-0 left-0 z-40 bg-card shadow-elevated transform transition-transform duration-300 lg:translate-x-0 lg:shadow-card",
+          isOpen ? "translate-x-0" : "-translate-x-full",
         )}
       >
         <div className="flex flex-col h-full">
@@ -271,14 +285,15 @@ export function Sidebar() {
                 // Special handling for "All Leads" to add expandable sources
                 if (item.name === "All Leads") {
                   return (
-                    <div key={item.name} className="space-y-1">
+                    <div key={item.name} className="space-y-0.5">
                       <Collapsible open={sourcesExpanded} onOpenChange={setSourcesExpanded}>
                         <div
                           className={cn(
-                            "flex items-center gap-0.5 rounded transition-all duration-200",
+                            "flex items-center gap-0.5 rounded-lg transition-all duration-200",
+                            sourcesExpanded && "bg-muted/40",
                             !isSourcePage &&
                               location.pathname === item.href &&
-                              "bg-primary text-primary-foreground shadow-card"
+                              "bg-primary text-primary-foreground shadow-card",
                           )}
                         >
                           <NavLink
@@ -325,8 +340,12 @@ export function Sidebar() {
 
                         {/* Expandable Sources Menu */}
                         {activeSources.length > 0 && (
-                          <CollapsibleContent className="pl-4 space-y-1 mt-1">
-                            {activeSources.map((source) => {
+                          <CollapsibleContent className="overflow-hidden data-[state=closed]:animate-accordion-up data-[state=open]:animate-accordion-down">
+                            <div className="mt-1.5 mb-1 ml-3.5 border-l border-border/70 pl-2.5 space-y-0.5">
+                              <p className="px-2.5 pb-1 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground/60">
+                                Lead sources
+                              </p>
+                              {activeSources.map((source) => {
                               const isActive = location.pathname === `/leads/source/${source.slug}`;
                               const IconComponent = getSourceIcon(source.slug);
                               const isWebSource = WEB_SOURCE_SLUGS.includes(source.slug);
@@ -345,6 +364,7 @@ export function Sidebar() {
                                 />
                               );
                             })}
+                            </div>
                           </CollapsibleContent>
                         )}
                       </Collapsible>
