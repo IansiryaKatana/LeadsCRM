@@ -63,6 +63,27 @@ serve(async (req) => {
       .from("lead_sources")
       .select("slug")
       .eq("is_active", true);
+
+    const [{ data: roomPricesSetting }, { data: academicYearsSetting }] = await Promise.all([
+      supabase
+        .from("system_settings")
+        .select("setting_value")
+        .eq("setting_key", "room_prices")
+        .maybeSingle(),
+      supabase
+        .from("system_settings")
+        .select("setting_value")
+        .eq("setting_key", "academic_years")
+        .maybeSingle(),
+    ]);
+
+    const configuredAcademicYears = Array.isArray(academicYearsSetting?.setting_value)
+      ? (academicYearsSetting.setting_value as string[])
+      : [academicYear];
+    const roomPricesByYear = normalizeRoomPricesByYear(
+      roomPricesSetting?.setting_value,
+      configuredAcademicYears,
+    );
     
     const validSourceSlugs = new Set(validSources?.map(s => s.slug) || []);
     console.log(`Valid lead sources: ${Array.from(validSourceSlugs).join(", ")}`);
@@ -89,14 +110,17 @@ serve(async (req) => {
       const roomChoice = mapRoomChoice(row.room_choice);
       const stayDuration = mapStayDuration(row.stay_duration);
       
-      // Only calculate revenue if status is converted
-      const potentialRevenue = mappedStatus === "converted" 
-        ? (row.estimated_revenue || calculateRevenue(roomChoice, stayDuration))
-        : 0;
-
-      // Map source and validate it exists in database
       const mappedSource = mapSource(row.source);
       const finalSource = validSourceSlugs.has(mappedSource) ? mappedSource : "website";
+      const isPaymentSource =
+        finalSource === "web_urban_hub_payment" || finalSource === "web_deposit";
+
+      const potentialRevenue = isPaymentSource
+        ? (row.estimated_revenue || 0)
+        : row.estimated_revenue ||
+          calculatePotentialRevenue(roomChoice, roomPricesByYear, academicYear);
+
+      // Map source and validate it exists in database
       
       if (!validSourceSlugs.has(mappedSource)) {
         console.warn(`Source "${mappedSource}" not found in database, using "website" as fallback for row ${i + 1}`);
@@ -326,22 +350,55 @@ function mapStayDuration(duration?: string): "51_weeks" | "45_weeks" | "short_st
   return durationMap[duration?.toLowerCase()?.trim() || ""] || "51_weeks";
 }
 
-function calculateRevenue(room: string, duration: string): number {
-  const roomPrices: Record<string, number> = {
+function calculatePotentialRevenue(
+  room: string,
+  roomPricesByYear: Record<string, Record<string, number>>,
+  academicYear: string,
+): number {
+  const yearPrices =
+    roomPricesByYear[academicYear] ||
+    roomPricesByYear[Object.keys(roomPricesByYear).sort().at(-1) || ""] ||
+    {
+      platinum: 8500,
+      gold: 7000,
+      silver: 5500,
+      bronze: 4500,
+      standard: 3500,
+    };
+
+  return yearPrices[room] || yearPrices.silver || 5500;
+}
+
+function normalizeRoomPricesByYear(
+  raw: unknown,
+  academicYears: string[],
+): Record<string, Record<string, number>> {
+  const defaultPrices = {
     platinum: 8500,
     gold: 7000,
     silver: 5500,
     bronze: 4500,
     standard: 3500,
   };
-  const durationMultipliers: Record<string, number> = {
-    "51_weeks": 1,
-    "45_weeks": 0.88,
-    short_stay: 0.4,
-  };
-  
-  const basePrice = roomPrices[room] || 5500;
-  const multiplier = durationMultipliers[duration] || 1;
-  
-  return Math.round(basePrice * multiplier);
+
+  if (raw && typeof raw === "object" && !Array.isArray(raw) && typeof (raw as Record<string, unknown>).platinum === "number") {
+    const flat = raw as Record<string, number>;
+    return Object.fromEntries(academicYears.map((year) => [year, { ...flat }]));
+  }
+
+  if (!raw || typeof raw !== "object" || Array.isArray(raw)) {
+    return Object.fromEntries(academicYears.map((year) => [year, { ...defaultPrices }]));
+  }
+
+  const record = raw as Record<string, Record<string, number>>;
+  const yearKeys = Object.keys(record).filter((key) => /^\d{4}\/\d{4}$/.test(key));
+  const fallbackYear = yearKeys.sort().at(-1);
+  const fallbackPrices = fallbackYear ? record[fallbackYear] : defaultPrices;
+  const result: Record<string, Record<string, number>> = {};
+
+  for (const year of academicYears) {
+    result[year] = yearKeys.includes(year) ? record[year] : { ...fallbackPrices };
+  }
+
+  return result;
 }

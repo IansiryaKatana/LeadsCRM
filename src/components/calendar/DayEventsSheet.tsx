@@ -13,7 +13,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { useIsMobile } from "@/hooks/use-mobile";
 import type { CalendarEvent } from "@/hooks/useCalendarEvents";
 import { groupDayEvents } from "@/components/calendar/calendarEventUtils";
-import { CalendarEventCard } from "@/components/calendar/CalendarEventCard";
+import { CalendarEventListSection } from "@/components/calendar/CalendarEventListSection";
 import {
   CalendarEventOutcomeForm,
   type OutcomeAction,
@@ -44,24 +44,17 @@ function EventSection({
 
   return (
     <div className="space-y-2">
-      <div className="flex items-center gap-2">
-        <h4 className="text-sm font-medium text-muted-foreground">{title}</h4>
-        {variant === "warning" && (
-          <Badge variant="outline" className="text-xs bg-warning/10 text-warning border-warning/20">
-            Action needed
-          </Badge>
-        )}
-      </div>
-      <div className="space-y-2">
-        {events.map((event) => (
-          <CalendarEventCard
-            key={event.id}
-            event={event}
-            onAction={onAction}
-            onViewLead={onViewLead}
-          />
-        ))}
-      </div>
+      {variant === "warning" && (
+        <Badge variant="outline" className="text-xs bg-warning/10 text-warning border-warning/20">
+          Action needed
+        </Badge>
+      )}
+      <CalendarEventListSection
+        title={title}
+        events={events}
+        onAction={onAction}
+        onViewLead={onViewLead}
+      />
     </div>
   );
 }

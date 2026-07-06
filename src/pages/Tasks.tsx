@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { AppLayout } from "@/components/layout/AppLayout";
-import { pageTitleClass } from "@/lib/typography";
+import { pageTitleClass, subsectionTitleClass } from "@/lib/typography";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -88,7 +88,7 @@ export default function Tasks() {
 
     return (
       <div className="space-y-3">
-        <h4 className="text-sm font-medium text-muted-foreground">{title}</h4>
+        <h4 className={subsectionTitleClass}>{title}</h4>
         {tasks.map((task) => (
           <Card key={task.id} className="p-4">
             <div className="flex items-start gap-3">
@@ -192,7 +192,7 @@ export default function Tasks() {
                 })()}
                 {myCompletedTasks.length > 0 && (
                   <div className="space-y-3 pt-6 border-t">
-                    <h4 className="text-sm font-medium text-muted-foreground">Completed</h4>
+                    <h4 className={subsectionTitleClass}>Completed</h4>
                     {myCompletedTasks.map((task) => (
                       <Card key={task.id} className="p-4 opacity-60">
                         <div className="flex items-start gap-3">
@@ -249,7 +249,7 @@ export default function Tasks() {
                 })()}
                 {allCompletedTasks.length > 0 && (
                   <div className="space-y-3 pt-6 border-t">
-                    <h4 className="text-sm font-medium text-muted-foreground">Completed</h4>
+                    <h4 className={subsectionTitleClass}>Completed</h4>
                     {allCompletedTasks.slice(0, 10).map((task) => (
                       <Card key={task.id} className="p-4 opacity-60">
                         <div className="flex items-start gap-3">

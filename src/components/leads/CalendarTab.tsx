@@ -18,13 +18,15 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
-import { Plus, Calendar, Trash2, Edit, Loader2 } from "lucide-react";
+import { Plus, Calendar, Loader2 } from "lucide-react";
 import { useCalendarEvents, useCreateCalendarEvent, useUpdateCalendarEvent, useDeleteCalendarEvent, type CalendarEvent } from "@/hooks/useCalendarEvents";
-import { CalendarEventCard } from "@/components/calendar/CalendarEventCard";
+import { CalendarEventListSection } from "@/components/calendar/CalendarEventListSection";
 import { CalendarEventOutcomeForm, type OutcomeAction } from "@/components/calendar/CalendarEventOutcomeForm";
 import { Sheet, SheetContent } from "@/components/ui/sheet";
 import { useAuth } from "@/hooks/useAuth";
 import { format } from "date-fns";
+import { cn } from "@/lib/utils";
+import { subsectionTitleClass } from "@/lib/typography";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -184,10 +186,12 @@ export function CalendarTab({ leadId, leadName }: CalendarTabProps) {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between pb-4 border-b">
         <div>
-          <h3 className="font-semibold">Calendar Events</h3>
-          <p className="text-sm text-muted-foreground">
+          <h3 className={subsectionTitleClass}>
+            Calendar Events
+          </h3>
+          <p className="mt-1 text-sm text-muted-foreground">
             {upcomingEvents.length} upcoming, {pastEvents.length} past
           </p>
         </div>
@@ -197,58 +201,30 @@ export function CalendarTab({ leadId, leadName }: CalendarTabProps) {
         </Button>
       </div>
 
-      {upcomingEvents.length > 0 && (
-        <div className="space-y-3">
-          <h4 className="text-sm font-medium text-muted-foreground">Upcoming Events</h4>
-          {upcomingEvents.map((event) => (
-            <div key={event.id} className="space-y-2">
-              <CalendarEventCard
-                event={event}
-                compact
-                onAction={(e, action) => {
-                  setOutcomeEvent(e);
-                  setOutcomeAction(action);
-                }}
-              />
-              <div className="flex justify-end gap-2 px-1">
-                <Button variant="ghost" size="sm" onClick={() => handleEdit(event)}>
-                  <Edit className="h-4 w-4 mr-1" />
-                  Edit
-                </Button>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  className="text-destructive"
-                  onClick={() => {
-                    setSelectedEvent(event);
-                    setDeleteDialogOpen(true);
-                  }}
-                >
-                  <Trash2 className="h-4 w-4 mr-1" />
-                  Delete
-                </Button>
-              </div>
-            </div>
-          ))}
-        </div>
-      )}
+      <CalendarEventListSection
+        title="Upcoming Events"
+        events={upcomingEvents}
+        showLeadColumn={false}
+        onEdit={handleEdit}
+        onDelete={(event) => {
+          setSelectedEvent(event);
+          setDeleteDialogOpen(true);
+        }}
+        onAction={(e, action) => {
+          setOutcomeEvent(e);
+          setOutcomeAction(action);
+        }}
+      />
 
-      {pastEvents.length > 0 && (
-        <div className="space-y-3">
-          <h4 className="text-sm font-medium text-muted-foreground">Past Events</h4>
-          {pastEvents.map((event) => (
-            <CalendarEventCard
-              key={event.id}
-              event={event}
-              compact={event.status !== "scheduled"}
-              onAction={(e, action) => {
-                setOutcomeEvent(e);
-                setOutcomeAction(action);
-              }}
-            />
-          ))}
-        </div>
-      )}
+      <CalendarEventListSection
+        title="Past Events"
+        events={pastEvents}
+        showLeadColumn={false}
+        onAction={(e, action) => {
+          setOutcomeEvent(e);
+          setOutcomeAction(action);
+        }}
+      />
 
       {events.length === 0 && (
         <div className="text-center py-12">

@@ -116,12 +116,19 @@ serve(async (req) => {
     const { data: settings } = await supabase
       .from("system_settings")
       .select("setting_key, setting_value")
-      .in("setting_key", ["default_academic_year", "currency"]);
+      .in("setting_key", ["default_academic_year", "currency", "room_prices", "academic_years"]);
     console.timeEnd("fetch-settings");
 
     const settingsMap = new Map(settings?.map(s => [s.setting_key, s.setting_value]));
     const academicYear = settingsMap.get("default_academic_year") as string || "2024/2025";
     const currency = settingsMap.get("currency") as { symbol: string } || { symbol: "KES" };
+    const configuredAcademicYears = Array.isArray(settingsMap.get("academic_years"))
+      ? (settingsMap.get("academic_years") as string[])
+      : [academicYear];
+    const roomPricesByYear = normalizeRoomPricesByYear(
+      settingsMap.get("room_prices"),
+      configuredAcademicYears,
+    );
 
     // 3. Insert lead
     console.time("insert-lead");
@@ -198,7 +205,14 @@ serve(async (req) => {
       academic_year: academicYear,
       landing_page: payload.landing_page || payload.campaign || payload.lp || payload.lp_campaign || (payload as any)["Landing Page"] || (payload as any)["Campaign"] || (payload as any)["LP"] || "",
       is_hot: isPaymentLead,
-      metadata: metadata
+      metadata: metadata,
+      potential_revenue: isPaymentLead
+        ? resolvePaymentAmount(payload)
+        : calculatePotentialRevenue(
+            mapRoomChoice(payload.room_choice || payload.studio_type || payload.studio_preference || (payload as any)["Choose Studio Type"]) || "silver",
+            roomPricesByYear,
+            academicYear,
+          ),
     };
 
     // Add contact form specific fields if present
@@ -402,6 +416,72 @@ function mapStayDuration(d?: string): any {
   if (d.includes("51")) return "51_weeks";
   if (d.includes("45")) return "45_weeks";
   return "short_stay";
+}
+
+function normalizeRoomPricesByYear(
+  raw: unknown,
+  academicYears: string[],
+): Record<string, Record<string, number>> {
+  const defaultPrices = {
+    platinum: 8500,
+    gold: 7000,
+    silver: 5500,
+    bronze: 4500,
+    standard: 3500,
+  };
+
+  if (raw && typeof raw === "object" && !Array.isArray(raw) && typeof (raw as Record<string, unknown>).platinum === "number") {
+    const flat = raw as Record<string, number>;
+    return Object.fromEntries(academicYears.map((year) => [year, { ...flat }]));
+  }
+
+  if (!raw || typeof raw !== "object" || Array.isArray(raw)) {
+    return Object.fromEntries(academicYears.map((year) => [year, { ...defaultPrices }]));
+  }
+
+  const record = raw as Record<string, Record<string, number>>;
+  const yearKeys = Object.keys(record).filter((key) => /^\d{4}\/\d{4}$/.test(key));
+  const fallbackYear = yearKeys.sort().at(-1);
+  const fallbackPrices = fallbackYear ? record[fallbackYear] : defaultPrices;
+  const result: Record<string, Record<string, number>> = {};
+
+  for (const year of academicYears) {
+    result[year] = yearKeys.includes(year) ? record[year] : { ...fallbackPrices };
+  }
+
+  return result;
+}
+
+function calculatePotentialRevenue(
+  room: string,
+  roomPricesByYear: Record<string, Record<string, number>>,
+  academicYear: string,
+): number {
+  const yearPrices =
+    roomPricesByYear[academicYear] ||
+    roomPricesByYear[Object.keys(roomPricesByYear).sort().at(-1) || ""] ||
+    {
+      platinum: 8500,
+      gold: 7000,
+      silver: 5500,
+      bronze: 4500,
+      standard: 3500,
+    };
+
+  return yearPrices[room] || yearPrices.silver || 5500;
+}
+
+function resolvePaymentAmount(payload: WordPressFormPayload): number {
+  const pence = Number(payload.amount_pence || 0);
+  if (Number.isFinite(pence) && pence > 0) return pence / 100;
+
+  const gbp = Number(String(payload.amount_gbp || "").replace(/[£$,]/g, ""));
+  if (Number.isFinite(gbp) && gbp > 0) return gbp;
+
+  const deposit = Number(String(payload.deposit_amount || "").replace(/[£$,]/g, ""));
+  if (Number.isFinite(deposit) && deposit > 0) return deposit;
+
+  return 0;
 }
 
 function normalizePhone(phone: string): string {

@@ -3,30 +3,33 @@
  * Mobile keeps full 16px root; lg+ uses 12px root so rem-based spacing/type match 75% zoom.
  */
 
-/** Page-level h1 (Dashboard, Leads, Reports, etc.) */
+/** Page-level h1 (Dashboard, Leads, Reports, etc.) — also used for section & card titles app-wide */
 export const pageTitleClass =
   "font-display text-2xl sm:text-3xl font-bold tracking-tight uppercase";
+
+/** In-card section headings — display style ~8px below pageTitleClass */
+export const detailSectionTitleClass =
+  "font-display text-base sm:text-xl font-bold tracking-tight uppercase";
 
 /** Sidebar brand wordmark */
 export const sidebarBrandTitleClass =
   "font-display text-2xl sm:text-3xl font-bold tracking-tight uppercase leading-none";
 
-/** Card / panel section titles */
-export const sectionTitleClass =
-  "font-display text-lg font-bold tracking-tight";
+/** @deprecated Use pageTitleClass */
+export const sectionTitleClass = pageTitleClass;
 
-/** Subsection / card titles (Inter Tight, uppercase, 15px desktop) */
-export const subsectionTitleClass =
-  "font-body text-sm lg:text-[15px] font-semibold uppercase tracking-wide leading-none";
+/** @deprecated Use pageTitleClass */
+export const subsectionTitleClass = pageTitleClass;
 
-/** @deprecated Use subsectionTitleClass */
-export const settingsSectionTitleClass = subsectionTitleClass;
+/** @deprecated Use pageTitleClass */
+export const settingsSectionTitleClass = pageTitleClass;
 
 /** Muted helper under page titles */
 export const pageSubtitleClass = "text-sm text-muted-foreground mt-1";
 
-/** Stat / KPI large numbers */
-export const statValueClass = "text-2xl font-display font-bold tracking-tight tabular-nums";
+/** Stat / KPI large numbers — same scale as page titles */
+export const statValueClass =
+  "font-display text-2xl sm:text-3xl font-bold tracking-tight tabular-nums";
 
 /** Table & dense UI labels */
 export const labelClass = "text-xs font-medium uppercase tracking-wide text-muted-foreground";

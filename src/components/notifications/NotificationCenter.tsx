@@ -17,10 +17,11 @@ import {
 } from "@/components/ui/sheet";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Bell, Check, CheckCheck, Trash2, X } from "lucide-react";
+import { Bell, Check, CheckCheck, Trash2 } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
 import { Link } from "react-router-dom";
 import { cn } from "@/lib/utils";
+import { NotificationTypeIcon } from "@/utils/notificationIcons";
 
 export function NotificationCenter() {
   const [open, setOpen] = useState(false);
@@ -39,28 +40,6 @@ export function NotificationCenter() {
     }
     if (notification.link) {
       setOpen(false);
-    }
-  };
-
-  const getNotificationIcon = (type: string) => {
-    switch (type) {
-      case "followup_reminder":
-      case "followup_overdue":
-        return "📞";
-      case "new_lead_assigned":
-        return "🎯";
-      case "lead_converted":
-        return "✅";
-      case "lead_status_changed":
-        return "📊";
-      case "exception_requested":
-        return "⚠️";
-      case "exception_approved":
-        return "✓";
-      case "exception_rejected":
-        return "✗";
-      default:
-        return "🔔";
     }
   };
 
@@ -218,7 +197,9 @@ function NotificationContent({ notification }: { notification: any }) {
   return (
     <div className="pr-12">
       <div className="flex items-start gap-3">
-        <span className="text-2xl mt-1">{getNotificationIcon(notification.type)}</span>
+        <div className="mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-md border border-border bg-muted/50">
+          <NotificationTypeIcon type={notification.type} />
+        </div>
         <div className="flex-1 min-w-0">
           <p className="font-medium text-sm">{notification.title}</p>
           <p className="text-sm text-muted-foreground mt-1">{notification.message}</p>
@@ -229,27 +210,5 @@ function NotificationContent({ notification }: { notification: any }) {
       </div>
     </div>
   );
-}
-
-function getNotificationIcon(type: string) {
-  switch (type) {
-    case "followup_reminder":
-    case "followup_overdue":
-      return "📞";
-    case "new_lead_assigned":
-      return "🎯";
-    case "lead_converted":
-      return "✅";
-    case "lead_status_changed":
-      return "📊";
-    case "exception_requested":
-      return "⚠️";
-    case "exception_approved":
-      return "✓";
-    case "exception_rejected":
-      return "✗";
-    default:
-      return "🔔";
-  }
 }
 

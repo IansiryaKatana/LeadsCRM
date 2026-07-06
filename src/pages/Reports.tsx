@@ -19,10 +19,11 @@ import {
   TrendingUp,
   Target,
   DollarSign,
+  Share2,
 } from "lucide-react";
 import { LEAD_STATUS_CONFIG, ROOM_CHOICE_CONFIG } from "@/types/crm";
 import { useDashboardStats, useChannelPerformance } from "@/hooks/useDashboardStats";
-import { useMonthlyLeadData, useRoomDistribution, useStatusDistribution } from "@/hooks/useMonthlyData";
+import { useMonthlyLeadData, useRoomDistribution, useStatusDistribution, useNationalityDistribution } from "@/hooks/useMonthlyData";
 import { exportToCSV, exportToPDF, exportToExcel } from "@/utils/exportReports";
 import { ExportFormatBar } from "@/components/dashboard/ExportFormatBar";
 import { exportFollowUpAnalyticsToCSV, exportFollowUpAnalyticsToExcel, exportFollowUpAnalyticsToPDF } from "@/utils/exportFollowUpAnalytics";
@@ -32,6 +33,12 @@ import { useSystemSettingsContext } from "@/contexts/SystemSettingsContext";
 import { useLeadSources } from "@/hooks/useLeadSources";
 import { FollowUpAnalytics } from "@/components/analytics/FollowUpAnalytics";
 import { TeamPerformanceAnalytics } from "@/components/analytics/TeamPerformanceAnalytics";
+import { SourceReportsPanel } from "@/components/analytics/SourceReportsPanel";
+import {
+  exportSourceToCSV,
+  exportSourceToExcel,
+  exportSourceToPDF,
+} from "@/utils/exportSource";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useFollowUpAnalytics } from "@/hooks/useFollowUpAnalytics";
 import { useTeamPerformance } from "@/hooks/useTeamPerformance";
@@ -39,7 +46,9 @@ import {
   LeadVolumeChart,
   PipelineStatusChart,
   RoomDistributionChart,
+  NationalityDistributionChart,
 } from "@/components/charts/analytics-charts";
+import { nationalityCountsToChartData } from "@/utils/phoneNationality";
 import {
   getReportDateBounds,
   type ReportDateRangeKey,
@@ -57,6 +66,9 @@ export default function Reports() {
   const [exportingFollowUpPDF, setExportingFollowUpPDF] = useState(false);
   const [exportingTeamExcel, setExportingTeamExcel] = useState(false);
   const [exportingTeamPDF, setExportingTeamPDF] = useState(false);
+  const [selectedSource, setSelectedSource] = useState("");
+  const [exportingSourceExcel, setExportingSourceExcel] = useState(false);
+  const [exportingSourcePDF, setExportingSourcePDF] = useState(false);
 
   const { currency, academicYears, currentAcademicYear, setCurrentAcademicYear, formatCurrency } = useSystemSettingsContext();
   const { data: sources = [] } = useLeadSources();
@@ -72,6 +84,7 @@ export default function Reports() {
   const { data: monthlyData, isLoading: monthlyLoading } = useMonthlyLeadData(yearFilter, startDate, endDate);
   const { data: roomData, isLoading: roomLoading } = useRoomDistribution(yearFilter, startDate, endDate);
   const { data: statusData, isLoading: statusLoading } = useStatusDistribution(yearFilter, startDate, endDate);
+  const { data: nationalityData, isLoading: nationalityLoading } = useNationalityDistribution(yearFilter, startDate, endDate);
   const { data: followUpAnalytics, isLoading: followUpLoading } = useFollowUpAnalytics(yearFilter, startDate, endDate);
   const { data: teamMetrics, isLoading: teamLoading } = useTeamPerformance(
     yearFilter,
@@ -79,7 +92,9 @@ export default function Reports() {
     endDate
   );
 
-  const analyticsLoading = statsLoading || monthlyLoading || roomLoading || statusLoading || channelsLoading;
+  const selectedSourceMeta = sources.find((s) => s.slug === selectedSource);
+
+  const analyticsLoading = statsLoading || monthlyLoading || roomLoading || statusLoading || channelsLoading || nationalityLoading;
 
   const roomDistribution = Object.entries(ROOM_CHOICE_CONFIG).map(([key, config]) => ({
     name: config.label,
@@ -92,10 +107,15 @@ export default function Reports() {
     fill: CHART_PALETTE[Object.keys(LEAD_STATUS_CONFIG).indexOf(key) % CHART_PALETTE.length],
   }));
 
+  const nationalityDistribution = nationalityCountsToChartData(nationalityData ?? {});
+
   const filterSummary = [
     dateRangeLabel,
     currentAcademicYear ? `AY ${currentAcademicYear}` : "All academic years",
-  ].join(" · ");
+    activeTab === "sources" && selectedSourceMeta ? `Source: ${selectedSourceMeta.name}` : null,
+  ]
+    .filter(Boolean)
+    .join(" · ");
 
   const formatCompactCurrency = (value: number) =>
     `${currency.symbol}${(value / 1000).toFixed(0)}K`;
@@ -113,6 +133,7 @@ export default function Reports() {
         roomDistribution,
         statusDistribution,
         channelPerformance: channels,
+        nationalityDistribution,
         dateRange: filterSummary,
         currencySymbol: currency.symbol,
         sources: sources.map((s) => ({ slug: s.slug, name: s.name, icon: s.icon })),
@@ -139,6 +160,7 @@ export default function Reports() {
         roomDistribution,
         statusDistribution,
         channelPerformance: channels,
+        nationalityDistribution,
         dateRange: filterSummary,
         currencySymbol: currency.symbol,
         sources: sources.map((s) => ({ slug: s.slug, name: s.name, icon: s.icon })),
@@ -248,6 +270,70 @@ export default function Reports() {
     }
   };
 
+  const buildSourceExportArgs = () => {
+    if (!selectedSource || !selectedSourceMeta) return null;
+    return {
+      startDate,
+      endDate,
+      currencySymbol: currency.symbol,
+      sourceSlug: selectedSource,
+      sourceName: selectedSourceMeta.name,
+      academicYear: yearFilter,
+      dateRangeLabel: filterSummary,
+    };
+  };
+
+  const handleSourceCSVExport = async () => {
+    const args = buildSourceExportArgs();
+    if (!args) {
+      toast({ title: "Select a source", description: "Choose a lead source to export its report", variant: "destructive" });
+      return;
+    }
+    try {
+      await exportSourceToCSV(args);
+      toast({ title: "Export Successful", description: `${selectedSourceMeta!.name} CSV report downloaded` });
+    } catch (error: unknown) {
+      const message = error instanceof Error ? error.message : "Failed to export CSV";
+      toast({ title: "Export Failed", description: message, variant: "destructive" });
+    }
+  };
+
+  const handleSourceExcelExport = async () => {
+    const args = buildSourceExportArgs();
+    if (!args) {
+      toast({ title: "Select a source", description: "Choose a lead source to export its report", variant: "destructive" });
+      return;
+    }
+    setExportingSourceExcel(true);
+    try {
+      await exportSourceToExcel(args);
+      toast({ title: "Export Successful", description: `${selectedSourceMeta!.name} Excel report downloaded` });
+    } catch (error: unknown) {
+      const message = error instanceof Error ? error.message : "Failed to export Excel";
+      toast({ title: "Export Failed", description: message, variant: "destructive" });
+    } finally {
+      setExportingSourceExcel(false);
+    }
+  };
+
+  const handleSourcePDFExport = async () => {
+    const args = buildSourceExportArgs();
+    if (!args) {
+      toast({ title: "Select a source", description: "Choose a lead source to export its report", variant: "destructive" });
+      return;
+    }
+    setExportingSourcePDF(true);
+    try {
+      await exportSourceToPDF(args);
+      toast({ title: "Export Successful", description: `${selectedSourceMeta!.name} PDF report downloaded` });
+    } catch (error: unknown) {
+      const message = error instanceof Error ? error.message : "Failed to export PDF";
+      toast({ title: "Export Failed", description: message, variant: "destructive" });
+    } finally {
+      setExportingSourcePDF(false);
+    }
+  };
+
   return (
     <AppLayout>
       <div className="space-y-8 animate-fade-in">
@@ -303,11 +389,16 @@ export default function Reports() {
           <div className="flex w-full flex-col gap-3 md:flex-row md:items-center md:justify-between md:gap-4">
             <TabsList
               fullWidth
-              className="grid w-full grid-cols-3 bg-muted/50 p-1 h-auto sm:inline-flex sm:w-auto sm:grid-cols-none"
+              className="grid w-full grid-cols-2 sm:grid-cols-4 bg-muted/50 p-1 h-auto sm:inline-flex sm:w-auto sm:grid-cols-none"
             >
               <TabsTrigger value="analytics" className="gap-1.5 sm:gap-2 flex-1 sm:flex-initial text-xs sm:text-sm font-body">
                 <TrendingUp className="h-4 w-4 shrink-0" />
                 Analytics
+              </TabsTrigger>
+              <TabsTrigger value="sources" className="gap-1.5 sm:gap-2 flex-1 sm:flex-initial text-xs sm:text-sm font-body">
+                <Share2 className="h-4 w-4 shrink-0" />
+                <span className="sm:hidden">Sources</span>
+                <span className="hidden sm:inline">Lead Sources</span>
               </TabsTrigger>
               <TabsTrigger value="followups" className="gap-1.5 sm:gap-2 flex-1 sm:flex-initial text-xs sm:text-sm font-body">
                 <BarChart3 className="h-4 w-4 shrink-0" />
@@ -323,16 +414,19 @@ export default function Reports() {
               className="w-full sm:w-auto"
               disabled={
                 (activeTab === "analytics" && (analyticsLoading || !stats)) ||
+                (activeTab === "sources" && !selectedSource) ||
                 (activeTab === "followups" && (followUpLoading || !followUpAnalytics)) ||
                 (activeTab === "team" && (teamLoading || !teamMetrics?.length))
               }
               loadingExcel={
                 (activeTab === "analytics" && exportingAnalyticsExcel) ||
+                (activeTab === "sources" && exportingSourceExcel) ||
                 (activeTab === "followups" && exportingFollowUpExcel) ||
                 (activeTab === "team" && exportingTeamExcel)
               }
               loadingPdf={
                 (activeTab === "analytics" && exportingAnalyticsPDF) ||
+                (activeTab === "sources" && exportingSourcePDF) ||
                 (activeTab === "followups" && exportingFollowUpPDF) ||
                 (activeTab === "team" && exportingTeamPDF)
               }
@@ -346,26 +440,33 @@ export default function Reports() {
                         roomDistribution,
                         statusDistribution,
                         channelPerformance: channels,
+                        nationalityDistribution,
                         dateRange: filterSummary,
                         currencySymbol: currency.symbol,
                         sources: sources.map((s) => ({ slug: s.slug, name: s.name, icon: s.icon })),
                         reportTitle: "Analytics Report",
                       })
-                  : activeTab === "followups"
+                  : activeTab === "sources"
+                    ? handleSourceCSVExport
+                    : activeTab === "followups"
                     ? handleFollowUpCSVExport
                     : handleTeamCSVExport
               }
               onExcel={
                 activeTab === "analytics"
                   ? handleAnalyticsExcelExport
-                  : activeTab === "followups"
+                  : activeTab === "sources"
+                    ? handleSourceExcelExport
+                    : activeTab === "followups"
                     ? handleFollowUpExcelExport
                     : handleTeamExcelExport
               }
               onPdf={
                 activeTab === "analytics"
                   ? handleAnalyticsPDFExport
-                  : activeTab === "followups"
+                  : activeTab === "sources"
+                    ? handleSourcePDFExport
+                    : activeTab === "followups"
                     ? handleFollowUpPDFExport
                     : handleTeamPDFExport
               }
@@ -424,7 +525,7 @@ export default function Reports() {
                   <ChannelPerformanceChart data={channels} className="h-full" />
                 </div>
 
-                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6">
                   <Card className="shadow-card rounded-2xl border-0">
                     <CardHeader className="pb-2">
                       <CardTitle>Room Distribution</CardTitle>
@@ -437,6 +538,16 @@ export default function Reports() {
 
                   <Card className="shadow-card rounded-2xl border-0">
                     <CardHeader className="pb-2">
+                      <CardTitle>Nationality</CardTitle>
+                      <CardDescription className="font-body">Inferred from phone country codes</CardDescription>
+                    </CardHeader>
+                    <CardContent className="pt-0">
+                      <NationalityDistributionChart nationalityData={nationalityData} />
+                    </CardContent>
+                  </Card>
+
+                  <Card className="shadow-card rounded-2xl border-0 lg:col-span-2 xl:col-span-1">
+                    <CardHeader className="pb-2">
                       <CardTitle>Pipeline Status</CardTitle>
                       <CardDescription className="font-body">Lead status breakdown</CardDescription>
                     </CardHeader>
@@ -447,6 +558,19 @@ export default function Reports() {
                 </div>
               </>
             )}
+          </TabsContent>
+
+          <TabsContent value="sources" className="space-y-6 mt-0">
+            <SourceReportsPanel
+              selectedSource={selectedSource}
+              onSourceChange={setSelectedSource}
+              academicYear={yearFilter}
+              startDate={startDate}
+              endDate={endDate}
+              dateRangeLabel={dateRangeLabel}
+              formatCompactCurrency={formatCompactCurrency}
+              formatCurrency={formatCurrency}
+            />
           </TabsContent>
 
           <TabsContent value="followups" className="space-y-6 mt-0">

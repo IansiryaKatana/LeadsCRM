@@ -2,6 +2,11 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { resolveDefaultAcademicYear } from "@/utils/academicYear";
+import {
+  normalizeRoomPricesByYear,
+  getRoomPriceForYear,
+  type RoomPricesByYear,
+} from "@/utils/roomPrices";
 
 export interface CurrencySettings {
   code: string;
@@ -33,7 +38,7 @@ export interface RoomLabels {
 export interface SystemSettings {
   currency: CurrencySettings;
   branding: BrandingSettings;
-  room_prices: RoomPrices;
+  room_prices: RoomPricesByYear;
   room_labels: RoomLabels;
   academic_years?: string[];
   default_academic_year?: string;
@@ -48,11 +53,20 @@ const DEFAULT_SETTINGS: SystemSettings = {
   currency: { code: "KES", symbol: "KES", name: "Kenyan Shilling" },
   branding: { logo_url: null, favicon_url: null },
   room_prices: {
-    platinum: 8500,
-    gold: 7000,
-    silver: 5500,
-    bronze: 4500,
-    standard: 3500,
+    "2024/2025": {
+      platinum: 8500,
+      gold: 7000,
+      silver: 5500,
+      bronze: 4500,
+      standard: 3500,
+    },
+    "2025/2026": {
+      platinum: 8500,
+      gold: 7000,
+      silver: 5500,
+      bronze: 4500,
+      standard: 3500,
+    },
   },
   room_labels: {
     platinum: "Platinum",
@@ -113,6 +127,11 @@ export function useSystemSettings() {
         settingsMap.default_academic_year,
       );
 
+      const academicYears =
+        settingsMap.academic_years ?? DEFAULT_SETTINGS.academic_years!;
+      const rawRoomPrices = data?.find((row) => row.setting_key === "room_prices")?.setting_value;
+      settingsMap.room_prices = normalizeRoomPricesByYear(rawRoomPrices, academicYears);
+
       return settingsMap;
     },
   });
@@ -164,8 +183,13 @@ export function useRoomConfig() {
     return settings.room_labels[roomKey as keyof RoomLabels] || roomKey;
   };
 
-  const getRoomPrice = (roomKey: string): number => {
-    return settings.room_prices[roomKey as keyof RoomPrices] || 0;
+  const getRoomPrice = (roomKey: string, academicYear?: string | null): number => {
+    return getRoomPriceForYear(
+      settings.room_prices,
+      roomKey,
+      academicYear,
+      settings.default_academic_year,
+    );
   };
 
   const formatCurrency = (amount: number): string => {
@@ -178,7 +202,7 @@ export function useRoomConfig() {
     formatCurrency,
     currency: settings.currency,
     roomLabels: settings.room_labels,
-    roomPrices: settings.room_prices,
+    roomPricesByYear: settings.room_prices,
     academicYears: settings.academic_years ?? DEFAULT_SETTINGS.academic_years!,
     defaultAcademicYear: resolveDefaultAcademicYear(
       settings.academic_years ?? DEFAULT_SETTINGS.academic_years!,

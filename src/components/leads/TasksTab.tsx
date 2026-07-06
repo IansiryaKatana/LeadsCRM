@@ -28,6 +28,7 @@ import { useTeamMembers } from "@/hooks/useDashboardStats";
 import { useAuth } from "@/hooks/useAuth";
 import { formatDistanceToNow } from "date-fns";
 import { cn } from "@/lib/utils";
+import { subsectionTitleClass } from "@/lib/typography";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -154,10 +155,12 @@ export function TasksTab({ leadId }: TasksTabProps) {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between pb-4 border-b">
         <div>
-          <h3 className="font-semibold">Tasks</h3>
-          <p className="text-sm text-muted-foreground">
+          <h3 className={subsectionTitleClass}>
+            Tasks
+          </h3>
+          <p className="mt-1 text-sm text-muted-foreground">
             {activeTasks.length} active, {completedTasks.length} completed
           </p>
         </div>
@@ -170,7 +173,7 @@ export function TasksTab({ leadId }: TasksTabProps) {
       {/* Active Tasks */}
       {activeTasks.length > 0 && (
         <div className="space-y-3">
-          <h4 className="text-sm font-medium text-muted-foreground">Active Tasks</h4>
+          <h4 className={subsectionTitleClass}>Active Tasks</h4>
           {activeTasks.map((task) => (
             <Card key={task.id} className="p-4">
               <div className="flex items-start gap-3">
@@ -242,7 +245,7 @@ export function TasksTab({ leadId }: TasksTabProps) {
       {/* Completed Tasks */}
       {completedTasks.length > 0 && (
         <div className="space-y-3">
-          <h4 className="text-sm font-medium text-muted-foreground">Completed Tasks</h4>
+          <h4 className={subsectionTitleClass}>Completed Tasks</h4>
           {completedTasks.map((task) => (
             <Card key={task.id} className="p-4 opacity-60">
               <div className="flex items-start gap-3">

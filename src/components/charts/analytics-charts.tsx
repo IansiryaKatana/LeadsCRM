@@ -179,6 +179,67 @@ export function PipelineStatusChart({ statusData }: PipelineStatusChartProps) {
   );
 }
 
+interface NationalityDistributionChartProps {
+  nationalityData?: Record<string, number>;
+}
+
+function nationalityKey(name: string): string {
+  return name.toLowerCase().replace(/[^a-z0-9]+/g, "_");
+}
+
+export function NationalityDistributionChart({ nationalityData }: NationalityDistributionChartProps) {
+  const chartData = useMemo<DistributionDatum[]>(
+    () =>
+      Object.entries(nationalityData ?? {})
+        .map(([name, value]) => ({
+          key: nationalityKey(name),
+          name,
+          value,
+        }))
+        .filter((item) => item.value > 0)
+        .sort((a, b) => b.value - a.value),
+    [nationalityData],
+  );
+
+  const chartConfig = useMemo(() => {
+    const config: ChartConfig = {};
+    chartData.forEach((item, index) => {
+      config[item.key] = {
+        label: item.name,
+        color: CHART_PALETTE[index % CHART_PALETTE.length],
+      };
+    });
+    return config;
+  }, [chartData]);
+
+  if (chartData.length === 0) {
+    return <ChartEmptyState message="No nationality data in this period" />;
+  }
+
+  return (
+    <ChartContainer config={chartConfig} className="h-[18rem] w-full aspect-auto">
+      <BarChart data={chartData} layout="vertical" margin={{ left: 4, right: 16, top: 4, bottom: 4 }}>
+        <CartesianGrid horizontal={false} />
+        <XAxis type="number" tickLine={false} axisLine={false} tickMargin={8} />
+        <YAxis
+          type="category"
+          dataKey="name"
+          width={128}
+          tickLine={false}
+          axisLine={false}
+          tickMargin={8}
+        />
+        <ChartTooltip content={<ChartTooltipContent hideLabel />} />
+        <Bar dataKey="value" name="Leads" radius={[0, 6, 6, 0]} barSize={24}>
+          {chartData.map((entry) => (
+            <Cell key={entry.key} fill={`var(--color-${entry.key})`} />
+          ))}
+        </Bar>
+      </BarChart>
+    </ChartContainer>
+  );
+}
+
 interface FollowUpTypeChartDatum {
   name: string;
   typeKey: string;

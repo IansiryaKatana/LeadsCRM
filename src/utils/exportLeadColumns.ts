@@ -5,6 +5,7 @@ import {
   getSourceConfig,
 } from "@/types/crm";
 import { getLeadPaymentAmountPounds, getLeadPaymentId } from "@/utils/leadPaymentAmount";
+import { inferNationalityFromPhone } from "@/utils/phoneNationality";
 import {
   DEPOSITS_PAYMENTS_SOURCE_SLUG,
   INQUIRIES_SOURCE_SLUG,
@@ -64,6 +65,7 @@ export function getLeadExportColumns(
     { key: "full_name", header: "Full Name", width: 24 },
     { key: "email", header: "Email", width: 30 },
     { key: "phone", header: "Phone", width: 16 },
+    { key: "nationality", header: "Nationality", width: 18 },
     { key: "source", header: "Source", width: 18 },
   ];
 
@@ -131,6 +133,8 @@ export function formatLeadExportRow(
       return lead.email;
     case "phone":
       return lead.phone?.trim() || "—";
+    case "nationality":
+      return inferNationalityFromPhone(lead.phone);
     case "source":
       return getSourceConfig(lead.source, sources).label;
     case "room_choice":

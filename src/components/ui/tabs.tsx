@@ -11,10 +11,10 @@ const TabsList = React.forwardRef<
 >(({ className, fullWidth, ...props }, ref) => (
   <div
     className={cn(
-      "max-w-full scrollbar-hide",
+      "max-w-full",
       fullWidth
         ? "w-full"
-        : "w-fit overflow-x-auto -mx-4 px-4 sm:mx-0 sm:px-0",
+        : "w-full sm:w-fit",
     )}
     style={{ WebkitOverflowScrolling: "touch" }}
   >
@@ -22,7 +22,7 @@ const TabsList = React.forwardRef<
       ref={ref}
       className={cn(
         "h-10 max-w-full items-center justify-center rounded-md bg-muted p-1 text-muted-foreground",
-        fullWidth ? "flex w-full" : "inline-flex w-fit",
+        fullWidth ? "flex w-full" : "inline-flex w-full sm:w-fit",
         "sm:flex-wrap sm:h-auto",
         className,
       )}

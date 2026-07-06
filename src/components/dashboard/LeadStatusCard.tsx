@@ -1,5 +1,6 @@
 import { cn } from "@/lib/utils";
-import { LeadStatus, LEAD_STATUS_CONFIG } from "@/types/crm";
+import { LeadStatusBadge } from "@/components/leads/LeadMetaBadge";
+import { LeadStatus } from "@/types/crm";
 import { useSystemSettingsContext } from "@/contexts/SystemSettingsContext";
 
 interface LeadStatusCardProps {
@@ -10,7 +11,6 @@ interface LeadStatusCardProps {
 }
 
 export function LeadStatusCard({ status, count, revenue, className }: LeadStatusCardProps) {
-  const config = LEAD_STATUS_CONFIG[status];
   const { formatCurrency } = useSystemSettingsContext();
   
   return (
@@ -21,13 +21,7 @@ export function LeadStatusCard({ status, count, revenue, className }: LeadStatus
       )}
     >
       <div className="flex items-center justify-between mb-3">
-        <span className={cn(
-          "px-3 py-1 rounded-full text-xs font-semibold",
-          config.bgColor,
-          config.color
-        )}>
-          {config.label}
-        </span>
+        <LeadStatusBadge status={status} />
         <span className="font-display text-xl font-bold tabular-nums">{count}</span>
       </div>
       <div className="text-sm text-muted-foreground">

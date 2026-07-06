@@ -6,6 +6,10 @@ import {
   resolveLeadExportProfile,
   type LeadExportProfile,
 } from "@/utils/exportLeadColumns";
+import {
+  buildNationalityDistribution,
+  nationalityCountsToChartData,
+} from "@/utils/phoneNationality";
 
 async function fetchLeadSources() {
   const { data, error } = await supabase
@@ -19,28 +23,42 @@ async function fetchLeadSources() {
 }
 
 export interface SourceExportData {
-  startDate: Date;
+  startDate: Date | null;
   endDate: Date;
   currencySymbol: string;
   sourceSlug: string;
   sourceName: string;
+  academicYear?: string | null;
+  dateRangeLabel?: string;
   leadProfile?: LeadExportProfile;
   viewMode?: string;
 }
 
-async function fetchLeadsByDateRangeAndSource(startDate: Date, endDate: Date, sourceSlug: string) {
-  const start = startDate.toISOString();
+async function fetchLeadsByDateRangeAndSource(
+  startDate: Date | null,
+  endDate: Date,
+  sourceSlug: string,
+  academicYear?: string | null,
+) {
   const end = new Date(endDate);
   end.setHours(23, 59, 59, 999);
   const endISO = end.toISOString();
 
-  const { data, error } = await supabase
+  let query = supabase
     .from("leads")
     .select("*")
     .eq("source", sourceSlug)
-    .gte("created_at", start)
     .lte("created_at", endISO)
     .order("created_at", { ascending: false });
+
+  if (startDate) {
+    query = query.gte("created_at", startDate.toISOString());
+  }
+  if (academicYear && academicYear.trim() !== "") {
+    query = query.eq("academic_year", academicYear);
+  }
+
+  const { data, error } = await query;
 
   if (error) throw error;
   return data || [];
@@ -155,25 +173,32 @@ function formatDate(date: Date): string {
 }
 
 async function buildSourceExportPayload(data: SourceExportData) {
-  const { startDate, endDate, currencySymbol, sourceSlug, sourceName, viewMode } = data;
+  const { startDate, endDate, currencySymbol, sourceSlug, sourceName, viewMode, academicYear, dateRangeLabel } =
+    data;
   const leadProfile =
     data.leadProfile ?? resolveLeadExportProfile(sourceSlug, viewMode);
 
-  const leads = await fetchLeadsByDateRangeAndSource(startDate, endDate, sourceSlug);
+  const leads = await fetchLeadsByDateRangeAndSource(startDate, endDate, sourceSlug, academicYear);
   const stats = calculateStatsFromLeads(leads);
   const monthlyData = calculateMonthlyData(leads);
   const roomDistribution = calculateRoomDistribution(leads);
   const statusDistribution = calculateStatusDistribution(leads);
+  const nationalityDistribution = nationalityCountsToChartData(buildNationalityDistribution(leads));
   const sources = await fetchLeadSources();
 
   const formattedLeads = leads.map((lead) => mapDbLeadToExportRow(lead));
+
+  const rangeText =
+    dateRangeLabel ??
+    (startDate ? `${formatDate(startDate)} - ${formatDate(endDate)}` : `Through ${formatDate(endDate)}`);
 
   return {
     stats,
     monthlyData,
     roomDistribution,
     statusDistribution,
-    dateRange: `${formatDate(startDate)} - ${formatDate(endDate)} | Source: ${sourceName}`,
+    nationalityDistribution,
+    dateRange: `${rangeText} | Source: ${sourceName}`,
     currencySymbol,
     sources,
     leads: formattedLeads,

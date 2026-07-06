@@ -3,11 +3,34 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { toast } from "@/hooks/use-toast";
 import type { Database } from "@/integrations/supabase/types";
+import { isPaymentLeadSource } from "@/constants/leadSegments";
+import {
+  fetchRoomPricesByYear,
+  resolveLeadPotentialRevenue,
+} from "@/utils/leadPotentialRevenue";
 
 type Lead = Database["public"]["Tables"]["leads"]["Row"];
 type LeadInsert = Database["public"]["Tables"]["leads"]["Insert"];
 type LeadUpdate = Database["public"]["Tables"]["leads"]["Update"];
 type LeadStatus = Database["public"]["Enums"]["lead_status"];
+
+const REVENUE_FIELDS = ["room_choice", "academic_year", "source"] as const;
+
+async function withComputedPotentialRevenue(
+  lead: Omit<LeadInsert, "created_by">,
+): Promise<Omit<LeadInsert, "created_by">> {
+  const roomPricesByYear = await fetchRoomPricesByYear(supabase);
+  const potential_revenue = resolveLeadPotentialRevenue({
+    roomChoice: lead.room_choice,
+    academicYear: lead.academic_year,
+    source: lead.source,
+    metadata: lead.metadata,
+    roomPricesByYear,
+    explicitAmount: lead.potential_revenue,
+  });
+
+  return { ...lead, potential_revenue };
+}
 
 export function useLeads(academicYear?: string | null) {
   const { user } = useAuth();
@@ -70,9 +93,11 @@ export function useCreateLead() {
         throw new Error("Name, email, and phone are required");
       }
 
+      const leadWithRevenue = await withComputedPotentialRevenue(lead);
+
       const { data, error } = await supabase
         .from("leads")
-        .insert({ ...lead, created_by: user?.id })
+        .insert({ ...leadWithRevenue, created_by: user?.id })
         .select()
         .single();
 
@@ -85,7 +110,7 @@ export function useCreateLead() {
           fullError: JSON.stringify(error, null, 2)
         });
         console.error("Lead data being inserted:", {
-          ...lead,
+          ...leadWithRevenue,
           created_by: user?.id
         });
         
@@ -137,9 +162,36 @@ export function useUpdateLead() {
 
   return useMutation({
     mutationFn: async ({ id, ...updates }: LeadUpdate & { id: string }) => {
+      const needsRevenueRecalc = REVENUE_FIELDS.some((field) => field in updates);
+
+      let payload: LeadUpdate = { ...updates };
+
+      if (needsRevenueRecalc) {
+        const { data: currentLead, error: fetchError } = await supabase
+          .from("leads")
+          .select("room_choice, academic_year, source, metadata, potential_revenue")
+          .eq("id", id)
+          .single();
+
+        if (fetchError) throw fetchError;
+
+        const mergedSource = (updates.source ?? currentLead.source) as string;
+
+        if (!isPaymentLeadSource(mergedSource)) {
+          const roomPricesByYear = await fetchRoomPricesByYear(supabase);
+          payload.potential_revenue = resolveLeadPotentialRevenue({
+            roomChoice: (updates.room_choice ?? currentLead.room_choice) as string,
+            academicYear: (updates.academic_year ?? currentLead.academic_year) as string,
+            source: mergedSource,
+            metadata: updates.metadata ?? currentLead.metadata,
+            roomPricesByYear,
+          });
+        }
+      }
+
       const { data, error } = await supabase
         .from("leads")
-        .update(updates)
+        .update(payload)
         .eq("id", id)
         .select()
         .single();
@@ -164,34 +216,9 @@ export function useUpdateLeadStatus() {
 
   return useMutation({
     mutationFn: async ({ id, status }: { id: string; status: LeadStatus }) => {
-      // First get the current lead to calculate revenue if converting
-      const { data: currentLead } = await supabase
-        .from("leads")
-        .select("room_choice, stay_duration")
-        .eq("id", id)
-        .single();
-
-      const updateData: Record<string, unknown> = { lead_status: status };
-      
-      // Calculate revenue only when status changes to converted
-      if (status === "converted" && currentLead) {
-        const roomPrices: Record<string, number> = {
-          platinum: 8500, gold: 7000, silver: 5500, bronze: 4500, standard: 3500
-        };
-        const durationMultipliers: Record<string, number> = {
-          "51_weeks": 1, "45_weeks": 0.88, short_stay: 0.4
-        };
-        const basePrice = roomPrices[currentLead.room_choice] || 5500;
-        const multiplier = durationMultipliers[currentLead.stay_duration] || 1;
-        updateData.potential_revenue = Math.round(basePrice * multiplier);
-      } else if (status !== "converted") {
-        // Reset revenue if moving away from converted
-        updateData.potential_revenue = 0;
-      }
-
       const { data, error } = await supabase
         .from("leads")
-        .update(updateData)
+        .update({ lead_status: status })
         .eq("id", id)
         .select()
         .single();

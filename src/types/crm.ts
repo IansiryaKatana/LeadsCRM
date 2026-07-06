@@ -161,6 +161,16 @@ export const LEAD_STATUS_CONFIG: Record<LeadStatus, { label: string; color: stri
   closed: { label: "Closed", color: "text-destructive-foreground", bgColor: "bg-destructive/80" },
 };
 
+/** Subtle bordered badge styles — use with the shared `Badge` component. */
+export const LEAD_STATUS_BADGE_CLASSES: Record<LeadStatus, string> = {
+  new: "bg-primary/10 text-primary border-primary/20",
+  awaiting_outreach: "bg-warning/10 text-warning border-warning/20",
+  low_engagement: "bg-muted text-muted-foreground border-border",
+  high_interest: "bg-success/10 text-success border-success/20",
+  converted: "bg-success/10 text-success border-success/20",
+  closed: "bg-destructive/10 text-destructive border-destructive/20",
+};
+
 // LEAD_SOURCE_CONFIG is deprecated - use useLeadSources() hook instead
 // This is kept for backward compatibility during migration
 export const LEAD_SOURCE_CONFIG: Record<string, { label: string; icon: string }> = {

@@ -23,7 +23,7 @@ const names = [
   "Michael Njoroge", "Catherine Wairimu", "Daniel Mutua", "Rose Nyambura", "Kevin Omondi"
 ];
 
-const calculateRevenue = (room: RoomChoice, duration: StayDuration): number => {
+const calculateRevenue = (room: RoomChoice, _duration: StayDuration): number => {
   const roomPrices: Record<RoomChoice, number> = {
     platinum: 8500,
     gold: 7000,
@@ -31,12 +31,7 @@ const calculateRevenue = (room: RoomChoice, duration: StayDuration): number => {
     bronze: 4500,
     standard: 3500,
   };
-  const durationMultipliers: Record<StayDuration, number> = {
-    "51_weeks": 1.0,
-    "45_weeks": 0.88,
-    "short_stay": 0.4,
-  };
-  return roomPrices[room] * durationMultipliers[duration];
+  return roomPrices[room];
 };
 
 export const generateMockLeads = (count: number = 50): Lead[] => {

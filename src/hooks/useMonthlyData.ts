@@ -1,6 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
+import { buildNationalityDistribution } from "@/utils/phoneNationality";
 
 const MONTH_LABELS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
 
@@ -166,6 +167,35 @@ export function useStatusDistribution(
       });
 
       return counts;
+    },
+    enabled: !!user && academicYear !== null,
+  });
+}
+
+export function useNationalityDistribution(
+  academicYear?: string | null,
+  startDate?: Date | null,
+  endDate?: Date | null
+) {
+  const { user } = useAuth();
+
+  return useQuery({
+    queryKey: ["nationality-distribution", academicYear, startDate?.toISOString(), endDate?.toISOString()],
+    queryFn: async () => {
+      let query = supabase
+        .from("leads")
+        .select("phone, academic_year, created_at");
+
+      if (academicYear && academicYear.trim() !== "") {
+        query = query.eq("academic_year", academicYear);
+      }
+      query = applyLeadDateFilters(query, startDate, endDate);
+
+      const { data, error } = await query;
+
+      if (error) throw error;
+
+      return buildNationalityDistribution(data ?? []);
     },
     enabled: !!user && academicYear !== null,
   });

@@ -1,4 +1,5 @@
 import { supabase } from "@/integrations/supabase/client";
+import { buildNationalityDistribution, nationalityCountsToChartData } from "@/utils/phoneNationality";
 import { LEAD_STATUS_CONFIG, ROOM_CHOICE_CONFIG } from "@/types/crm";
 import type { DashboardStats } from "@/hooks/useDashboardStats";
 import { mapDbLeadToExportRow } from "@/utils/exportLeadColumns";
@@ -155,6 +156,10 @@ function calculateChannelPerformance(leads: any[]) {
   }));
 }
 
+function calculateNationalityDistribution(leads: any[]) {
+  return nationalityCountsToChartData(buildNationalityDistribution(leads));
+}
+
 async function buildDashboardExportPayload(data: DashboardExportData) {
   const { startDate, endDate, currencySymbol } = data;
   const leads = await fetchLeadsByDateRange(startDate, endDate);
@@ -166,6 +171,7 @@ async function buildDashboardExportPayload(data: DashboardExportData) {
     roomDistribution: calculateRoomDistribution(leads),
     statusDistribution: calculateStatusDistribution(leads),
     channelPerformance: calculateChannelPerformance(leads),
+    nationalityDistribution: calculateNationalityDistribution(leads),
     dateRange: `${formatDate(startDate)} - ${formatDate(endDate)}`,
     currencySymbol,
     sources,

@@ -24,7 +24,7 @@ import {
   LeadSource, 
   RoomChoice, 
   StayDuration,
-  STAY_DURATION_CONFIG
+  STAY_DURATION_CONFIG,
 } from "@/types/crm";
 import { Plus, UserPlus, Loader2, Calendar, Globe } from "lucide-react";
 import { useCreateLead } from "@/hooks/useLeads";
@@ -47,7 +47,7 @@ export function CreateLeadForm() {
   const [open, setOpen] = useState(false);
   const [estimatedRevenue, setEstimatedRevenue] = useState(0);
   const createLead = useCreateLead();
-  const { getRoomLabel, getRoomPrice, formatCurrency, roomLabels, roomPrices, academicYears, currentAcademicYear, defaultAcademicYear } = useSystemSettingsContext();
+  const { getRoomLabel, getRoomPrice, formatCurrency, roomLabels, roomPricesByYear, academicYears, currentAcademicYear, defaultAcademicYear } = useSystemSettingsContext();
   const [selectedAcademicYear, setSelectedAcademicYear] = useState(currentAcademicYear || defaultAcademicYear);
   const { data: sources = [] } = useLeadSources();
 
@@ -83,17 +83,16 @@ export function CreateLeadForm() {
   const roomChoice = watch("room_choice");
   const stayDuration = watch("stay_duration");
 
-  const calculateRevenue = (room: RoomChoice, duration: StayDuration) => {
-    const basePrice = getRoomPrice(room);
-    const durationConfig = STAY_DURATION_CONFIG[duration];
-    return basePrice * durationConfig.multiplier;
+  const calculateRevenue = (room: RoomChoice, year: string) => {
+    return getRoomPrice(room, year);
   };
 
   useEffect(() => {
-    if (roomChoice && stayDuration) {
-      setEstimatedRevenue(calculateRevenue(roomChoice, stayDuration));
+    const year = selectedAcademicYear || currentAcademicYear || defaultAcademicYear;
+    if (roomChoice && year) {
+      setEstimatedRevenue(calculateRevenue(roomChoice, year));
     }
-  }, [roomChoice, stayDuration, roomPrices]);
+  }, [roomChoice, selectedAcademicYear, currentAcademicYear, defaultAcademicYear, roomPricesByYear]);
 
   const handleRoomChange = (value: RoomChoice) => {
     setValue("room_choice", value);
@@ -117,7 +116,6 @@ export function CreateLeadForm() {
       sourcesAvailable: sources.map(s => s.slug),
     });
     
-    // Revenue is only calculated when lead is converted, not at creation
     createLead.mutate({
       full_name: data.full_name,
       email: data.email,
@@ -125,7 +123,7 @@ export function CreateLeadForm() {
       source: validSource,
       room_choice: data.room_choice,
       stay_duration: data.stay_duration,
-      potential_revenue: 0,
+      potential_revenue: estimatedRevenue,
       lead_status: "new",
       is_hot: false,
       academic_year: selectedAcademicYear || currentAcademicYear || defaultAcademicYear,
@@ -313,9 +311,13 @@ export function CreateLeadForm() {
             </div>
           </div>
 
-          <div className="p-4 rounded-xl bg-muted/50 border border-border">
-            <p className="text-sm text-muted-foreground">
-              Revenue will be calculated when this lead is converted
+          <div className="p-4 rounded-xl bg-primary/10 border border-primary/20">
+            <p className="text-sm text-muted-foreground mb-1">Potential Revenue</p>
+            <p className="text-2xl font-display font-bold text-primary">
+              {formatCurrency(estimatedRevenue)}
+            </p>
+            <p className="text-xs text-muted-foreground mt-1">
+              Based on {getRoomLabel(roomChoice)} for {selectedAcademicYear || currentAcademicYear || defaultAcademicYear}
             </p>
           </div>
 

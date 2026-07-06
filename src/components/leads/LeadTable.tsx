@@ -1,6 +1,9 @@
 import { useState } from "react";
 import { LEAD_STATUS_CONFIG, LEAD_STATUS_CONFIG as STATUS_CONFIG, getSourceConfig } from "@/types/crm";
+import { LeadStatusBadge } from "@/components/leads/LeadMetaBadge";
 import { cn } from "@/lib/utils";
+import { sectionTitleClass } from "@/lib/typography";
+import { formatCompactLeadDate, formatLeadDate } from "@/lib/formatDate";
 import { SourceIcon } from "@/utils/sourceIcons";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -232,13 +235,7 @@ export function LeadTable({
     return 0;
   });
 
-  const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString("en-GB", {
-      day: "2-digit",
-      month: "short",
-      year: "numeric",
-    });
-  };
+  const desktopOnlyCell = "hidden lg:table-cell";
 
   const handleDelete = (e: React.MouseEvent, lead: Lead) => {
     e.stopPropagation();
@@ -403,7 +400,7 @@ export function LeadTable({
         <div className="flex flex-col gap-4">
           <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-center justify-between">
             <div>
-              <h3 className="font-display text-xl font-bold">All Leads</h3>
+              <h3 className={sectionTitleClass}>All Leads</h3>
               {selectedLeads.size > 0 && (
                 <p className="text-sm text-muted-foreground">
                   <span className="text-primary font-semibold">
@@ -553,7 +550,7 @@ export function LeadTable({
         <Table>
           <TableHeader>
             <TableRow className="hover:bg-transparent">
-              <TableHead className="w-12">
+              <TableHead className={cn("w-12", desktopOnlyCell)}>
                 <Checkbox
                   checked={allSelected}
                   onCheckedChange={handleSelectAll}
@@ -565,9 +562,9 @@ export function LeadTable({
                 />
               </TableHead>
               <TableHead className="font-semibold">Lead</TableHead>
-              <TableHead className="font-semibold">Phone</TableHead>
-              <TableHead className="font-semibold">Source</TableHead>
-              <TableHead className="font-semibold">
+              <TableHead className={cn("font-semibold", desktopOnlyCell)}>Phone</TableHead>
+              <TableHead className={cn("font-semibold", desktopOnlyCell)}>Source</TableHead>
+              <TableHead className={cn("font-semibold", desktopOnlyCell)}>
                 {viewMode === "web_contact"
                   ? "Reason"
                   : viewMode === "web_keyworkers"
@@ -577,11 +574,11 @@ export function LeadTable({
                       : "LP / Campaign"}
               </TableHead>
               {isDepositsPaymentsView && (
-                <TableHead className="font-semibold">Amount</TableHead>
+                <TableHead className={cn("font-semibold", desktopOnlyCell)}>Amount</TableHead>
               )}
-              <TableHead className="font-semibold">Status</TableHead>
-              <TableHead className="font-semibold">Created</TableHead>
-              <TableHead className="font-semibold w-12"></TableHead>
+              <TableHead className={cn("font-semibold", desktopOnlyCell)}>Status</TableHead>
+              <TableHead className="font-semibold text-right lg:text-left">Created</TableHead>
+              <TableHead className={cn("font-semibold w-12", desktopOnlyCell)}></TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -596,7 +593,6 @@ export function LeadTable({
               </TableRow>
             ) : (
               sortedLeads.map((lead) => {
-                const statusConfig = LEAD_STATUS_CONFIG[lead.lead_status];
                 const sourceConfig = getSourceConfig(lead.source, sources);
                 const isSelected = selectedLeads.has(lead.id);
                 const paymentAmount = isDepositsPaymentsView
@@ -616,30 +612,33 @@ export function LeadTable({
                       onViewLead?.(lead);
                     }}
                   >
-                    <TableCell onClick={(e) => e.stopPropagation()}>
+                    <TableCell className={cn("p-3 lg:p-4", desktopOnlyCell)} onClick={(e) => e.stopPropagation()}>
                       <Checkbox
                         checked={isSelected}
                         onCheckedChange={(checked) => handleSelectLead(lead.id, checked as boolean)}
                       />
                     </TableCell>
-                    <TableCell>
-                      <div className="flex items-center gap-3">
+                    <TableCell className="p-3 lg:p-4">
+                      <div className="flex items-center gap-2 lg:gap-3 min-w-0">
                         <button
                           onClick={(e) => {
                             e.stopPropagation();
                             handleToggleHot(e, lead);
                           }}
-                          className="hover:scale-110 transition-transform"
+                          className={cn(
+                            "shrink-0 hover:scale-110 transition-transform",
+                            lead.is_hot ? "inline-flex" : "hidden lg:inline-flex",
+                          )}
                         >
                           <Flame className={cn(
                             "h-4 w-4 shrink-0",
                             lead.is_hot ? "text-warning fill-warning" : "text-muted-foreground/30"
                           )} />
                         </button>
-                        <div>
+                        <div className="min-w-0">
                           <p
                             className={cn(
-                              "font-medium",
+                              "font-medium truncate",
                               isLeadUnread(lead.id, lead.source) && "font-semibold text-foreground"
                             )}
                           >
@@ -647,7 +646,7 @@ export function LeadTable({
                           </p>
                           <p
                             className={cn(
-                              "text-sm text-muted-foreground",
+                              "text-xs lg:text-sm text-muted-foreground truncate",
                               isLeadUnread(lead.id, lead.source) && "text-foreground"
                             )}
                           >
@@ -656,16 +655,16 @@ export function LeadTable({
                         </div>
                       </div>
                     </TableCell>
-                    <TableCell>
+                    <TableCell className={cn("p-3 lg:p-4", desktopOnlyCell)}>
                       <span className="text-sm whitespace-nowrap">{lead.phone?.trim() || "—"}</span>
                     </TableCell>
-                    <TableCell>
+                    <TableCell className={cn("p-3 lg:p-4", desktopOnlyCell)}>
                       <div className="flex items-center gap-2">
                         <SourceIcon slug={lead.source} className="text-muted-foreground" />
                         <span className="text-sm">{sourceConfig.label}</span>
                       </div>
                     </TableCell>
-                    <TableCell>
+                    <TableCell className={cn("p-3 lg:p-4", desktopOnlyCell)}>
                       {viewMode === "web_contact" ? (
                         <span className="text-xs text-muted-foreground">
                           {lead.contact_reason || "-"}
@@ -685,25 +684,20 @@ export function LeadTable({
                       )}
                     </TableCell>
                     {isDepositsPaymentsView && (
-                      <TableCell>
+                      <TableCell className={cn("p-3 lg:p-4", desktopOnlyCell)}>
                         <span className="text-sm font-medium whitespace-nowrap">
                           {paymentAmount !== null ? formatCurrency(paymentAmount) : "—"}
                         </span>
                       </TableCell>
                     )}
-                    <TableCell>
-                      <span className={cn(
-                        "px-3 py-1 rounded-full text-xs font-semibold",
-                        statusConfig.bgColor,
-                        statusConfig.color
-                      )}>
-                        {statusConfig.label}
-                      </span>
+                    <TableCell className={cn("p-3 lg:p-4", desktopOnlyCell)}>
+                      <LeadStatusBadge status={lead.lead_status} />
                     </TableCell>
-                    <TableCell className="text-muted-foreground">
-                      {formatDate(lead.created_at)}
+                    <TableCell className="p-3 text-right text-xs text-muted-foreground whitespace-nowrap lg:p-4 lg:text-left lg:text-sm">
+                      <span className="lg:hidden">{formatCompactLeadDate(lead.created_at)}</span>
+                      <span className="hidden lg:inline">{formatLeadDate(lead.created_at)}</span>
                     </TableCell>
-                    <TableCell onClick={(e) => e.stopPropagation()}>
+                    <TableCell className={cn("p-3 lg:p-4", desktopOnlyCell)} onClick={(e) => e.stopPropagation()}>
                       <DropdownMenu>
                         <DropdownMenuTrigger asChild>
                           <Button variant="ghost" size="icon" className="h-8 w-8">

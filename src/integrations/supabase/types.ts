@@ -342,6 +342,10 @@ export type Database = {
         }
         Returns: boolean
       }
+      recalculate_pipeline_potential_revenue: {
+        Args: Record<PropertyKey, never>
+        Returns: number
+      }
     }
     Enums: {
       app_role: "super_admin" | "admin" | "manager" | "salesperson" | "viewer"

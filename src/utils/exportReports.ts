@@ -33,6 +33,7 @@ export interface ExportData {
   roomDistribution: Array<{ name: string; value: number }>;
   statusDistribution: Array<{ name: string; value: number; fill: string }>;
   channelPerformance?: ChannelPerformance[];
+  nationalityDistribution?: Array<{ name: string; value: number }>;
   dateRange: string;
   currencySymbol?: string;
   sources?: Array<{ slug: string; name: string; icon: string }>;
@@ -97,6 +98,28 @@ function appendChannelPerformanceCsv(
   return next;
 }
 
+function appendNationalityDistributionCsv(
+  csv: string,
+  nationalities: Array<{ name: string; value: number }>,
+): string {
+  if (nationalities.length === 0) return csv;
+
+  let next = csv;
+  next += csvSectionTitle("Nationality (from phone country code)");
+  next += `\n`;
+  next += `Nationality,Count,Percentage\n`;
+  const total = nationalities.reduce((sum, item) => sum + item.value, 0);
+  nationalities.forEach((item) => {
+    const percentage = total > 0 ? ((item.value / total) * 100).toFixed(1) : "0.0";
+    next += `${item.name},${item.value},${percentage}%\n`;
+  });
+  next += `\n`;
+  next += `Nationality Chart (Visual Representation):\n`;
+  next += generateASCIIChart(nationalities, 30);
+  next += `\n`;
+  return next;
+}
+
 export function exportToCSV(data: ExportData) {
   const {
     stats,
@@ -148,6 +171,7 @@ export function exportToCSV(data: ExportData) {
   );
   csv += `\n`;
   csv = appendChannelPerformanceCsv(csv, channelRows, currencySymbol);
+  csv = appendNationalityDistributionCsv(csv, data.nationalityDistribution ?? []);
   csv += `\n`;
   csv += `═══════════════════════════════════════════════════════════════\n`;
   csv += `ROOM DISTRIBUTION\n`;
@@ -348,6 +372,35 @@ export async function exportToExcel(data: ExportData) {
       row.getCell(4).style = styles.numberCellStyle;
       row.getCell(5).style = styles.numberCellStyle;
       row.getCell(6).style = styles.numberCellStyle;
+      rowIndex++;
+    });
+
+    rowIndex += 2;
+  }
+
+  const nationalityRows = data.nationalityDistribution ?? [];
+  if (nationalityRows.length > 0) {
+    const nationalityHeaderRow = worksheet.addRow(["Nationality (from phone country code)"]);
+    nationalityHeaderRow.height = 25;
+    worksheet.mergeCells(`A${rowIndex}:C${rowIndex}`);
+    nationalityHeaderRow.getCell(1).style = styles.sectionHeaderStyle;
+    rowIndex++;
+
+    const nationalityTotal = nationalityRows.reduce((sum, item) => sum + item.value, 0);
+    const nationalityTableHeader = worksheet.addRow(["Nationality", "Count", "Percentage"]);
+    nationalityTableHeader.height = 20;
+    for (let col = 1; col <= 3; col++) {
+      nationalityTableHeader.getCell(col).style = styles.tableHeaderStyle;
+    }
+    rowIndex++;
+
+    nationalityRows.forEach((item) => {
+      const percentage = nationalityTotal > 0 ? ((item.value / nationalityTotal) * 100).toFixed(1) : "0.0";
+      const row = worksheet.addRow([item.name, item.value, `${percentage}%`]);
+      row.height = 18;
+      row.getCell(1).style = styles.cellStyle;
+      row.getCell(2).style = styles.numberCellStyle;
+      row.getCell(3).style = styles.numberCellStyle;
       rowIndex++;
     });
 
@@ -628,6 +681,48 @@ export async function exportToPDF(data: ExportData) {
       doc.text(`${channel.shareOfLeads.toFixed(1)}%`, xPos, yPos);
       xPos += channelColWidths[4];
       doc.text(channel.revenue.toFixed(2), xPos, yPos);
+
+      drawPdfDottedRowSeparator(doc, startX, yPos + 2, pageWidth - margin);
+      yPos += cellHeight;
+    });
+
+    yPos += 5;
+    checkPageBreak(30);
+  }
+
+  const nationalityRows = data.nationalityDistribution ?? [];
+  if (nationalityRows.length > 0) {
+    yPos = drawPdfSectionHeader(doc, "Nationality (from phone)", yPos, margin, pageWidth);
+
+    doc.setFontSize(10);
+    doc.setFont("helvetica", "normal");
+    doc.setTextColor(0, 0, 0);
+
+    const nationalityTotal = nationalityRows.reduce((sum, item) => sum + item.value, 0);
+    const nationalityHeaders = ["Nationality", "Count", "Percentage"];
+    const nationalityColWidths = [80, 30, 40];
+
+    doc.setFillColor(240, 240, 240);
+    doc.rect(startX, yPos - 5, pageWidth - 2 * margin, cellHeight, "F");
+    doc.setFont("helvetica", "bold");
+    xPos = startX + 2;
+    nationalityHeaders.forEach((header, i) => {
+      doc.text(header, xPos, yPos);
+      xPos += nationalityColWidths[i];
+    });
+
+    yPos += cellHeight;
+    doc.setFont("helvetica", "normal");
+
+    nationalityRows.forEach((item) => {
+      checkPageBreak(cellHeight + 2);
+      const percentage = nationalityTotal > 0 ? ((item.value / nationalityTotal) * 100).toFixed(1) : "0.0";
+      xPos = startX + 2;
+      drawPdfTableCellText(doc, item.name, xPos, yPos, nationalityColWidths[0], { fontSize: 9 });
+      xPos += nationalityColWidths[0];
+      doc.text(item.value.toString(), xPos, yPos);
+      xPos += nationalityColWidths[1];
+      doc.text(`${percentage}%`, xPos, yPos);
 
       drawPdfDottedRowSeparator(doc, startX, yPos + 2, pageWidth - margin);
       yPos += cellHeight;

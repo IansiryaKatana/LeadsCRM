@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { AppLayout } from "@/components/layout/AppLayout";
-import { pageTitleClass } from "@/lib/typography";
+import { pageTitleClass, sectionTitleClass } from "@/lib/typography";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -9,7 +9,7 @@ import { Sheet, SheetContent } from "@/components/ui/sheet";
 import { useCalendarEvents, type CalendarEvent } from "@/hooks/useCalendarEvents";
 import { useLead } from "@/hooks/useLeads";
 import { DayEventsSheet } from "@/components/calendar/DayEventsSheet";
-import { CalendarEventCard } from "@/components/calendar/CalendarEventCard";
+import { CalendarEventListSection } from "@/components/calendar/CalendarEventListSection";
 import { LeadDetailDialog } from "@/components/leads/LeadDetailDialog";
 import {
   CalendarEventOutcomeForm,
@@ -124,7 +124,7 @@ export default function Calendar() {
                     >
                       <ChevronLeft className="h-4 w-4" />
                     </Button>
-                    <h2 className="text-xl font-semibold">{format(currentDate, "MMMM yyyy")}</h2>
+                    <h2 className={sectionTitleClass}>{format(currentDate, "MMMM yyyy")}</h2>
                     <Button
                       variant="outline"
                       size="icon"
@@ -211,40 +211,26 @@ export default function Calendar() {
             </Card>
           </TabsContent>
 
-          <TabsContent value="list" className="mt-6 space-y-4">
-            {todayEvents.length > 0 && (
-              <div className="space-y-3">
-                <h3 className="font-semibold">Today</h3>
-                {todayEvents.map((event) => (
-                  <CalendarEventCard
-                    key={event.id}
-                    event={event}
-                    onAction={(e, action) => {
-                      setListOutcomeEvent(e);
-                      setListOutcomeAction(action);
-                    }}
-                    onViewLead={handleViewLead}
-                  />
-                ))}
-              </div>
-            )}
+          <TabsContent value="list" className="mt-6 space-y-6">
+            <CalendarEventListSection
+              title="Today"
+              events={todayEvents}
+              onAction={(e, action) => {
+                setListOutcomeEvent(e);
+                setListOutcomeAction(action);
+              }}
+              onViewLead={handleViewLead}
+            />
 
-            {upcomingEvents.length > 0 && (
-              <div className="space-y-3">
-                <h3 className="font-semibold">Upcoming</h3>
-                {upcomingEvents.map((event) => (
-                  <CalendarEventCard
-                    key={event.id}
-                    event={event}
-                    onAction={(e, action) => {
-                      setListOutcomeEvent(e);
-                      setListOutcomeAction(action);
-                    }}
-                    onViewLead={handleViewLead}
-                  />
-                ))}
-              </div>
-            )}
+            <CalendarEventListSection
+              title="Upcoming"
+              events={upcomingEvents}
+              onAction={(e, action) => {
+                setListOutcomeEvent(e);
+                setListOutcomeAction(action);
+              }}
+              onViewLead={handleViewLead}
+            />
 
             {events.length === 0 && (
               <div className="text-center py-12">

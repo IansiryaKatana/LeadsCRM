@@ -93,25 +93,35 @@ serve(async (req) => {
     const { data: settings } = await supabase
       .from("system_settings")
       .select("setting_key, setting_value")
-      .in("setting_key", ["default_academic_year", "currency"]);
+      .in("setting_key", ["default_academic_year", "currency", "room_prices", "academic_years"]);
     console.timeEnd("fetch-settings");
 
     const settingsMap = new Map(settings?.map(s => [s.setting_key, s.setting_value]));
     const academicYear = settingsMap.get("default_academic_year") as string || "2024/2025";
-    const currency = settingsMap.get("currency") as { code: string, symbol: string } || { code: "KES", symbol: "KES" };
+    const configuredAcademicYears = Array.isArray(settingsMap.get("academic_years"))
+      ? (settingsMap.get("academic_years") as string[])
+      : [academicYear];
+    const roomPricesByYear = normalizeRoomPricesByYear(
+      settingsMap.get("room_prices"),
+      configuredAcademicYears,
+    );
 
     // 2. Insert Lead
     console.time("insert-lead");
+    const mappedRoom = mapRoomChoice(payload.room_choice as string) || "silver";
     const leadData = {
       full_name: payload.full_name,
       email: payload.email,
       phone: payload.phone,
       source,
-      room_choice: mapRoomChoice(payload.room_choice as string) || "silver",
+      room_choice: mappedRoom,
       stay_duration: mapStayDuration(payload.stay_duration as string) || "51_weeks",
       lead_status: isPaymentLead ? "converted" : "new",
       academic_year: academicYear,
       is_hot: isPaymentLead,
+      potential_revenue: isPaymentSource(source)
+        ? 0
+        : calculatePotentialRevenue(mappedRoom, roomPricesByYear, academicYear),
       metadata: {
         form_type_raw: formType,
         lead_type_normalized: normalizedLeadType,
@@ -199,4 +209,61 @@ function mapStayDuration(duration?: string): string | null {
   if (duration.includes("51")) return "51_weeks";
   if (duration.includes("45")) return "45_weeks";
   return "short_stay";
+}
+
+function isPaymentSource(source: string): boolean {
+  return source === "web_urban_hub_payment" || source === "web_deposit" || source === "web_secure_booking";
+}
+
+function normalizeRoomPricesByYear(
+  raw: unknown,
+  academicYears: string[],
+): Record<string, Record<string, number>> {
+  const defaultPrices = {
+    platinum: 8500,
+    gold: 7000,
+    silver: 5500,
+    bronze: 4500,
+    standard: 3500,
+  };
+
+  if (raw && typeof raw === "object" && !Array.isArray(raw) && typeof (raw as Record<string, unknown>).platinum === "number") {
+    const flat = raw as Record<string, number>;
+    return Object.fromEntries(academicYears.map((year) => [year, { ...flat }]));
+  }
+
+  if (!raw || typeof raw !== "object" || Array.isArray(raw)) {
+    return Object.fromEntries(academicYears.map((year) => [year, { ...defaultPrices }]));
+  }
+
+  const record = raw as Record<string, Record<string, number>>;
+  const yearKeys = Object.keys(record).filter((key) => /^\d{4}\/\d{4}$/.test(key));
+  const fallbackYear = yearKeys.sort().at(-1);
+  const fallbackPrices = fallbackYear ? record[fallbackYear] : defaultPrices;
+  const result: Record<string, Record<string, number>> = {};
+
+  for (const year of academicYears) {
+    result[year] = yearKeys.includes(year) ? record[year] : { ...fallbackPrices };
+  }
+
+  return result;
+}
+
+function calculatePotentialRevenue(
+  room: string,
+  roomPricesByYear: Record<string, Record<string, number>>,
+  academicYear: string,
+): number {
+  const yearPrices =
+    roomPricesByYear[academicYear] ||
+    roomPricesByYear[Object.keys(roomPricesByYear).sort().at(-1) || ""] ||
+    {
+      platinum: 8500,
+      gold: 7000,
+      silver: 5500,
+      bronze: 4500,
+      standard: 3500,
+    };
+
+  return yearPrices[room] || yearPrices.silver || 5500;
 }

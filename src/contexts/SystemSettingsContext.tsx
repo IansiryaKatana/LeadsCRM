@@ -9,18 +9,19 @@ import React, {
   useMemo,
 } from "react";
 import { useAuth } from "@/hooks/useAuth";
-import { useSystemSettings, SystemSettings, CurrencySettings, RoomLabels, RoomPrices } from "@/hooks/useSystemSettings";
+import { useSystemSettings, SystemSettings, CurrencySettings, RoomLabels } from "@/hooks/useSystemSettings";
 import { resolveDefaultAcademicYear } from "@/utils/academicYear";
+import { getRoomPriceForYear, type RoomPricesByYear } from "@/utils/roomPrices";
 
 interface SystemSettingsContextValue {
   settings: SystemSettings;
   isLoading: boolean;
   getRoomLabel: (roomKey: string) => string;
-  getRoomPrice: (roomKey: string) => number;
+  getRoomPrice: (roomKey: string, academicYear?: string | null) => number;
   formatCurrency: (amount: number) => string;
   currency: CurrencySettings;
   roomLabels: RoomLabels;
-  roomPrices: RoomPrices;
+  roomPricesByYear: RoomPricesByYear;
   academicYears: string[];
   defaultAcademicYear: string;
   currentAcademicYear: string | null;
@@ -89,8 +90,10 @@ export function SystemSettingsProvider({ children }: { children: ReactNode }) {
     return settings.room_labels[roomKey as keyof RoomLabels] || roomKey;
   };
 
-  const getRoomPrice = (roomKey: string): number => {
-    return settings.room_prices[roomKey as keyof RoomPrices] || 0;
+  const getRoomPrice = (roomKey: string, academicYear?: string | null): number => {
+    const resolvedYear =
+      academicYear || currentAcademicYear || defaultAcademicYear || undefined;
+    return getRoomPriceForYear(settings.room_prices, roomKey, resolvedYear, defaultAcademicYear);
   };
 
   const formatCurrency = (amount: number): string => {
@@ -107,7 +110,7 @@ export function SystemSettingsProvider({ children }: { children: ReactNode }) {
         formatCurrency,
         currency: settings.currency,
         roomLabels: settings.room_labels,
-        roomPrices: settings.room_prices,
+        roomPricesByYear: settings.room_prices,
         academicYears,
         defaultAcademicYear,
         currentAcademicYear,

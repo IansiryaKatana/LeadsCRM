@@ -11,7 +11,7 @@ import { SkeletonDashboard } from "@/components/ui/skeleton-loader";
 import { useLeads } from "@/hooks/useLeads";
 import { useDashboardStats, useChannelPerformance } from "@/hooks/useDashboardStats";
 import { useSystemSettingsContext } from "@/contexts/SystemSettingsContext";
-import { pageTitleClass } from "@/lib/typography";
+import { pageTitleClass, sectionTitleClass } from "@/lib/typography";
 import { LeadStatus } from "@/types/crm";
 import {
   Users,
@@ -27,6 +27,7 @@ import { Link } from "react-router-dom";
 import { toast } from "@/hooks/use-toast";
 import { exportDashboardToCSV, exportDashboardToExcel, exportDashboardToPDF } from "@/utils/exportDashboard";
 import type { ExportFormat } from "@/components/dashboard/ExportDialog";
+import { cn } from "@/lib/utils";
 import {
   Select,
   SelectContent,
@@ -170,7 +171,7 @@ export default function Dashboard() {
 
         {/* Status Cards */}
         <div>
-          <h2 className="font-display text-xl font-bold mb-4">Lead Pipeline</h2>
+          <h2 className={cn(sectionTitleClass, "mb-4")}>Lead Pipeline</h2>
           <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4">
             {statusCards.map((card) => (
               <LeadStatusCard

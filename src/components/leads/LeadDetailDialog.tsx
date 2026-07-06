@@ -1,8 +1,7 @@
 import { useState, useEffect } from "react";
 import { LEAD_STATUS_CONFIG, getSourceConfig } from "@/types/crm";
-import { SourceIcon } from "@/utils/sourceIcons";
 import { cn } from "@/lib/utils";
-import { subsectionTitleClass, pageTitleClass } from "@/lib/typography";
+import { subsectionTitleClass, pageTitleClass, detailSectionTitleClass } from "@/lib/typography";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import {
@@ -46,6 +45,7 @@ import { useSystemSettingsContext } from "@/contexts/SystemSettingsContext";
 import { useLeadSources } from "@/hooks/useLeadSources";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { FollowUpBadge } from "@/components/leads/FollowUpBadge";
+import { LeadSourceBadge, LeadStatusBadge } from "@/components/leads/LeadMetaBadge";
 import { FollowUpHistory } from "@/components/leads/FollowUpHistory";
 import { FollowUpForm } from "@/components/leads/FollowUpForm";
 import { ExceptionRequestDialog } from "@/components/leads/ExceptionRequestDialog";
@@ -56,9 +56,12 @@ import { TasksTab } from "@/components/leads/TasksTab";
 import { CalendarTab } from "@/components/leads/CalendarTab";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Progress } from "@/components/ui/progress";
+import { ScrollProgressArea } from "@/components/ui/scroll-progress-area";
 import { Flame, Mail, Phone, Calendar, DollarSign, User, MessageSquare, Loader2, PhoneCall, Plus, History, CheckSquare, CalendarDays } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
 import type { Database } from "@/integrations/supabase/types";
+import { DEPOSITS_PAYMENTS_SOURCE_SLUG } from "@/constants/leadSegments";
+import { getLeadPaymentAmountPounds } from "@/utils/leadPaymentAmount";
 
 type Lead = Database["public"]["Tables"]["leads"]["Row"];
 type LeadStatus = Database["public"]["Enums"]["lead_status"];
@@ -68,6 +71,22 @@ interface LeadDetailDialogProps {
   onClose: () => void;
   initialTab?: string;
 }
+
+const MOBILE_TAB_LABELS: Record<string, string> = {
+  details: "Details",
+  followups: "Follow-Ups",
+  tasks: "Tasks",
+  calendar: "Calendar",
+  notes: "Notes",
+  email: "Email",
+  history: "History",
+  "contact-message": "Message",
+  "keyworkers-details": "Keyworker Details",
+  "tourist-details": "Stay Details",
+  "creator-details": "Creator App",
+  "secure-booking": "Booking Info",
+  "refer-friend": "Referral Info",
+};
 
 export function LeadDetailDialog({ lead, onClose, initialTab }: LeadDetailDialogProps) {
   const isMobile = useIsMobile();
@@ -109,6 +128,11 @@ export function LeadDetailDialog({ lead, onClose, initialTab }: LeadDetailDialog
   const isWebCreator = leadData.source === "web_creator";
   const isWebSecureBooking = leadData.source === "web_secure_booking";
   const isWebReferFriend = leadData.source === "web_refer_friend";
+  const isDepositsPaymentsLead =
+    leadData.source === DEPOSITS_PAYMENTS_SOURCE_SLUG || leadData.source === "web_deposit";
+  const paymentAmount = isDepositsPaymentsLead
+    ? getLeadPaymentAmountPounds(leadData.metadata)
+    : null;
   const isWebSimpleDialog = isWebContact || isWebKeyworkers || isWebTourist || isWebCreator || isWebSecureBooking || isWebReferFriend;
   const followUpCount = leadData.followup_count || 0;
   const lastFollowUpDate = leadData.last_followup_date ? new Date(leadData.last_followup_date) : null;
@@ -150,14 +174,24 @@ export function LeadDetailDialog({ lead, onClose, initialTab }: LeadDetailDialog
     });
   };
 
-  const statusConfig = LEAD_STATUS_CONFIG[leadData.lead_status];
   const sourceConfig = getSourceConfig(leadData.source, sources);
   const isCompletedOrClosed = leadData.lead_status === "converted" || leadData.lead_status === "closed";
 
   const tabScrollClass = cn(
-    "mt-4 overflow-y-auto pr-2 scrollbar-thin scrollbar-thumb-muted scrollbar-track-transparent",
-    isMobile ? "max-h-[60vh]" : "flex-1 min-h-0",
+    "mt-4",
+    isMobile
+      ? ""
+      : "flex-1 min-h-0 overflow-y-auto pr-2 scrollbar-thin scrollbar-thumb-muted scrollbar-track-transparent",
   );
+
+  const mobileIconTabClass =
+    "flex flex-1 items-center justify-center rounded-sm p-2 min-h-11 min-w-0";
+  const mobileTextTabClass =
+    "flex items-center justify-center rounded-sm px-2 py-2 text-xs min-h-11";
+  const mobileActiveTabLabel =
+    activeTab === "details" && isWebSimpleDialog
+      ? "Contact Info"
+      : MOBILE_TAB_LABELS[activeTab] ?? activeTab;
 
   const leadTitle = (
     <span className={cn("flex items-center gap-3", pageTitleClass)}>
@@ -171,18 +205,9 @@ export function LeadDetailDialog({ lead, onClose, initialTab }: LeadDetailDialog
   const leadDetailBody = (
     <>
         {/* Status & Source - Always visible */}
-        <div className="flex flex-wrap gap-3 mb-4">
-          <span className={cn(
-            "px-4 py-2 rounded-full text-sm font-semibold",
-            statusConfig.bgColor,
-            statusConfig.color
-          )}>
-            {statusConfig.label}
-          </span>
-          <span className="px-4 py-2 rounded-full text-sm font-semibold bg-muted flex items-center gap-2">
-            <SourceIcon slug={leadData.source} />
-            {sourceConfig.label}
-          </span>
+        <div className="mb-4 flex flex-wrap items-center gap-2">
+          <LeadStatusBadge status={leadData.lead_status} />
+          <LeadSourceBadge slug={leadData.source} label={sourceConfig.label} />
           <FollowUpBadge count={followUpCount} />
         </div>
 
@@ -194,69 +219,205 @@ export function LeadDetailDialog({ lead, onClose, initialTab }: LeadDetailDialog
         >
           <TabsList
             className={cn(
+              "h-auto p-1",
               isMobile
-                ? cn(
-                    "grid w-full",
-                    isWebSimpleDialog
-                      ? "grid-cols-3"
-                      : hasElevatedRole
-                        ? "grid-cols-7"
-                        : "grid-cols-6",
-                  )
-                : "inline-flex h-auto w-fit max-w-full flex-wrap justify-start gap-0.5",
+                ? isWebSimpleDialog
+                  ? cn(
+                      "grid w-full gap-0.5",
+                      hasElevatedRole ? "grid-cols-4" : "grid-cols-3",
+                    )
+                  : "flex w-full"
+                : "inline-flex w-fit max-w-full flex-wrap justify-start gap-0.5",
             )}
           >
-            <TabsTrigger value="details">
-              {isWebSimpleDialog ? "Contact Info" : "Details"}
+            <TabsTrigger
+              value="details"
+              className={isMobile ? (isWebSimpleDialog ? mobileTextTabClass : mobileIconTabClass) : undefined}
+              aria-label="Details"
+            >
+              {isMobile && !isWebSimpleDialog ? (
+                <>
+                  <User className="h-4 w-4" aria-hidden />
+                  <span className="sr-only">Details</span>
+                </>
+              ) : isWebSimpleDialog ? (
+                isMobile ? "Contact" : "Contact Info"
+              ) : (
+                "Details"
+              )}
             </TabsTrigger>
             {isWebContact ? (
-              <TabsTrigger value="contact-message">Message</TabsTrigger>
+              <TabsTrigger
+                value="contact-message"
+                className={isMobile ? mobileTextTabClass : undefined}
+              >
+                Message
+              </TabsTrigger>
             ) : isWebKeyworkers ? (
-              <TabsTrigger value="keyworkers-details">Keyworker Details</TabsTrigger>
+              <TabsTrigger
+                value="keyworkers-details"
+                className={isMobile ? mobileTextTabClass : undefined}
+              >
+                {isMobile ? "Keyworker" : "Keyworker Details"}
+              </TabsTrigger>
             ) : isWebTourist ? (
-              <TabsTrigger value="tourist-details">Stay Details</TabsTrigger>
+              <TabsTrigger
+                value="tourist-details"
+                className={isMobile ? mobileTextTabClass : undefined}
+              >
+                {isMobile ? "Stay" : "Stay Details"}
+              </TabsTrigger>
             ) : isWebCreator ? (
-              <TabsTrigger value="creator-details">Creator App</TabsTrigger>
+              <TabsTrigger
+                value="creator-details"
+                className={isMobile ? mobileTextTabClass : undefined}
+              >
+                {isMobile ? "Creator" : "Creator App"}
+              </TabsTrigger>
             ) : isWebSecureBooking ? (
-              <TabsTrigger value="secure-booking">Booking Info</TabsTrigger>
+              <TabsTrigger
+                value="secure-booking"
+                className={isMobile ? mobileTextTabClass : undefined}
+              >
+                {isMobile ? "Booking" : "Booking Info"}
+              </TabsTrigger>
             ) : isWebReferFriend ? (
-              <TabsTrigger value="refer-friend">Referral Info</TabsTrigger>
+              <TabsTrigger
+                value="refer-friend"
+                className={isMobile ? mobileTextTabClass : undefined}
+              >
+                {isMobile ? "Referral" : "Referral Info"}
+              </TabsTrigger>
             ) : (
               <>
-                <TabsTrigger value="followups">
-                  Follow-Ups
-                  {followUpCount > 0 && (
-                    <span className="ml-2 px-1.5 py-0.5 text-xs rounded-full bg-primary/10 text-primary">
-                      {followUpCount}
+                <TabsTrigger
+                  value="followups"
+                  className={isMobile ? mobileIconTabClass : undefined}
+                  aria-label={`Follow-Ups${followUpCount > 0 ? `, ${followUpCount} recorded` : ""}`}
+                >
+                  {isMobile ? (
+                    <span className="relative inline-flex">
+                      <PhoneCall className="h-4 w-4" aria-hidden />
+                      {followUpCount > 0 && (
+                        <span className="absolute -top-1.5 -right-1.5 flex h-3.5 min-w-3.5 items-center justify-center rounded-full bg-primary px-0.5 text-[9px] font-semibold leading-none text-primary-foreground">
+                          {followUpCount}
+                        </span>
+                      )}
+                      <span className="sr-only">Follow-Ups</span>
                     </span>
+                  ) : (
+                    <>
+                      Follow-Ups
+                      {followUpCount > 0 && (
+                        <span className="ml-2 px-1.5 py-0.5 text-xs rounded-full bg-primary/10 text-primary">
+                          {followUpCount}
+                        </span>
+                      )}
+                    </>
                   )}
                 </TabsTrigger>
-                <TabsTrigger value="tasks">
-                  <CheckSquare className="h-4 w-4 mr-1" />
-                  Tasks
+                <TabsTrigger
+                  value="tasks"
+                  className={isMobile ? mobileIconTabClass : undefined}
+                  aria-label="Tasks"
+                >
+                  {isMobile ? (
+                    <>
+                      <CheckSquare className="h-4 w-4" aria-hidden />
+                      <span className="sr-only">Tasks</span>
+                    </>
+                  ) : (
+                    <>
+                      <CheckSquare className="h-4 w-4 mr-1" />
+                      Tasks
+                    </>
+                  )}
                 </TabsTrigger>
-                <TabsTrigger value="calendar">
-                  <CalendarDays className="h-4 w-4 mr-1" />
-                  Calendar
+                <TabsTrigger
+                  value="calendar"
+                  className={isMobile ? mobileIconTabClass : undefined}
+                  aria-label="Calendar"
+                >
+                  {isMobile ? (
+                    <>
+                      <CalendarDays className="h-4 w-4" aria-hidden />
+                      <span className="sr-only">Calendar</span>
+                    </>
+                  ) : (
+                    <>
+                      <CalendarDays className="h-4 w-4 mr-1" />
+                      Calendar
+                    </>
+                  )}
                 </TabsTrigger>
-                <TabsTrigger value="notes">
-                  Notes
-                  {notes.length > 0 && (
-                    <span className="ml-2 px-1.5 py-0.5 text-xs rounded-full bg-primary/10 text-primary">
-                      {notes.length}
+                <TabsTrigger
+                  value="notes"
+                  className={isMobile ? mobileIconTabClass : undefined}
+                  aria-label={`Notes${notes.length > 0 ? `, ${notes.length} note${notes.length === 1 ? "" : "s"}` : ""}`}
+                >
+                  {isMobile ? (
+                    <span className="relative inline-flex">
+                      <MessageSquare className="h-4 w-4" aria-hidden />
+                      {notes.length > 0 && (
+                        <span className="absolute -top-1.5 -right-1.5 flex h-3.5 min-w-3.5 items-center justify-center rounded-full bg-primary px-0.5 text-[9px] font-semibold leading-none text-primary-foreground">
+                          {notes.length}
+                        </span>
+                      )}
+                      <span className="sr-only">Notes</span>
                     </span>
+                  ) : (
+                    <>
+                      Notes
+                      {notes.length > 0 && (
+                        <span className="ml-2 px-1.5 py-0.5 text-xs rounded-full bg-primary/10 text-primary">
+                          {notes.length}
+                        </span>
+                      )}
+                    </>
                   )}
                 </TabsTrigger>
               </>
             )}
-            <TabsTrigger value="email">
-              <Mail className="h-4 w-4 mr-1" />
-              Email
+            <TabsTrigger
+              value="email"
+              className={isMobile ? (isWebSimpleDialog ? mobileTextTabClass : mobileIconTabClass) : undefined}
+              aria-label="Email"
+            >
+              {isMobile && !isWebSimpleDialog ? (
+                <>
+                  <Mail className="h-4 w-4" aria-hidden />
+                  <span className="sr-only">Email</span>
+                </>
+              ) : (
+                <>
+                  {!isMobile && <Mail className="h-4 w-4 mr-1" />}
+                  {isMobile && isWebSimpleDialog && <Mail className="h-3.5 w-3.5 mr-1 shrink-0" />}
+                  Email
+                </>
+              )}
             </TabsTrigger>
             {!isWebSimpleDialog && hasElevatedRole && (
-              <TabsTrigger value="history">History</TabsTrigger>
+              <TabsTrigger
+                value="history"
+                className={isMobile ? mobileIconTabClass : undefined}
+                aria-label="History"
+              >
+                {isMobile ? (
+                  <>
+                    <History className="h-4 w-4" aria-hidden />
+                    <span className="sr-only">History</span>
+                  </>
+                ) : (
+                  "History"
+                )}
+              </TabsTrigger>
             )}
           </TabsList>
+          {isMobile && !isWebSimpleDialog && (
+            <p className="mt-1.5 text-center text-xs font-medium text-muted-foreground">
+              {mobileActiveTabLabel}
+            </p>
+          )}
 
           {/* Details / Contact Info Tab */}
           <TabsContent value="details" className={cn(tabScrollClass, "space-y-4")}>
@@ -279,14 +440,20 @@ export function LeadDetailDialog({ lead, onClose, initialTab }: LeadDetailDialog
 
             {!isWebSimpleDialog && (
               <>
-                {/* Revenue Card */}
+                {/* Revenue / payment amount */}
                 <div className="p-4 rounded-xl bg-primary/10 border border-primary/20">
                   <div className="flex items-center gap-2 text-primary mb-1">
                     <DollarSign className="h-4 w-4" />
-                    <span className="text-sm font-medium">Potential Revenue</span>
+                    <span className="text-sm font-medium">
+                      {isDepositsPaymentsLead ? "Amount" : "Potential Revenue"}
+                    </span>
                   </div>
                   <p className="text-3xl font-display font-bold">
-                    {formatCurrency(leadData.potential_revenue)}
+                    {formatCurrency(
+                      isDepositsPaymentsLead
+                        ? (paymentAmount ?? 0)
+                        : leadData.potential_revenue,
+                    )}
                   </p>
                 </div>
 
@@ -365,8 +532,7 @@ export function LeadDetailDialog({ lead, onClose, initialTab }: LeadDetailDialog
             {!isCompletedOrClosed && (
               <div className="flex items-center justify-between pb-4 border-b">
                 <div className="space-y-1">
-                  <h3 className="font-semibold flex items-center gap-2">
-                    <PhoneCall className="h-4 w-4" />
+                  <h3 className={subsectionTitleClass}>
                     Follow-Up Progress
                   </h3>
                   <div className="flex items-center gap-4 text-sm text-muted-foreground">
@@ -424,8 +590,7 @@ export function LeadDetailDialog({ lead, onClose, initialTab }: LeadDetailDialog
           <TabsContent value="notes" className={cn(tabScrollClass, "space-y-4")}>
             <div className="space-y-4">
               <div className="flex items-center justify-between pb-4 border-b">
-                <h3 className="font-semibold flex items-center gap-2">
-                  <MessageSquare className="h-4 w-4" />
+                <h3 className={subsectionTitleClass}>
                   Notes
                 </h3>
               </div>
@@ -503,13 +668,13 @@ export function LeadDetailDialog({ lead, onClose, initialTab }: LeadDetailDialog
             <TabsContent value="contact-message" className={cn(tabScrollClass, "space-y-4")}>
               <div className="space-y-4">
                 <div className="p-4 rounded-xl bg-muted/50">
-                  <h3 className="font-semibold mb-2">Reason for contacting</h3>
+                  <h3 className={cn(detailSectionTitleClass, "mb-2")}>Reason for contacting</h3>
                   <p className="text-sm text-muted-foreground">
                     {leadData.contact_reason || "Not provided"}
                   </p>
                 </div>
                 <div className="p-4 rounded-xl bg-muted/50">
-                  <h3 className="font-semibold mb-2">Message</h3>
+                  <h3 className={cn(detailSectionTitleClass, "mb-2")}>Message</h3>
                   <p className="text-sm whitespace-pre-wrap">
                     {leadData.contact_message || "No message provided"}
                   </p>
@@ -523,20 +688,20 @@ export function LeadDetailDialog({ lead, onClose, initialTab }: LeadDetailDialog
             <TabsContent value="keyworkers-details" className={cn(tabScrollClass, "space-y-4")}>
               <div className="space-y-4">
                 <div className="p-4 rounded-xl bg-muted/50">
-                  <h3 className={cn(subsectionTitleClass, "mb-2")}>Length of Stay</h3>
+                  <h3 className={cn(detailSectionTitleClass, "mb-2")}>Length of Stay</h3>
                   <p className="text-sm text-muted-foreground whitespace-pre-wrap">
                     {leadData.keyworker_length_of_stay || (leadData.metadata as any)?.stay_duration || "Not provided"}
                   </p>
                 </div>
                 <div className="p-4 rounded-xl bg-muted/50">
-                  <h3 className={cn(subsectionTitleClass, "mb-2")}>Preferred Date</h3>
+                  <h3 className={cn(detailSectionTitleClass, "mb-2")}>Preferred Date</h3>
                   <p className="text-sm text-muted-foreground whitespace-pre-wrap">
                     {leadData.keyworker_preferred_date || (leadData.metadata as any)?.start_date || "Not provided"}
                   </p>
                 </div>
                 {(leadData.metadata as any)?.rooms_count && (
                   <div className="p-4 rounded-xl bg-muted/50">
-                    <h3 className={cn(subsectionTitleClass, "mb-2")}>Rooms Requested</h3>
+                    <h3 className={cn(detailSectionTitleClass, "mb-2")}>Rooms Requested</h3>
                     <p className="text-sm text-muted-foreground">
                       {(leadData.metadata as any).rooms_count}
                     </p>
@@ -552,16 +717,16 @@ export function LeadDetailDialog({ lead, onClose, initialTab }: LeadDetailDialog
               <div className="space-y-4">
                 <div className="grid grid-cols-2 gap-4">
                   <div className="p-4 rounded-xl bg-muted/50">
-                    <h3 className="font-semibold mb-2 text-xs uppercase text-muted-foreground">Start Date</h3>
+                    <h3 className={cn(detailSectionTitleClass, "mb-2 text-muted-foreground")}>Start Date</h3>
                     <p className="text-sm">{(leadData.metadata as any)?.start_date || "Not provided"}</p>
                   </div>
                   <div className="p-4 rounded-xl bg-muted/50">
-                    <h3 className="font-semibold mb-2 text-xs uppercase text-muted-foreground">End Date</h3>
+                    <h3 className={cn(detailSectionTitleClass, "mb-2 text-muted-foreground")}>End Date</h3>
                     <p className="text-sm">{(leadData.metadata as any)?.end_date || "Not provided"}</p>
                   </div>
                 </div>
                 <div className="p-4 rounded-xl bg-muted/50">
-                  <h3 className="font-semibold mb-2 text-xs uppercase text-muted-foreground">Rooms Requested</h3>
+                  <h3 className={cn(detailSectionTitleClass, "mb-2 text-muted-foreground")}>Rooms Requested</h3>
                   <p className="text-sm">{(leadData.metadata as any)?.rooms_count || "Not provided"}</p>
                 </div>
               </div>
@@ -573,7 +738,7 @@ export function LeadDetailDialog({ lead, onClose, initialTab }: LeadDetailDialog
             <TabsContent value="creator-details" className={cn(tabScrollClass, "space-y-4")}>
               <div className="space-y-4">
                 <div className="p-4 rounded-xl bg-muted/50">
-                  <h3 className="font-semibold mb-2 text-xs uppercase text-muted-foreground">City / University</h3>
+                  <h3 className={cn(detailSectionTitleClass, "mb-2 text-muted-foreground")}>City / University</h3>
                   <p className="text-sm">{(leadData.metadata as any)?.city_university || "Not provided"}</p>
                 </div>
                 
@@ -581,7 +746,7 @@ export function LeadDetailDialog({ lead, onClose, initialTab }: LeadDetailDialog
                   {['instagram', 'tiktok', 'snapchat', 'youtube'].map(social => (
                     (leadData.metadata as any)?.[social] && (
                       <div key={social} className="p-4 rounded-xl bg-muted/50">
-                        <h3 className="font-semibold mb-1 text-xs uppercase text-muted-foreground capitalize">{social}</h3>
+                        <h3 className={cn(detailSectionTitleClass, "mb-1 text-muted-foreground capitalize")}>{social}</h3>
                         <p className="text-sm truncate">{(leadData.metadata as any)[social]}</p>
                       </div>
                     )
@@ -589,7 +754,7 @@ export function LeadDetailDialog({ lead, onClose, initialTab }: LeadDetailDialog
                 </div>
 
                 <div className="p-4 rounded-xl bg-muted/50">
-                  <h3 className="font-semibold mb-2 text-xs uppercase text-muted-foreground">Collaboration Details</h3>
+                  <h3 className={cn(detailSectionTitleClass, "mb-2 text-muted-foreground")}>Collaboration Details</h3>
                   <div className="space-y-3">
                     <div>
                       <p className="text-xs text-muted-foreground">Followers</p>
@@ -610,12 +775,12 @@ export function LeadDetailDialog({ lead, onClose, initialTab }: LeadDetailDialog
                 </div>
 
                 <div className="p-4 rounded-xl bg-muted/50">
-                  <h3 className="font-semibold mb-2 text-xs uppercase text-muted-foreground">Content Idea</h3>
+                  <h3 className={cn(detailSectionTitleClass, "mb-2 text-muted-foreground")}>Content Idea</h3>
                   <p className="text-sm italic">"{(leadData.metadata as any)?.urbanhub_content_idea || "No idea provided"}"</p>
                 </div>
 
                 <div className="p-4 rounded-xl bg-muted/50">
-                  <h3 className="font-semibold mb-2 text-xs uppercase text-muted-foreground">Example Links</h3>
+                  <h3 className={cn(detailSectionTitleClass, "mb-2 text-muted-foreground")}>Example Links</h3>
                   <p className="text-sm whitespace-pre-wrap">{(leadData.metadata as any)?.example_links || "None provided"}</p>
                 </div>
               </div>
@@ -627,7 +792,7 @@ export function LeadDetailDialog({ lead, onClose, initialTab }: LeadDetailDialog
             <TabsContent value="secure-booking" className={cn(tabScrollClass, "space-y-4")}>
               <div className="space-y-4">
                 <div className="p-4 rounded-xl bg-primary/10 border border-primary/20">
-                  <h3 className="font-semibold mb-2 text-xs uppercase text-primary">Payment Details</h3>
+                  <h3 className={cn(detailSectionTitleClass, "mb-2 text-primary")}>Payment Details</h3>
                   <div className="grid grid-cols-2 gap-4">
                     <div>
                       <p className="text-xs text-muted-foreground">Amount Paid</p>
@@ -655,14 +820,14 @@ export function LeadDetailDialog({ lead, onClose, initialTab }: LeadDetailDialog
                 </div>
                 
                 <div className="p-4 rounded-xl bg-muted/50">
-                  <h3 className="font-semibold mb-2 text-xs uppercase text-muted-foreground">Room Preference</h3>
+                  <h3 className={cn(detailSectionTitleClass, "mb-2 text-muted-foreground")}>Room Preference</h3>
                   <p className="text-sm font-semibold">
                     {(leadData.metadata as any)?.studio_preference || getRoomLabel(leadData.room_choice)}
                   </p>
                 </div>
 
                 <div className="p-4 rounded-xl bg-muted/50">
-                  <h3 className="font-semibold mb-2 text-xs uppercase text-muted-foreground">Attribution</h3>
+                  <h3 className={cn(detailSectionTitleClass, "mb-2 text-muted-foreground")}>Attribution</h3>
                   <div className="space-y-2 text-sm">
                     <p><span className="text-muted-foreground">Form type:</span> {(leadData.metadata as any)?.form_type_raw || "Not provided"}</p>
                     <p><span className="text-muted-foreground">Submission type:</span> {(leadData.metadata as any)?.submission_type || "Not provided"}</p>
@@ -678,7 +843,7 @@ export function LeadDetailDialog({ lead, onClose, initialTab }: LeadDetailDialog
             <TabsContent value="refer-friend" className={cn(tabScrollClass, "space-y-4")}>
               <div className="space-y-4">
                 <div className="p-4 rounded-xl bg-primary/10 border border-primary/20">
-                  <h3 className="font-semibold mb-2 text-xs uppercase text-primary">Referral Payment</h3>
+                  <h3 className={cn(detailSectionTitleClass, "mb-2 text-primary")}>Referral Payment</h3>
                   <div className="grid grid-cols-2 gap-4">
                     <div>
                       <p className="text-xs text-muted-foreground">Amount Paid</p>
@@ -694,7 +859,7 @@ export function LeadDetailDialog({ lead, onClose, initialTab }: LeadDetailDialog
                 </div>
 
                 <div className="p-4 rounded-xl bg-muted/50 border-l-4 border-l-blue-500">
-                  <h3 className="font-semibold mb-3 text-xs uppercase text-muted-foreground">Friend's Information</h3>
+                  <h3 className={cn(detailSectionTitleClass, "mb-3 text-muted-foreground")}>Friend's Information</h3>
                   <div className="space-y-3">
                     <div>
                       <p className="text-xs text-muted-foreground">Name</p>
@@ -708,7 +873,7 @@ export function LeadDetailDialog({ lead, onClose, initialTab }: LeadDetailDialog
                 </div>
 
                 <div className="p-4 rounded-xl bg-muted/50">
-                  <h3 className="font-semibold mb-2 text-xs uppercase text-muted-foreground">Referrer's Studio Preference</h3>
+                  <h3 className={cn(detailSectionTitleClass, "mb-2 text-muted-foreground")}>Referrer's Studio Preference</h3>
                   <p className="text-sm font-semibold">{getRoomLabel(leadData.room_choice)}</p>
                 </div>
               </div>
@@ -725,12 +890,11 @@ export function LeadDetailDialog({ lead, onClose, initialTab }: LeadDetailDialog
             <TabsContent value="history" className={cn(tabScrollClass, "space-y-4")}>
               <div className="space-y-4">
                 <div className="flex items-center justify-between pb-4 border-b">
-                  <h3 className="font-semibold flex items-center gap-2">
-                    <History className="h-4 w-4" />
+                  <h3 className={subsectionTitleClass}>
                     Activity History
                   </h3>
                 </div>
-                <AuditTrailDisplay leadId={leadData.id} />
+                <AuditTrailDisplay leadId={leadData.id} embedded={isMobile} />
               </div>
             </TabsContent>
           )}
@@ -742,15 +906,21 @@ export function LeadDetailDialog({ lead, onClose, initialTab }: LeadDetailDialog
     <>
       {isMobile ? (
         <Dialog open={!!leadData} onOpenChange={() => onClose()}>
-          <DialogContent className="sm:max-w-2xl overflow-hidden flex flex-col pb-6">
-            <div className="mx-auto mt-2 mb-2 h-1.5 w-12 rounded-full bg-muted" aria-hidden />
-            <DialogHeader className="sm:pt-0 mb-4">
-              <DialogTitle className={pageTitleClass}>{leadTitle}</DialogTitle>
-              <DialogDescription className="sr-only">
-                Lead details, follow-ups, tasks, and activity for {leadData.full_name}
-              </DialogDescription>
-            </DialogHeader>
-            {leadDetailBody}
+          <DialogContent className="flex max-h-[92vh] flex-col gap-0 overflow-hidden p-0 sm:max-w-2xl">
+            <div className="shrink-0">
+              <div className="mx-auto mt-2 h-1.5 w-12 rounded-full bg-muted" aria-hidden />
+              <DialogHeader className="space-y-0 border-b px-5 pb-3 pt-3 text-left">
+                <DialogTitle className={cn(pageTitleClass, "text-xl leading-tight")}>
+                  {leadTitle}
+                </DialogTitle>
+                <DialogDescription className="sr-only">
+                  Lead details, follow-ups, tasks, and activity for {leadData.full_name}
+                </DialogDescription>
+              </DialogHeader>
+            </div>
+            <ScrollProgressArea scrollKey={activeTab} contentClassName="px-5 pb-6 pt-4">
+              {leadDetailBody}
+            </ScrollProgressArea>
           </DialogContent>
         </Dialog>
       ) : (
