@@ -32,6 +32,7 @@ export interface ExportData {
   monthlyData: Array<{ month: string; leads: number; converted: number }>;
   roomDistribution: Array<{ name: string; value: number }>;
   statusDistribution: Array<{ name: string; value: number; fill: string }>;
+  statusRevenueDistribution?: Array<{ name: string; value: number; fill: string }>;
   channelPerformance?: ChannelPerformance[];
   nationalityDistribution?: Array<{ name: string; value: number }>;
   dateRange: string;
@@ -148,6 +149,13 @@ export function exportToCSV(data: ExportData) {
   csv += `Converted,${stats.converted}\n`;
   csv += `Closed,${stats.closed}\n`;
   csv += `\n`;
+  csv += csvSectionTitle("Revenue Summary");
+  csv += `\n`;
+  csv += `Metric,Value (${currencySymbol})\n`;
+  csv += `Confirmed Revenue,${stats.totalRevenue.toFixed(2)}\n`;
+  csv += `Forecast (High Interest),${stats.forecastRevenue.toFixed(2)}\n`;
+  csv += `Pipeline Potential,${(stats.pipelineRevenue ?? 0).toFixed(2)}\n`;
+  csv += `\n`;
   csv += `═══════════════════════════════════════════════════════════════\n`;
   csv += `MONTHLY PERFORMANCE\n`;
   csv += `═══════════════════════════════════════════════════════════════\n`;
@@ -202,6 +210,20 @@ export function exportToCSV(data: ExportData) {
   csv += `Status Distribution Chart (Visual Representation):\n`;
   csv += generateASCIIChart(statusDistribution, 30);
   csv += `\n`;
+
+  const statusRevenueRows = data.statusRevenueDistribution ?? [];
+  if (statusRevenueRows.length > 0) {
+    csv += csvSectionTitle("Pipeline Revenue by Status");
+    csv += `\n`;
+    csv += `Status,Potential Revenue (${currencySymbol})\n`;
+    statusRevenueRows.forEach((status) => {
+      csv += `${status.name},${status.value.toFixed(2)}\n`;
+    });
+    csv += `\n`;
+    csv += `Status Revenue Chart (Visual Representation):\n`;
+    csv += generateASCIIChart(statusRevenueRows, 30);
+    csv += `\n`;
+  }
   if (leads && leads.length > 0) {
     const columns = getLeadExportColumns(leadProfile, currencySymbol);
     csv += csvSectionTitle(`Lead Records (${leads.length} total)`);
@@ -299,6 +321,20 @@ export async function exportToExcel(data: ExportData) {
   ];
   
   summaryData.forEach(([metric, value]) => {
+    const row = worksheet.addRow([metric, value]);
+    row.height = 18;
+    row.getCell(1).style = styles.cellStyle;
+    row.getCell(2).style = styles.numberCellStyle;
+    rowIndex++;
+  });
+
+  const revenueSummary = [
+    ["Confirmed Revenue", stats.totalRevenue],
+    ["Forecast (High Interest)", stats.forecastRevenue],
+    ["Pipeline Potential", stats.pipelineRevenue ?? 0],
+  ];
+
+  revenueSummary.forEach(([metric, value]) => {
     const row = worksheet.addRow([metric, value]);
     row.height = 18;
     row.getCell(1).style = styles.cellStyle;
@@ -459,6 +495,34 @@ export async function exportToExcel(data: ExportData) {
     rowIndex++;
   });
 
+  const statusRevenueRows = data.statusRevenueDistribution ?? [];
+  if (statusRevenueRows.length > 0) {
+    rowIndex += 2;
+
+    const statusRevenueHeaderRow = worksheet.addRow(["Pipeline Revenue by Status"]);
+    statusRevenueHeaderRow.height = 25;
+    worksheet.mergeCells(`A${rowIndex}:B${rowIndex}`);
+    statusRevenueHeaderRow.getCell(1).style = styles.sectionHeaderStyle;
+    rowIndex++;
+
+    const statusRevenueTableHeader = worksheet.addRow([
+      "Status",
+      `Potential Revenue (${currencySymbol})`,
+    ]);
+    statusRevenueTableHeader.height = 20;
+    statusRevenueTableHeader.getCell(1).style = styles.tableHeaderStyle;
+    statusRevenueTableHeader.getCell(2).style = styles.tableHeaderStyle;
+    rowIndex++;
+
+    statusRevenueRows.forEach((status) => {
+      const row = worksheet.addRow([status.name, status.value]);
+      row.height = 18;
+      row.getCell(1).style = styles.cellStyle;
+      row.getCell(2).style = styles.numberCellStyle;
+      rowIndex++;
+    });
+  }
+
   if (data.leads && data.leads.length > 0) {
     const leadColumns = getLeadExportColumns(leadProfile, currencySymbol);
     rowIndex += 2;
@@ -565,6 +629,9 @@ export async function exportToPDF(data: ExportData) {
     ["High Interest", stats.highInterest.toLocaleString()],
     ["Converted", stats.converted.toLocaleString()],
     ["Closed", stats.closed.toLocaleString()],
+    ["Confirmed Revenue", `${currencySymbol}${stats.totalRevenue.toFixed(2)}`],
+    ["Forecast (High Interest)", `${currencySymbol}${stats.forecastRevenue.toFixed(2)}`],
+    ["Pipeline Potential", `${currencySymbol}${(stats.pipelineRevenue ?? 0).toFixed(2)}`],
   ];
   
   // Draw stats table
@@ -808,6 +875,44 @@ export async function exportToPDF(data: ExportData) {
     drawPdfDottedRowSeparator(doc, startX, yPos + 2, pageWidth - margin);
     yPos += cellHeight;
   });
+
+  const statusRevenueRows = data.statusRevenueDistribution ?? [];
+  if (statusRevenueRows.length > 0) {
+    yPos += 5;
+    checkPageBreak(30);
+
+    yPos = drawPdfSectionHeader(doc, "Pipeline Revenue by Status", yPos, margin, pageWidth);
+
+    doc.setFontSize(10);
+    doc.setFont("helvetica", "normal");
+    doc.setTextColor(0, 0, 0);
+
+    const revenueHeaders = ["Status", `Potential Revenue (${currencySymbol})`];
+    const revenueColWidths = [90, 50];
+
+    doc.setFillColor(240, 240, 240);
+    doc.rect(startX, yPos - 5, pageWidth - 2 * margin, cellHeight, "F");
+    doc.setFont("helvetica", "bold");
+    xPos = startX + 2;
+    revenueHeaders.forEach((header, i) => {
+      doc.text(header, xPos, yPos);
+      xPos += revenueColWidths[i];
+    });
+
+    yPos += cellHeight;
+    doc.setFont("helvetica", "normal");
+
+    statusRevenueRows.forEach((status) => {
+      checkPageBreak(cellHeight + 2);
+      xPos = startX + 2;
+      drawPdfTableCellText(doc, status.name, xPos, yPos, revenueColWidths[0], { fontSize: 9 });
+      xPos += revenueColWidths[0];
+      doc.text(status.value.toFixed(2), xPos, yPos);
+
+      drawPdfDottedRowSeparator(doc, startX, yPos + 2, pageWidth - margin);
+      yPos += cellHeight;
+    });
+  }
   
   if (data.leads && data.leads.length > 0) {
     const leadColumns = getLeadExportColumns(leadProfile, currencySymbol);

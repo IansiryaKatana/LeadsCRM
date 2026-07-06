@@ -8,7 +8,6 @@ import { CreateLeadForm } from "@/components/leads/CreateLeadForm";
 import { ExportDialog } from "@/components/dashboard/ExportDialog";
 import { OverdueFollowUpsWidget } from "@/components/dashboard/OverdueFollowUpsWidget";
 import { SkeletonDashboard } from "@/components/ui/skeleton-loader";
-import { useLeads } from "@/hooks/useLeads";
 import { useDashboardStats, useChannelPerformance } from "@/hooks/useDashboardStats";
 import { useSystemSettingsContext } from "@/contexts/SystemSettingsContext";
 import { pageTitleClass, sectionTitleClass } from "@/lib/typography";
@@ -39,7 +38,6 @@ import {
 export default function Dashboard() {
   const { academicYears, currentAcademicYear, setCurrentAcademicYear, currency, isLoading: settingsLoading } = useSystemSettingsContext();
   const { data: stats, isLoading: statsLoading } = useDashboardStats(currentAcademicYear);
-  const { data: leads = [] } = useLeads(currentAcademicYear);
   const { data: channels = [] } = useChannelPerformance(currentAcademicYear);
   const [exportDialogOpen, setExportDialogOpen] = useState(false);
   const [isExporting, setIsExporting] = useState(false);
@@ -77,11 +75,11 @@ export default function Dashboard() {
   };
 
   const statusCards: { status: LeadStatus; count: number; revenue: number }[] = stats ? [
-    { status: "new", count: stats.newLeads, revenue: leads.filter(l => l.lead_status === "new").reduce((s, l) => s + l.potential_revenue, 0) },
-    { status: "awaiting_outreach", count: stats.awaitingOutreach, revenue: leads.filter(l => l.lead_status === "awaiting_outreach").reduce((s, l) => s + l.potential_revenue, 0) },
-    { status: "high_interest", count: stats.highInterest, revenue: leads.filter(l => l.lead_status === "high_interest").reduce((s, l) => s + l.potential_revenue, 0) },
+    { status: "new", count: stats.newLeads, revenue: stats.statusRevenue?.new || 0 },
+    { status: "awaiting_outreach", count: stats.awaitingOutreach, revenue: stats.statusRevenue?.awaiting_outreach || 0 },
+    { status: "high_interest", count: stats.highInterest, revenue: stats.statusRevenue?.high_interest || 0 },
     { status: "converted", count: stats.converted, revenue: stats.totalRevenue },
-    { status: "closed", count: stats.closed, revenue: leads.filter(l => l.lead_status === "closed").reduce((s, l) => s + l.potential_revenue, 0) },
+    { status: "closed", count: stats.closed, revenue: stats.statusRevenue?.closed || 0 },
   ] : [];
 
   if (loading) {

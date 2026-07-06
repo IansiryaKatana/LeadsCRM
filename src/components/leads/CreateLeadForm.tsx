@@ -26,6 +26,8 @@ import {
   StayDuration,
   STAY_DURATION_CONFIG,
 } from "@/types/crm";
+import { isPipelinePricingLeadSource } from "@/constants/leadSegments";
+import { calculatePipelineLeadRevenue } from "@/utils/roomPrices";
 import { Plus, UserPlus, Loader2, Calendar, Globe } from "lucide-react";
 import { useCreateLead } from "@/hooks/useLeads";
 import { useSystemSettingsContext } from "@/contexts/SystemSettingsContext";
@@ -47,7 +49,7 @@ export function CreateLeadForm() {
   const [open, setOpen] = useState(false);
   const [estimatedRevenue, setEstimatedRevenue] = useState(0);
   const createLead = useCreateLead();
-  const { getRoomLabel, getRoomPrice, formatCurrency, roomLabels, roomPricesByYear, academicYears, currentAcademicYear, defaultAcademicYear } = useSystemSettingsContext();
+  const { getRoomLabel, formatCurrency, roomLabels, roomPricesByYear, academicYears, currentAcademicYear, defaultAcademicYear } = useSystemSettingsContext();
   const [selectedAcademicYear, setSelectedAcademicYear] = useState(currentAcademicYear || defaultAcademicYear);
   const { data: sources = [] } = useLeadSources();
 
@@ -82,17 +84,24 @@ export function CreateLeadForm() {
 
   const roomChoice = watch("room_choice");
   const stayDuration = watch("stay_duration");
-
-  const calculateRevenue = (room: RoomChoice, year: string) => {
-    return getRoomPrice(room, year);
-  };
+  const source = watch("source");
 
   useEffect(() => {
     const year = selectedAcademicYear || currentAcademicYear || defaultAcademicYear;
-    if (roomChoice && year) {
-      setEstimatedRevenue(calculateRevenue(roomChoice, year));
+    if (!roomChoice || !year) {
+      setEstimatedRevenue(0);
+      return;
     }
-  }, [roomChoice, selectedAcademicYear, currentAcademicYear, defaultAcademicYear, roomPricesByYear]);
+
+    if (isPipelinePricingLeadSource(source)) {
+      setEstimatedRevenue(
+        calculatePipelineLeadRevenue(roomChoice, stayDuration, roomPricesByYear, year),
+      );
+      return;
+    }
+
+    setEstimatedRevenue(0);
+  }, [roomChoice, stayDuration, source, selectedAcademicYear, currentAcademicYear, defaultAcademicYear, roomPricesByYear]);
 
   const handleRoomChange = (value: RoomChoice) => {
     setValue("room_choice", value);
@@ -317,7 +326,9 @@ export function CreateLeadForm() {
               {formatCurrency(estimatedRevenue)}
             </p>
             <p className="text-xs text-muted-foreground mt-1">
-              Based on {getRoomLabel(roomChoice)} for {selectedAcademicYear || currentAcademicYear || defaultAcademicYear}
+              {isPipelinePricingLeadSource(source)
+                ? `${getRoomLabel(roomChoice)} · ${STAY_DURATION_CONFIG[stayDuration as StayDuration]?.label ?? stayDuration} · weekly × ${STAY_DURATION_CONFIG[stayDuration as StayDuration]?.weeks ?? 51} weeks`
+                : `Select Book Viewing or Schedule Callback source for a revenue estimate`}
             </p>
           </div>
 

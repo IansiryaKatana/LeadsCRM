@@ -1,5 +1,6 @@
 import type { RoomPrices } from "@/hooks/useSystemSettings";
 import { getLatestAcademicYear } from "@/utils/academicYear";
+import { getStayDurationWeeks } from "@/utils/stayDuration";
 
 export const ROOM_PRICE_KEYS = [
   "platinum",
@@ -13,12 +14,13 @@ export type RoomPriceKey = (typeof ROOM_PRICE_KEYS)[number];
 
 export type RoomPricesByYear = Record<string, RoomPrices>;
 
+/** Default weekly rates (GBP) when settings are missing. */
 export const DEFAULT_ROOM_PRICES: RoomPrices = {
-  platinum: 8500,
-  gold: 7000,
-  silver: 5500,
-  bronze: 4500,
-  standard: 3500,
+  platinum: 189,
+  gold: 156,
+  silver: 122,
+  bronze: 100,
+  standard: 78,
 };
 
 function isAcademicYearKey(key: string): boolean {
@@ -112,23 +114,45 @@ export function getRoomPriceForYear(
   return pricesByYear[resolvedYear]?.[roomKey as keyof RoomPrices] || 0;
 }
 
-/** Flat room price for a lead's academic year (pipeline potential). */
+/** Weekly room rate for the lead's academic year. */
+export function getWeeklyRoomRate(
+  pricesByYear: RoomPricesByYear,
+  room: string,
+  academicYear?: string | null,
+  fallbackYear?: string,
+): number {
+  return getRoomPriceForYear(pricesByYear, room, academicYear, fallbackYear);
+}
+
+/** Weekly rate × stay duration weeks (Book Viewing / Schedule Callback). */
+export function calculatePipelineLeadRevenue(
+  room: string,
+  stayDuration: string | null | undefined,
+  pricesByYear: RoomPricesByYear,
+  academicYear?: string | null,
+): number {
+  const weeklyRate = getWeeklyRoomRate(pricesByYear, room, academicYear);
+  const weeks = getStayDurationWeeks(stayDuration);
+  return weeklyRate * weeks;
+}
+
+/** @deprecated Use calculatePipelineLeadRevenue for pipeline pricing sources. */
 export function calculateLeadPotentialRevenue(
   room: string,
   pricesByYear: RoomPricesByYear,
   academicYear?: string | null,
 ): number {
-  return getRoomPriceForYear(pricesByYear, room, academicYear);
+  return getWeeklyRoomRate(pricesByYear, room, academicYear);
 }
 
-/** @deprecated Use calculateLeadPotentialRevenue */
+/** @deprecated Use calculatePipelineLeadRevenue */
 export function calculateLeadRevenue(
   room: string,
-  _duration: string,
+  duration: string,
   pricesByYear: RoomPricesByYear,
   academicYear?: string | null,
 ): number {
-  return calculateLeadPotentialRevenue(room, pricesByYear, academicYear);
+  return calculatePipelineLeadRevenue(room, duration, pricesByYear, academicYear);
 }
 export function ensureYearPricing(
   pricesByYear: RoomPricesByYear,

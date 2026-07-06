@@ -17,6 +17,16 @@ export function isPaymentLeadSource(source: string): boolean {
   return (PAYMENT_LEAD_SOURCE_SLUGS as readonly string[]).includes(source);
 }
 
+/** Book Viewing + Schedule Callback — weekly room rate × stay duration. */
+export const PIPELINE_PRICING_SOURCE_SLUGS = [
+  "web_booking",
+  "web_callback",
+] as const;
+
+export function isPipelinePricingLeadSource(source: string): boolean {
+  return (PIPELINE_PRICING_SOURCE_SLUGS as readonly string[]).includes(source);
+}
+
 /** Sources shown on dedicated routes — excluded from All Leads and its sidebar sub-items. */
 export const EXCLUDED_FROM_ALL_LEADS_SOURCE_SLUGS = [
   INQUIRIES_SOURCE_SLUG,

@@ -1,5 +1,6 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { resolveLeadPotentialRevenue } from "../_shared/leadRevenue.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -118,7 +119,13 @@ serve(async (req) => {
       const potentialRevenue = isPaymentSource
         ? (row.estimated_revenue || 0)
         : row.estimated_revenue ||
-          calculatePotentialRevenue(roomChoice, roomPricesByYear, academicYear);
+          resolveLeadPotentialRevenue({
+            source: finalSource,
+            room: roomChoice,
+            stayDuration,
+            roomPricesByYear,
+            academicYear,
+          });
 
       // Map source and validate it exists in database
       
@@ -350,35 +357,16 @@ function mapStayDuration(duration?: string): "51_weeks" | "45_weeks" | "short_st
   return durationMap[duration?.toLowerCase()?.trim() || ""] || "51_weeks";
 }
 
-function calculatePotentialRevenue(
-  room: string,
-  roomPricesByYear: Record<string, Record<string, number>>,
-  academicYear: string,
-): number {
-  const yearPrices =
-    roomPricesByYear[academicYear] ||
-    roomPricesByYear[Object.keys(roomPricesByYear).sort().at(-1) || ""] ||
-    {
-      platinum: 8500,
-      gold: 7000,
-      silver: 5500,
-      bronze: 4500,
-      standard: 3500,
-    };
-
-  return yearPrices[room] || yearPrices.silver || 5500;
-}
-
 function normalizeRoomPricesByYear(
   raw: unknown,
   academicYears: string[],
 ): Record<string, Record<string, number>> {
   const defaultPrices = {
-    platinum: 8500,
-    gold: 7000,
-    silver: 5500,
-    bronze: 4500,
-    standard: 3500,
+    platinum: 189,
+    gold: 156,
+    silver: 122,
+    bronze: 100,
+    standard: 78,
   };
 
   if (raw && typeof raw === "object" && !Array.isArray(raw) && typeof (raw as Record<string, unknown>).platinum === "number") {

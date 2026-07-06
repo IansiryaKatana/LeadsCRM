@@ -179,6 +179,75 @@ export function PipelineStatusChart({ statusData }: PipelineStatusChartProps) {
   );
 }
 
+interface PipelineRevenueByStatusChartProps {
+  statusRevenueData?: Record<string, number>;
+  formatCurrency?: (value: number) => string;
+}
+
+export function PipelineRevenueByStatusChart({
+  statusRevenueData,
+  formatCurrency,
+}: PipelineRevenueByStatusChartProps) {
+  const chartConfig = useMemo(() => buildStatusChartConfig(), []);
+
+  const chartData = useMemo<DistributionDatum[]>(
+    () =>
+      Object.entries(LEAD_STATUS_CONFIG)
+        .map(([key, config]) => ({
+          key,
+          name: config.label,
+          value: statusRevenueData?.[key] || 0,
+        }))
+        .filter((item) => item.value > 0)
+        .sort((a, b) => b.value - a.value),
+    [statusRevenueData],
+  );
+
+  if (chartData.length === 0) {
+    return <ChartEmptyState message="No pipeline revenue in this period" />;
+  }
+
+  return (
+    <ChartContainer config={chartConfig} className="h-[18rem] w-full aspect-auto">
+      <BarChart data={chartData} layout="vertical" margin={{ left: 4, right: 16, top: 4, bottom: 4 }}>
+        <CartesianGrid horizontal={false} />
+        <XAxis
+          type="number"
+          tickLine={false}
+          axisLine={false}
+          tickMargin={8}
+          tickFormatter={(value) =>
+            formatCurrency ? formatCurrency(Number(value)) : String(value)
+          }
+        />
+        <YAxis
+          type="category"
+          dataKey="name"
+          width={112}
+          tickLine={false}
+          axisLine={false}
+          tickMargin={8}
+        />
+        <ChartTooltip
+          content={
+            <ChartTooltipContent
+              hideLabel
+              formatter={(value) =>
+                formatCurrency ? formatCurrency(Number(value)) : String(value)
+              }
+            />
+          }
+        />
+        <Bar dataKey="value" name="Potential Revenue" radius={[0, 6, 6, 0]} barSize={24}>
+          {chartData.map((entry) => (
+            <Cell key={entry.key} fill={`var(--color-${entry.key})`} />
+          ))}
+        </Bar>
+      </BarChart>
+    </ChartContainer>
+  );
+}
+
 interface NationalityDistributionChartProps {
   nationalityData?: Record<string, number>;
 }

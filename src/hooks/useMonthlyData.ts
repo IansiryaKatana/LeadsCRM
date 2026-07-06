@@ -2,6 +2,8 @@ import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { buildNationalityDistribution } from "@/utils/phoneNationality";
+import { fetchRoomPricesByYear } from "@/utils/leadPotentialRevenue";
+import { getEffectivePotentialRevenue, type LeadRevenueRow } from "@/utils/leadRevenueStats";
 
 const MONTH_LABELS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
 
@@ -52,9 +54,13 @@ export function useMonthlyLeadData(
   return useQuery({
     queryKey: ["monthly-lead-data", academicYear, startDate?.toISOString(), endDate?.toISOString()],
     queryFn: async () => {
+      const roomPricesByYear = await fetchRoomPricesByYear(supabase);
+
       let query = supabase
         .from("leads")
-        .select("created_at, lead_status, potential_revenue, academic_year");
+        .select(
+          "created_at, lead_status, potential_revenue, room_choice, stay_duration, source, metadata, academic_year",
+        );
 
       if (academicYear && academicYear.trim() !== "") {
         query = query.eq("academic_year", academicYear);
@@ -82,7 +88,10 @@ export function useMonthlyLeadData(
           current.leads += 1;
           if (lead.lead_status === "converted") {
             current.converted += 1;
-            current.revenue += Number(lead.potential_revenue) || 0;
+            current.revenue += getEffectivePotentialRevenue(
+              lead as LeadRevenueRow,
+              roomPricesByYear,
+            );
           }
         }
       });

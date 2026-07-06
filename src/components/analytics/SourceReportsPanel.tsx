@@ -8,10 +8,11 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Target, Users, DollarSign, Filter } from "lucide-react";
+import { Target, Users, DollarSign, Filter, TrendingUp, BarChart3 } from "lucide-react";
 import {
   LeadVolumeChart,
   PipelineStatusChart,
+  PipelineRevenueByStatusChart,
   RoomDistributionChart,
   NationalityDistributionChart,
 } from "@/components/charts/analytics-charts";
@@ -124,8 +125,8 @@ export function SourceReportsPanel({
 
       {isLoading ? (
         <>
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-            {[1, 2, 3].map((i) => (
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
+            {[1, 2, 3, 4, 5].map((i) => (
               <SkeletonCard key={i} />
             ))}
           </div>
@@ -136,7 +137,7 @@ export function SourceReportsPanel({
         </>
       ) : (
         <>
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
             <StatCard
               title="Total Leads"
               value={reports?.stats.totalLeads || 0}
@@ -151,12 +152,24 @@ export function SourceReportsPanel({
               variant="success"
             />
             <StatCard
-              title="Revenue"
+              title="Confirmed Revenue"
               value={formatCompactCurrency(reports?.stats.totalRevenue || 0)}
               subtitle={formatCurrency(reports?.stats.totalRevenue || 0)}
               icon={DollarSign}
               variant="primary"
-              className="sm:col-span-2 lg:col-span-1"
+            />
+            <StatCard
+              title="Forecast"
+              value={formatCompactCurrency(reports?.stats.forecastRevenue || 0)}
+              subtitle="High interest pipeline"
+              icon={TrendingUp}
+              variant="warning"
+            />
+            <StatCard
+              title="Pipeline Potential"
+              value={formatCompactCurrency(reports?.stats.pipelineRevenue || 0)}
+              subtitle="Active leads value"
+              icon={BarChart3}
             />
           </div>
 
@@ -200,6 +213,21 @@ export function SourceReportsPanel({
               </CardHeader>
               <CardContent className="pt-0">
                 <PipelineStatusChart statusData={reports?.statusData} />
+              </CardContent>
+            </Card>
+
+            <Card className="shadow-card rounded-2xl border-0 lg:col-span-2 xl:col-span-2">
+              <CardHeader className="pb-2">
+                <CardTitle>Pipeline Revenue</CardTitle>
+                <CardDescription className="font-body">
+                  Potential revenue by status — room price per lead
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="pt-0">
+                <PipelineRevenueByStatusChart
+                  statusRevenueData={reports?.statusRevenueData}
+                  formatCurrency={formatCurrency}
+                />
               </CardContent>
             </Card>
           </div>

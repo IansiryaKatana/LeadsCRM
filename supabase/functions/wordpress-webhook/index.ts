@@ -1,5 +1,6 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { resolveLeadPotentialRevenue } from "../_shared/leadRevenue.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -208,11 +209,24 @@ serve(async (req) => {
       metadata: metadata,
       potential_revenue: isPaymentLead
         ? resolvePaymentAmount(payload)
-        : calculatePotentialRevenue(
-            mapRoomChoice(payload.room_choice || payload.studio_type || payload.studio_preference || (payload as any)["Choose Studio Type"]) || "silver",
+        : resolveLeadPotentialRevenue({
+            source,
+            room:
+              mapRoomChoice(
+                payload.room_choice ||
+                  payload.studio_type ||
+                  payload.studio_preference ||
+                  (payload as any)["Choose Studio Type"],
+              ) || "silver",
+            stayDuration:
+              mapStayDuration(
+                payload.stay_duration ||
+                  payload.duration ||
+                  (payload as any)["Stay Duration"],
+              ) || "51_weeks",
             roomPricesByYear,
             academicYear,
-          ),
+          }),
     };
 
     // Add contact form specific fields if present
@@ -423,11 +437,11 @@ function normalizeRoomPricesByYear(
   academicYears: string[],
 ): Record<string, Record<string, number>> {
   const defaultPrices = {
-    platinum: 8500,
-    gold: 7000,
-    silver: 5500,
-    bronze: 4500,
-    standard: 3500,
+    platinum: 189,
+    gold: 156,
+    silver: 122,
+    bronze: 100,
+    standard: 78,
   };
 
   if (raw && typeof raw === "object" && !Array.isArray(raw) && typeof (raw as Record<string, unknown>).platinum === "number") {
@@ -450,25 +464,6 @@ function normalizeRoomPricesByYear(
   }
 
   return result;
-}
-
-function calculatePotentialRevenue(
-  room: string,
-  roomPricesByYear: Record<string, Record<string, number>>,
-  academicYear: string,
-): number {
-  const yearPrices =
-    roomPricesByYear[academicYear] ||
-    roomPricesByYear[Object.keys(roomPricesByYear).sort().at(-1) || ""] ||
-    {
-      platinum: 8500,
-      gold: 7000,
-      silver: 5500,
-      bronze: 4500,
-      standard: 3500,
-    };
-
-  return yearPrices[room] || yearPrices.silver || 5500;
 }
 
 function resolvePaymentAmount(payload: WordPressFormPayload): number {

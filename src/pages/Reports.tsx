@@ -45,10 +45,12 @@ import { useTeamPerformance } from "@/hooks/useTeamPerformance";
 import {
   LeadVolumeChart,
   PipelineStatusChart,
+  PipelineRevenueByStatusChart,
   RoomDistributionChart,
   NationalityDistributionChart,
 } from "@/components/charts/analytics-charts";
 import { nationalityCountsToChartData } from "@/utils/phoneNationality";
+import { buildStatusRevenueDistribution } from "@/utils/leadRevenueStats";
 import {
   getReportDateBounds,
   type ReportDateRangeKey,
@@ -107,6 +109,10 @@ export default function Reports() {
     fill: CHART_PALETTE[Object.keys(LEAD_STATUS_CONFIG).indexOf(key) % CHART_PALETTE.length],
   }));
 
+  const statusRevenueDistribution = stats?.statusRevenue
+    ? buildStatusRevenueDistribution(stats.statusRevenue)
+    : [];
+
   const nationalityDistribution = nationalityCountsToChartData(nationalityData ?? {});
 
   const filterSummary = [
@@ -132,6 +138,7 @@ export default function Reports() {
         monthlyData,
         roomDistribution,
         statusDistribution,
+        statusRevenueDistribution,
         channelPerformance: channels,
         nationalityDistribution,
         dateRange: filterSummary,
@@ -159,6 +166,7 @@ export default function Reports() {
         monthlyData,
         roomDistribution,
         statusDistribution,
+        statusRevenueDistribution,
         channelPerformance: channels,
         nationalityDistribution,
         dateRange: filterSummary,
@@ -439,6 +447,7 @@ export default function Reports() {
                         monthlyData: monthlyData || [],
                         roomDistribution,
                         statusDistribution,
+                        statusRevenueDistribution,
                         channelPerformance: channels,
                         nationalityDistribution,
                         dateRange: filterSummary,
@@ -476,8 +485,8 @@ export default function Reports() {
           <TabsContent value="analytics" className="space-y-6 mt-0">
             {analyticsLoading ? (
               <>
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                  {[1, 2, 3].map((i) => (
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                  {[1, 2, 3, 4].map((i) => (
                     <SkeletonCard key={i} />
                   ))}
                 </div>
@@ -488,7 +497,7 @@ export default function Reports() {
               </>
             ) : (
               <>
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
                   <StatCard
                     title="Total Leads"
                     value={stats?.totalLeads || 0}
@@ -503,12 +512,18 @@ export default function Reports() {
                     variant="success"
                   />
                   <StatCard
-                    title="Revenue"
+                    title="Confirmed Revenue"
                     value={formatCompactCurrency(stats?.totalRevenue || 0)}
                     subtitle={formatCurrency(stats?.totalRevenue || 0)}
                     icon={DollarSign}
                     variant="primary"
-                    className="sm:col-span-2 lg:col-span-1"
+                  />
+                  <StatCard
+                    title="Forecast"
+                    value={formatCompactCurrency(stats?.forecastRevenue || 0)}
+                    subtitle="High interest pipeline"
+                    icon={TrendingUp}
+                    variant="warning"
                   />
                 </div>
 
@@ -553,6 +568,21 @@ export default function Reports() {
                     </CardHeader>
                     <CardContent className="pt-0">
                       <PipelineStatusChart statusData={statusData} />
+                    </CardContent>
+                  </Card>
+
+                  <Card className="shadow-card rounded-2xl border-0 lg:col-span-2 xl:col-span-2">
+                    <CardHeader className="pb-2">
+                      <CardTitle>Pipeline Revenue</CardTitle>
+                      <CardDescription className="font-body">
+                        Potential revenue by status — room price per lead
+                      </CardDescription>
+                    </CardHeader>
+                    <CardContent className="pt-0">
+                      <PipelineRevenueByStatusChart
+                        statusRevenueData={stats?.statusRevenue}
+                        formatCurrency={formatCurrency}
+                      />
                     </CardContent>
                   </Card>
                 </div>

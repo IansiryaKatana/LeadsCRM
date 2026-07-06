@@ -54,18 +54,18 @@ const DEFAULT_SETTINGS: SystemSettings = {
   branding: { logo_url: null, favicon_url: null },
   room_prices: {
     "2024/2025": {
-      platinum: 8500,
-      gold: 7000,
-      silver: 5500,
-      bronze: 4500,
-      standard: 3500,
+      platinum: 189,
+      gold: 156,
+      silver: 122,
+      bronze: 100,
+      standard: 78,
     },
     "2025/2026": {
-      platinum: 8500,
-      gold: 7000,
-      silver: 5500,
-      bronze: 4500,
-      standard: 3500,
+      platinum: 189,
+      gold: 156,
+      silver: 122,
+      bronze: 100,
+      standard: 78,
     },
   },
   room_labels: {

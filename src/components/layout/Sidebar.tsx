@@ -43,7 +43,6 @@ import { useUnreadWebLeadsCount, useUnreadWebLeadsCountBySource } from "@/hooks/
 import {
   Collapsible,
   CollapsibleContent,
-  CollapsibleTrigger,
 } from "@/components/ui/collapsible";
 import { ChevronDown, ChevronRight } from "lucide-react";
 import { getSourceIcon } from "@/utils/sourceIcons";
@@ -173,6 +172,13 @@ export function Sidebar() {
   // Check if we're on a source page
   const isSourcePage = location.pathname.startsWith("/leads/source/");
 
+  // Keep sources expanded while browsing a source sub-page
+  useEffect(() => {
+    if (isSourcePage) {
+      setSourcesExpanded(true);
+    }
+  }, [location.pathname, isSourcePage]);
+
   const handleSignOut = async () => {
     await signOut();
     navigate("/auth");
@@ -267,45 +273,56 @@ export function Sidebar() {
                   return (
                     <div key={item.name} className="space-y-1">
                       <Collapsible open={sourcesExpanded} onOpenChange={setSourcesExpanded}>
-                        <CollapsibleTrigger asChild>
+                        <div
+                          className={cn(
+                            "flex items-center gap-0.5 rounded transition-all duration-200",
+                            !isSourcePage &&
+                              location.pathname === item.href &&
+                              "bg-primary text-primary-foreground shadow-card"
+                          )}
+                        >
                           <NavLink
                             to={item.href}
+                            end
                             className={cn(
-                              "flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-muted-foreground transition-all duration-200 hover:bg-muted hover:text-foreground w-full",
-                              !isSourcePage && location.pathname === item.href && "bg-primary text-primary-foreground hover:bg-primary hover:text-primary-foreground shadow-card"
+                              "flex flex-1 items-center gap-3 px-3.5 py-2.5 rounded text-muted-foreground transition-all duration-200 hover:bg-muted hover:text-foreground min-w-0",
+                              !isSourcePage &&
+                                location.pathname === item.href &&
+                                "text-primary-foreground hover:bg-primary hover:text-primary-foreground",
+                              isSourcePage && "hover:bg-muted hover:text-foreground"
                             )}
-                            activeClassName="bg-primary text-primary-foreground hover:bg-primary hover:text-primary-foreground shadow-card"
-                            onClick={(e) => {
-                              if (e.currentTarget === e.target || (e.target as HTMLElement).closest('.chevron-icon')) {
-                                // Only toggle if clicking the chevron or the link itself
-                                if ((e.target as HTMLElement).closest('.chevron-icon')) {
-                                  e.preventDefault();
-                                  setSourcesExpanded(!sourcesExpanded);
-                                } else {
-                                  setIsOpen(false);
-                                }
-                              }
-                            }}
+                            onClick={() => setIsOpen(false)}
                           >
-                            <item.icon className="h-4 w-4" />
+                            <item.icon className="h-4 w-4 shrink-0" />
                             <span className="font-medium flex-1">{item.name}</span>
                             {unreadWebLeads > 0 && (
                               <span className="inline-flex items-center justify-center rounded-full bg-warning text-warning-foreground text-xs font-semibold px-2 py-0.5 min-w-[1.5rem]">
                                 {unreadWebLeads.toLocaleString()}
                               </span>
                             )}
-                            {activeSources.length > 0 && (
-                              <span className="chevron-icon ml-1">
-                                {sourcesExpanded ? (
-                                  <ChevronDown className="h-4 w-4" />
-                                ) : (
-                                  <ChevronRight className="h-4 w-4" />
-                                )}
-                              </span>
-                            )}
                           </NavLink>
-                        </CollapsibleTrigger>
-                        
+                          {activeSources.length > 0 && (
+                            <button
+                              type="button"
+                              className={cn(
+                                "chevron-icon shrink-0 p-2 rounded transition-colors hover:bg-muted/80",
+                                !isSourcePage &&
+                                  location.pathname === item.href &&
+                                  "text-primary-foreground hover:bg-primary/80"
+                              )}
+                              aria-expanded={sourcesExpanded}
+                              aria-label={sourcesExpanded ? "Collapse lead sources" : "Expand lead sources"}
+                              onClick={() => setSourcesExpanded((prev) => !prev)}
+                            >
+                              {sourcesExpanded ? (
+                                <ChevronDown className="h-4 w-4" />
+                              ) : (
+                                <ChevronRight className="h-4 w-4" />
+                              )}
+                            </button>
+                          )}
+                        </div>
+
                         {/* Expandable Sources Menu */}
                         {activeSources.length > 0 && (
                           <CollapsibleContent className="pl-4 space-y-1 mt-1">
@@ -313,7 +330,7 @@ export function Sidebar() {
                               const isActive = location.pathname === `/leads/source/${source.slug}`;
                               const IconComponent = getSourceIcon(source.slug);
                               const isWebSource = WEB_SOURCE_SLUGS.includes(source.slug);
-                              
+
                               return (
                                 <SourceNavItem
                                   key={source.slug}
@@ -321,7 +338,10 @@ export function Sidebar() {
                                   isActive={isActive}
                                   IconComponent={IconComponent}
                                   isWebSource={isWebSource}
-                                  onNavigate={() => setIsOpen(false)}
+                                  onNavigate={() => {
+                                    setSourcesExpanded(true);
+                                    setIsOpen(false);
+                                  }}
                                 />
                               );
                             })}
@@ -339,7 +359,7 @@ export function Sidebar() {
                     key={item.name}
                     to={item.href}
                     className={cn(
-                      "flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-muted-foreground transition-all duration-200 hover:bg-muted hover:text-foreground"
+                      "flex items-center gap-3 px-3.5 py-2.5 rounded text-muted-foreground transition-all duration-200 hover:bg-muted hover:text-foreground"
                     )}
                     activeClassName="bg-primary text-primary-foreground hover:bg-primary hover:text-primary-foreground shadow-card"
                     onClick={() => setIsOpen(false)}

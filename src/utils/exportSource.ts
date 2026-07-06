@@ -10,6 +10,13 @@ import {
   buildNationalityDistribution,
   nationalityCountsToChartData,
 } from "@/utils/phoneNationality";
+import { fetchRoomPricesByYear } from "@/utils/leadPotentialRevenue";
+import {
+  aggregateLeadRevenueStats,
+  buildStatusRevenueDistribution,
+  getEffectivePotentialRevenue,
+  type LeadRevenueRow,
+} from "@/utils/leadRevenueStats";
 
 async function fetchLeadSources() {
   const { data, error } = await supabase
@@ -64,40 +71,13 @@ async function fetchLeadsByDateRangeAndSource(
   return data || [];
 }
 
-function calculateStatsFromLeads(leads: Record<string, unknown>[]): DashboardStats {
-  const totalLeads = leads.length;
-  const newLeads = leads.filter((l) => l.lead_status === "new").length;
-  const awaitingOutreach = leads.filter((l) => l.lead_status === "awaiting_outreach").length;
-  const lowEngagement = leads.filter((l) => l.lead_status === "low_engagement").length;
-  const highInterest = leads.filter((l) => l.lead_status === "high_interest").length;
-  const converted = leads.filter((l) => l.lead_status === "converted").length;
-  const closed = leads.filter((l) => l.lead_status === "closed").length;
-
-  const conversionRate = totalLeads > 0 ? (converted / totalLeads) * 100 : 0;
-
-  const totalRevenue = leads
-    .filter((l) => l.lead_status === "converted")
-    .reduce((sum, l) => sum + (Number(l.potential_revenue) || 0), 0);
-
-  const forecastRevenue = leads
-    .filter((l) => l.lead_status === "high_interest")
-    .reduce((sum, l) => sum + (Number(l.potential_revenue) || 0), 0);
-
-  return {
-    totalLeads,
-    newLeads,
-    awaitingOutreach,
-    lowEngagement,
-    highInterest,
-    converted,
-    closed,
-    conversionRate,
-    totalRevenue,
-    forecastRevenue,
-  };
+async function calculateStatsFromLeads(leads: LeadRevenueRow[]): Promise<DashboardStats> {
+  const roomPricesByYear = await fetchRoomPricesByYear(supabase);
+  return aggregateLeadRevenueStats(leads, roomPricesByYear);
 }
 
-function calculateMonthlyData(leads: Record<string, unknown>[]) {
+async function calculateMonthlyData(leads: LeadRevenueRow[]) {
+  const roomPricesByYear = await fetchRoomPricesByYear(supabase);
   const monthlyMap = new Map<string, { leads: number; converted: number; revenue: number }>();
   const months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
 
@@ -113,7 +93,7 @@ function calculateMonthlyData(leads: Record<string, unknown>[]) {
     current.leads += 1;
     if (lead.lead_status === "converted") {
       current.converted += 1;
-      current.revenue += Number(lead.potential_revenue) || 0;
+      current.revenue += getEffectivePotentialRevenue(lead, roomPricesByYear);
     }
   });
 
@@ -178,11 +158,12 @@ async function buildSourceExportPayload(data: SourceExportData) {
   const leadProfile =
     data.leadProfile ?? resolveLeadExportProfile(sourceSlug, viewMode);
 
-  const leads = await fetchLeadsByDateRangeAndSource(startDate, endDate, sourceSlug, academicYear);
-  const stats = calculateStatsFromLeads(leads);
-  const monthlyData = calculateMonthlyData(leads);
+  const leads = (await fetchLeadsByDateRangeAndSource(startDate, endDate, sourceSlug, academicYear)) as LeadRevenueRow[];
+  const stats = await calculateStatsFromLeads(leads);
+  const monthlyData = await calculateMonthlyData(leads);
   const roomDistribution = calculateRoomDistribution(leads);
   const statusDistribution = calculateStatusDistribution(leads);
+  const statusRevenueDistribution = buildStatusRevenueDistribution(stats.statusRevenue);
   const nationalityDistribution = nationalityCountsToChartData(buildNationalityDistribution(leads));
   const sources = await fetchLeadSources();
 
@@ -197,6 +178,7 @@ async function buildSourceExportPayload(data: SourceExportData) {
     monthlyData,
     roomDistribution,
     statusDistribution,
+    statusRevenueDistribution,
     nationalityDistribution,
     dateRange: `${rangeText} | Source: ${sourceName}`,
     currencySymbol,

@@ -798,7 +798,7 @@ export function SystemSettingsTab() {
               </SelectContent>
             </Select>
             <p className="text-xs text-muted-foreground">
-              Prices apply to leads tagged with this academic year
+              Weekly rates — potential revenue = rate × stay duration (viewing &amp; callback leads)
             </p>
           </div>
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">

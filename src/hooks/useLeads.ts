@@ -14,7 +14,7 @@ type LeadInsert = Database["public"]["Tables"]["leads"]["Insert"];
 type LeadUpdate = Database["public"]["Tables"]["leads"]["Update"];
 type LeadStatus = Database["public"]["Enums"]["lead_status"];
 
-const REVENUE_FIELDS = ["room_choice", "academic_year", "source"] as const;
+const REVENUE_FIELDS = ["room_choice", "academic_year", "source", "stay_duration"] as const;
 
 async function withComputedPotentialRevenue(
   lead: Omit<LeadInsert, "created_by">,
@@ -23,6 +23,7 @@ async function withComputedPotentialRevenue(
   const potential_revenue = resolveLeadPotentialRevenue({
     roomChoice: lead.room_choice,
     academicYear: lead.academic_year,
+    stayDuration: lead.stay_duration,
     source: lead.source,
     metadata: lead.metadata,
     roomPricesByYear,
@@ -169,7 +170,7 @@ export function useUpdateLead() {
       if (needsRevenueRecalc) {
         const { data: currentLead, error: fetchError } = await supabase
           .from("leads")
-          .select("room_choice, academic_year, source, metadata, potential_revenue")
+          .select("room_choice, academic_year, source, stay_duration, metadata, potential_revenue")
           .eq("id", id)
           .single();
 
@@ -182,6 +183,7 @@ export function useUpdateLead() {
           payload.potential_revenue = resolveLeadPotentialRevenue({
             roomChoice: (updates.room_choice ?? currentLead.room_choice) as string,
             academicYear: (updates.academic_year ?? currentLead.academic_year) as string,
+            stayDuration: (updates.stay_duration ?? currentLead.stay_duration) as string,
             source: mergedSource,
             metadata: updates.metadata ?? currentLead.metadata,
             roomPricesByYear,

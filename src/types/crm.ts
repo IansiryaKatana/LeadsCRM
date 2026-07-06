@@ -142,6 +142,8 @@ export interface DashboardStats {
   closed: number;
   totalRevenue: number;
   forecastRevenue: number;
+  pipelineRevenue?: number;
+  statusRevenue?: Record<string, number>;
   conversionRate: number;
 }
 
@@ -203,8 +205,8 @@ export const ROOM_CHOICE_CONFIG: Record<RoomChoice, { label: string; basePrice: 
   standard: { label: "Rhodium Plus", basePrice: 3500 },
 };
 
-export const STAY_DURATION_CONFIG: Record<StayDuration, { label: string; multiplier: number }> = {
-  "51_weeks": { label: "51 Weeks", multiplier: 1.0 },
-  "45_weeks": { label: "45 Weeks", multiplier: 0.88 },
-  "short_stay": { label: "Short Stay", multiplier: 0.4 },
+export const STAY_DURATION_CONFIG: Record<StayDuration, { label: string; weeks: number }> = {
+  "51_weeks": { label: "51 Weeks", weeks: 51 },
+  "45_weeks": { label: "45 Weeks", weeks: 45 },
+  "short_stay": { label: "Short Stay", weeks: 12 },
 };

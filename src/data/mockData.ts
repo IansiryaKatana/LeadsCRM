@@ -72,7 +72,16 @@ export const calculateDashboardStats = (leads: Lead[]): DashboardStats => {
   const totalRevenue = convertedLeads.reduce((sum, l) => sum + l.potential_revenue, 0);
   const forecastRevenue = leads
     .filter(l => l.lead_status === "high_interest")
-    .reduce((sum, l) => sum + l.potential_revenue * 0.7, 0);
+    .reduce((sum, l) => sum + l.potential_revenue, 0);
+
+  const pipelineRevenue = leads
+    .filter(l => ["new", "awaiting_outreach", "low_engagement", "high_interest"].includes(l.lead_status))
+    .reduce((sum, l) => sum + l.potential_revenue, 0);
+
+  const statusRevenue = leads.reduce<Record<string, number>>((acc, lead) => {
+    acc[lead.lead_status] = (acc[lead.lead_status] || 0) + lead.potential_revenue;
+    return acc;
+  }, {});
 
   return {
     totalLeads: leads.length,
@@ -84,6 +93,8 @@ export const calculateDashboardStats = (leads: Lead[]): DashboardStats => {
     closed: statusCounts.closed || 0,
     totalRevenue,
     forecastRevenue,
+    pipelineRevenue,
+    statusRevenue,
     conversionRate: leads.length > 0 ? ((statusCounts.converted || 0) / leads.length) * 100 : 0,
   };
 };

@@ -1,5 +1,6 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { resolveLeadPotentialRevenue } from "../_shared/leadRevenue.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -121,7 +122,13 @@ serve(async (req) => {
       is_hot: isPaymentLead,
       potential_revenue: isPaymentSource(source)
         ? 0
-        : calculatePotentialRevenue(mappedRoom, roomPricesByYear, academicYear),
+        : resolveLeadPotentialRevenue({
+            source,
+            room: mappedRoom,
+            stayDuration: mapStayDuration(payload.stay_duration as string) || "51_weeks",
+            roomPricesByYear,
+            academicYear,
+          }),
       metadata: {
         form_type_raw: formType,
         lead_type_normalized: normalizedLeadType,
@@ -220,11 +227,11 @@ function normalizeRoomPricesByYear(
   academicYears: string[],
 ): Record<string, Record<string, number>> {
   const defaultPrices = {
-    platinum: 8500,
-    gold: 7000,
-    silver: 5500,
-    bronze: 4500,
-    standard: 3500,
+    platinum: 189,
+    gold: 156,
+    silver: 122,
+    bronze: 100,
+    standard: 78,
   };
 
   if (raw && typeof raw === "object" && !Array.isArray(raw) && typeof (raw as Record<string, unknown>).platinum === "number") {
@@ -247,23 +254,4 @@ function normalizeRoomPricesByYear(
   }
 
   return result;
-}
-
-function calculatePotentialRevenue(
-  room: string,
-  roomPricesByYear: Record<string, Record<string, number>>,
-  academicYear: string,
-): number {
-  const yearPrices =
-    roomPricesByYear[academicYear] ||
-    roomPricesByYear[Object.keys(roomPricesByYear).sort().at(-1) || ""] ||
-    {
-      platinum: 8500,
-      gold: 7000,
-      silver: 5500,
-      bronze: 4500,
-      standard: 3500,
-    };
-
-  return yearPrices[room] || yearPrices.silver || 5500;
 }
