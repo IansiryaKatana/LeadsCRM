@@ -3,7 +3,6 @@ import { LEAD_STATUS_CONFIG, getSourceConfig } from "@/types/crm";
 import { cn } from "@/lib/utils";
 import { subsectionTitleClass, pageTitleClass, detailSectionTitleClass } from "@/lib/typography";
 import { Button } from "@/components/ui/button";
-import { Textarea } from "@/components/ui/textarea";
 import {
   Dialog,
   DialogContent,
@@ -37,7 +36,8 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { useUpdateLeadStatus, useAssignLead, useToggleHotLead, useLead } from "@/hooks/useLeads";
-import { useLeadNotes, useCreateLeadNote } from "@/hooks/useLeadNotes";
+import { LeadNotesTab } from "@/components/leads/LeadNotesTab";
+import { useLeadNotes } from "@/hooks/useLeadNotes";
 import { useFollowUps, useCanCloseLead } from "@/hooks/useFollowUps";
 import { useTeamMembers } from "@/hooks/useDashboardStats";
 import { useAuth } from "@/hooks/useAuth";
@@ -50,7 +50,6 @@ import { FollowUpHistory } from "@/components/leads/FollowUpHistory";
 import { FollowUpForm } from "@/components/leads/FollowUpForm";
 import { ExceptionRequestDialog } from "@/components/leads/ExceptionRequestDialog";
 import { AuditTrailDisplay } from "@/components/leads/AuditTrailDisplay";
-import { LeadNoteContent } from "@/components/leads/LeadNoteContent";
 import { EmailTab } from "@/components/leads/EmailTab";
 import { TasksTab } from "@/components/leads/TasksTab";
 import { CalendarTab } from "@/components/leads/CalendarTab";
@@ -90,7 +89,6 @@ const MOBILE_TAB_LABELS: Record<string, string> = {
 
 export function LeadDetailDialog({ lead, onClose, initialTab }: LeadDetailDialogProps) {
   const isMobile = useIsMobile();
-  const [newNote, setNewNote] = useState("");
   const [showFollowUpForm, setShowFollowUpForm] = useState(false);
   const [showCloseWarning, setShowCloseWarning] = useState(false);
   const [showExceptionDialog, setShowExceptionDialog] = useState(false);
@@ -108,13 +106,12 @@ export function LeadDetailDialog({ lead, onClose, initialTab }: LeadDetailDialog
   const updateStatus = useUpdateLeadStatus();
   const assignLead = useAssignLead();
   const toggleHot = useToggleHotLead();
-  const createNote = useCreateLeadNote();
   
   // Fetch lead data reactively to get updated follow-up count
   const { data: currentLead, isLoading: leadLoading } = useLead(lead?.id || "");
   const leadData = currentLead || lead; // Use fetched lead if available, fallback to prop
   
-  const { data: notes = [], isLoading: notesLoading, refetch: refetchNotes } = useLeadNotes(leadData?.id || "");
+  const { data: notes = [] } = useLeadNotes(leadData?.id || "");
   const { data: followUps = [], isLoading: followUpsLoading, refetch: refetchFollowUps } = useFollowUps(leadData?.id || "");
   const { data: canClose = false } = useCanCloseLead(leadData?.id || "");
   const { data: teamMembers = [] } = useTeamMembers();
@@ -162,16 +159,6 @@ export function LeadDetailDialog({ lead, onClose, initialTab }: LeadDetailDialog
 
   const handleToggleHot = () => {
     toggleHot.mutate({ id: leadData.id, isHot: !leadData.is_hot });
-  };
-
-  const handleAddNote = () => {
-    if (!newNote.trim()) return;
-    createNote.mutate({ leadId: leadData.id, note: newNote }, {
-      onSuccess: () => {
-        setNewNote("");
-        refetchNotes();
-      },
-    });
   };
 
   const sourceConfig = getSourceConfig(leadData.source, sources);
@@ -588,64 +575,7 @@ export function LeadDetailDialog({ lead, onClose, initialTab }: LeadDetailDialog
           {/* Notes Tab (not shown for Web Contact / Keyworkers) */}
           {!isWebSimpleDialog && (
           <TabsContent value="notes" className={cn(tabScrollClass, "space-y-4")}>
-            <div className="space-y-4">
-              <div className="flex items-center justify-between pb-4 border-b">
-                <h3 className={subsectionTitleClass}>
-                  Notes
-                </h3>
-              </div>
-              
-              <div className="space-y-2">
-                <Textarea
-                  placeholder="Add a note..."
-                  value={newNote}
-                  onChange={(e) => setNewNote(e.target.value)}
-                  rows={3}
-                />
-                <Button 
-                  onClick={handleAddNote} 
-                  disabled={!newNote.trim() || createNote.isPending}
-                  size="sm"
-                  className="w-full"
-                >
-                  {createNote.isPending && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
-                  Add Note
-                </Button>
-              </div>
-
-              {notesLoading && notes.length === 0 ? (
-                <div className="space-y-3">
-                  <div className="flex items-center gap-2">
-                    <Loader2 className="h-4 w-4 animate-spin text-primary" />
-                    <span className="text-sm text-muted-foreground">Loading notes...</span>
-                  </div>
-                  <div className="relative h-1 w-full overflow-hidden rounded-full bg-muted">
-                    <div className="absolute h-full w-1/3 animate-[loading_1.5s_ease-in-out_infinite] bg-primary/50" />
-                  </div>
-                  <div className="space-y-2">
-                    <Skeleton className="h-16 w-full" />
-                    <Skeleton className="h-16 w-full" />
-                  </div>
-                </div>
-              ) : notes.length === 0 ? (
-                <div className="text-center py-8">
-                  <MessageSquare className="h-12 w-12 mx-auto text-muted-foreground/50 mb-2" />
-                  <p className="text-muted-foreground text-sm">No notes yet</p>
-                </div>
-              ) : (
-                <div className="space-y-3">
-                  {notes.map((note) => (
-                    <div key={note.id} className="rounded-lg border border-border bg-muted/50 p-4">
-                      <LeadNoteContent note={note.note} />
-                      <p className="mt-3 border-t border-border/60 pt-3 text-xs text-muted-foreground">
-                        {(note as any).profiles?.full_name || (note.created_by ? "Unknown" : "System")} •{" "}
-                        {new Date(note.created_at).toLocaleString()}
-                      </p>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
+            <LeadNotesTab leadId={leadData.id} />
           </TabsContent>
           )}
 

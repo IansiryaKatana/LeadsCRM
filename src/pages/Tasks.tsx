@@ -1,17 +1,11 @@
 import { useState } from "react";
 import { AppLayout } from "@/components/layout/AppLayout";
 import { pageTitleClass, subsectionTitleClass } from "@/lib/typography";
-import { Card, CardContent } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Checkbox } from "@/components/ui/checkbox";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useMyTasks, useTasks, useCompleteTask, type Task } from "@/hooks/useTasks";
-import { formatDistanceToNow, format } from "date-fns";
-import { Calendar, User, CheckCircle2, Circle, Plus, Loader2 } from "lucide-react";
-import { cn } from "@/lib/utils";
-import { Link } from "react-router-dom";
+import { CheckCircle2 } from "lucide-react";
+import { TaskListSection } from "@/components/tasks/TaskListSection";
 
 export default function Tasks() {
   const [activeTab, setActiveTab] = useState("my-tasks");
@@ -28,24 +22,6 @@ export default function Tasks() {
     if (!t.due_date) return false;
     return new Date(t.due_date) < new Date() && new Date(t.due_date).toDateString() !== new Date().toDateString();
   });
-
-  const getPriorityColor = (priority: string) => {
-    switch (priority) {
-      case "high":
-        return "bg-destructive/10 text-destructive border-destructive/20";
-      case "medium":
-        return "bg-warning/10 text-warning border-warning/20";
-      case "low":
-        return "bg-muted text-muted-foreground border-border";
-      default:
-        return "bg-muted text-muted-foreground border-border";
-    }
-  };
-
-  const isOverdue = (dueDate: string | null) => {
-    if (!dueDate) return false;
-    return new Date(dueDate) < new Date() && new Date(dueDate).toDateString() !== new Date().toDateString();
-  };
 
   const groupTasksByDate = (tasks: Task[]) => {
     const today = new Date();
@@ -83,65 +59,42 @@ export default function Tasks() {
     return { todayTasks, tomorrowTasks, thisWeekTasks, laterTasks, noDateTasks };
   };
 
-  const renderTaskGroup = (title: string, tasks: Task[], emptyMessage: string) => {
-    if (tasks.length === 0) return null;
+  const renderTaskGroups = (tasks: Task[], showLeadLink: boolean) => {
+    const { todayTasks, tomorrowTasks, thisWeekTasks, laterTasks, noDateTasks } = groupTasksByDate(tasks);
 
     return (
-      <div className="space-y-3">
-        <h4 className={subsectionTitleClass}>{title}</h4>
-        {tasks.map((task) => (
-          <Card key={task.id} className="p-4">
-            <div className="flex items-start gap-3">
-              <Checkbox
-                checked={task.completed}
-                onCheckedChange={(checked) =>
-                  completeTask.mutate({ id: task.id, completed: checked as boolean })
-                }
-                className="mt-1"
-              />
-              <div className="flex-1 space-y-2">
-                <div className="flex items-start justify-between gap-2">
-                  <div className="flex-1">
-                    <p className={cn("font-medium", task.completed && "line-through text-muted-foreground")}>
-                      {task.title}
-                    </p>
-                    {task.description && (
-                      <p className="text-sm text-muted-foreground mt-1">{task.description}</p>
-                    )}
-                    {task.lead_id && (
-                      <Link
-                        to={`/leads/${task.lead_id}`}
-                        className="text-sm text-primary hover:underline mt-1 inline-block"
-                      >
-                        View Lead →
-                      </Link>
-                    )}
-                  </div>
-                  <Badge variant="outline" className={getPriorityColor(task.priority)}>
-                    {task.priority}
-                  </Badge>
-                </div>
-                <div className="flex items-center gap-4 text-xs text-muted-foreground">
-                  {task.due_date && (
-                    <div className="flex items-center gap-1">
-                      <Calendar className="h-3 w-3" />
-                      <span className={cn(isOverdue(task.due_date) && "text-destructive font-semibold")}>
-                        {format(new Date(task.due_date), "MMM d, yyyy")} ({formatDistanceToNow(new Date(task.due_date), { addSuffix: true })})
-                      </span>
-                    </div>
-                  )}
-                  {task.assigned_profile && (
-                    <div className="flex items-center gap-1">
-                      <User className="h-3 w-3" />
-                      <span>{task.assigned_profile.full_name}</span>
-                    </div>
-                  )}
-                </div>
-              </div>
-            </div>
-          </Card>
-        ))}
-      </div>
+      <>
+        <TaskListSection
+          title="Today"
+          tasks={todayTasks}
+          showLeadLink={showLeadLink}
+          onComplete={(params) => completeTask.mutate(params)}
+        />
+        <TaskListSection
+          title="Tomorrow"
+          tasks={tomorrowTasks}
+          showLeadLink={showLeadLink}
+          onComplete={(params) => completeTask.mutate(params)}
+        />
+        <TaskListSection
+          title="This Week"
+          tasks={thisWeekTasks}
+          showLeadLink={showLeadLink}
+          onComplete={(params) => completeTask.mutate(params)}
+        />
+        <TaskListSection
+          title="Later"
+          tasks={laterTasks}
+          showLeadLink={showLeadLink}
+          onComplete={(params) => completeTask.mutate(params)}
+        />
+        <TaskListSection
+          title="No Due Date"
+          tasks={noDateTasks}
+          showLeadLink={showLeadLink}
+          onComplete={(params) => completeTask.mutate(params)}
+        />
+      </>
     );
   };
 
@@ -178,43 +131,16 @@ export default function Tasks() {
               </div>
             ) : (
               <>
-                {(() => {
-                  const { todayTasks, tomorrowTasks, thisWeekTasks, laterTasks, noDateTasks } = groupTasksByDate(myActiveTasks);
-                  return (
-                    <>
-                      {renderTaskGroup("Today", todayTasks, "")}
-                      {renderTaskGroup("Tomorrow", tomorrowTasks, "")}
-                      {renderTaskGroup("This Week", thisWeekTasks, "")}
-                      {renderTaskGroup("Later", laterTasks, "")}
-                      {renderTaskGroup("No Due Date", noDateTasks, "")}
-                    </>
-                  );
-                })()}
+                {renderTaskGroups(myActiveTasks, true)}
                 {myCompletedTasks.length > 0 && (
-                  <div className="space-y-3 pt-6 border-t">
-                    <h4 className={subsectionTitleClass}>Completed</h4>
-                    {myCompletedTasks.map((task) => (
-                      <Card key={task.id} className="p-4 opacity-60">
-                        <div className="flex items-start gap-3">
-                          <CheckCircle2 className="h-5 w-5 text-success mt-1" />
-                          <div className="flex-1">
-                            <p className="font-medium line-through text-muted-foreground">{task.title}</p>
-                            {task.completed_at && (
-                              <p className="text-xs text-muted-foreground mt-1">
-                                Completed {formatDistanceToNow(new Date(task.completed_at), { addSuffix: true })}
-                              </p>
-                            )}
-                          </div>
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => completeTask.mutate({ id: task.id, completed: false })}
-                          >
-                            Reopen
-                          </Button>
-                        </div>
-                      </Card>
-                    ))}
+                  <div className="pt-6 border-t">
+                    <TaskListSection
+                      title="Completed"
+                      tasks={myCompletedTasks}
+                      variant="completed"
+                      showLeadLink
+                      onComplete={(params) => completeTask.mutate(params)}
+                    />
                   </div>
                 )}
               </>
@@ -235,36 +161,16 @@ export default function Tasks() {
               </div>
             ) : (
               <>
-                {(() => {
-                  const { todayTasks, tomorrowTasks, thisWeekTasks, laterTasks, noDateTasks } = groupTasksByDate(allActiveTasks);
-                  return (
-                    <>
-                      {renderTaskGroup("Today", todayTasks, "")}
-                      {renderTaskGroup("Tomorrow", tomorrowTasks, "")}
-                      {renderTaskGroup("This Week", thisWeekTasks, "")}
-                      {renderTaskGroup("Later", laterTasks, "")}
-                      {renderTaskGroup("No Due Date", noDateTasks, "")}
-                    </>
-                  );
-                })()}
+                {renderTaskGroups(allActiveTasks, true)}
                 {allCompletedTasks.length > 0 && (
-                  <div className="space-y-3 pt-6 border-t">
-                    <h4 className={subsectionTitleClass}>Completed</h4>
-                    {allCompletedTasks.slice(0, 10).map((task) => (
-                      <Card key={task.id} className="p-4 opacity-60">
-                        <div className="flex items-start gap-3">
-                          <CheckCircle2 className="h-5 w-5 text-success mt-1" />
-                          <div className="flex-1">
-                            <p className="font-medium line-through text-muted-foreground">{task.title}</p>
-                            {task.completed_at && (
-                              <p className="text-xs text-muted-foreground mt-1">
-                                Completed {formatDistanceToNow(new Date(task.completed_at), { addSuffix: true })}
-                              </p>
-                            )}
-                          </div>
-                        </div>
-                      </Card>
-                    ))}
+                  <div className="pt-6 border-t">
+                    <TaskListSection
+                      title="Completed"
+                      tasks={allCompletedTasks.slice(0, 10)}
+                      variant="completed"
+                      showLeadLink
+                      onComplete={(params) => completeTask.mutate(params)}
+                    />
                   </div>
                 )}
               </>
@@ -279,58 +185,12 @@ export default function Tasks() {
                 <p className="text-sm text-muted-foreground mt-1">Great job staying on top of your tasks!</p>
               </div>
             ) : (
-              <div className="space-y-3">
-                {overdueTasks.map((task) => (
-                  <Card key={task.id} className="p-4 border-destructive/20 bg-destructive/5">
-                    <div className="flex items-start gap-3">
-                      <Checkbox
-                        checked={task.completed}
-                        onCheckedChange={(checked) =>
-                          completeTask.mutate({ id: task.id, completed: checked as boolean })
-                        }
-                        className="mt-1"
-                      />
-                      <div className="flex-1 space-y-2">
-                        <div className="flex items-start justify-between gap-2">
-                          <div className="flex-1">
-                            <p className="font-medium">{task.title}</p>
-                            {task.description && (
-                              <p className="text-sm text-muted-foreground mt-1">{task.description}</p>
-                            )}
-                            {task.lead_id && (
-                              <Link
-                                to={`/leads/${task.lead_id}`}
-                                className="text-sm text-primary hover:underline mt-1 inline-block"
-                              >
-                                View Lead →
-                              </Link>
-                            )}
-                          </div>
-                          <Badge variant="outline" className="bg-destructive/10 text-destructive border-destructive/20">
-                            Overdue
-                          </Badge>
-                        </div>
-                        <div className="flex items-center gap-4 text-xs text-destructive font-semibold">
-                          {task.due_date && (
-                            <div className="flex items-center gap-1">
-                              <Calendar className="h-3 w-3" />
-                              <span>
-                                Due: {format(new Date(task.due_date), "MMM d, yyyy")} ({formatDistanceToNow(new Date(task.due_date), { addSuffix: true })})
-                              </span>
-                            </div>
-                          )}
-                          {task.assigned_profile && (
-                            <div className="flex items-center gap-1">
-                              <User className="h-3 w-3" />
-                              <span>{task.assigned_profile.full_name}</span>
-                            </div>
-                          )}
-                        </div>
-                      </div>
-                    </div>
-                  </Card>
-                ))}
-              </div>
+              <TaskListSection
+                tasks={overdueTasks}
+                variant="overdue"
+                showLeadLink
+                onComplete={(params) => completeTask.mutate(params)}
+              />
             )}
           </TabsContent>
         </Tabs>

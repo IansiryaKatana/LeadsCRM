@@ -99,3 +99,56 @@ export function useCreateLeadNote() {
     },
   });
 }
+
+export function useUpdateLeadNote() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async ({
+      noteId,
+      leadId,
+      note,
+    }: {
+      noteId: string;
+      leadId: string;
+      note: string;
+    }) => {
+      const { data, error } = await supabase
+        .from("lead_notes")
+        .update({ note })
+        .eq("id", noteId)
+        .select()
+        .single();
+
+      if (error) throw error;
+      return { data, leadId };
+    },
+    onSuccess: ({ leadId }) => {
+      queryClient.invalidateQueries({ queryKey: ["lead-notes", leadId] });
+      toast({ title: "Note updated successfully" });
+    },
+    onError: (error) => {
+      toast({ title: "Failed to update note", description: error.message, variant: "destructive" });
+    },
+  });
+}
+
+export function useDeleteLeadNote() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async ({ noteId, leadId }: { noteId: string; leadId: string }) => {
+      const { error } = await supabase.from("lead_notes").delete().eq("id", noteId);
+
+      if (error) throw error;
+      return { leadId };
+    },
+    onSuccess: ({ leadId }) => {
+      queryClient.invalidateQueries({ queryKey: ["lead-notes", leadId] });
+      toast({ title: "Note deleted successfully" });
+    },
+    onError: (error) => {
+      toast({ title: "Failed to delete note", description: error.message, variant: "destructive" });
+    },
+  });
+}

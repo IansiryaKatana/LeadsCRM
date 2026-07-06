@@ -1,8 +1,5 @@
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
-import { Checkbox } from "@/components/ui/checkbox";
-import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
   ResponsivePanel,
@@ -23,13 +20,12 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
-import { Plus, CheckCircle2, Circle, Calendar, User, Trash2, Edit, Loader2 } from "lucide-react";
+import { Plus, Loader2 } from "lucide-react";
 import { useTasks, useCreateTask, useUpdateTask, useCompleteTask, useDeleteTask, type Task } from "@/hooks/useTasks";
 import { useTeamMembers } from "@/hooks/useDashboardStats";
 import { useAuth } from "@/hooks/useAuth";
-import { formatDistanceToNow } from "date-fns";
-import { cn } from "@/lib/utils";
 import { subsectionTitleClass } from "@/lib/typography";
+import { TaskListSection } from "@/components/tasks/TaskListSection";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -126,24 +122,6 @@ export function TasksTab({ leadId }: TasksTabProps) {
     });
   };
 
-  const getPriorityColor = (priority: string) => {
-    switch (priority) {
-      case "high":
-        return "bg-destructive/10 text-destructive border-destructive/20";
-      case "medium":
-        return "bg-warning/10 text-warning border-warning/20";
-      case "low":
-        return "bg-muted text-muted-foreground border-border";
-      default:
-        return "bg-muted text-muted-foreground border-border";
-    }
-  };
-
-  const isOverdue = (dueDate: string | null) => {
-    if (!dueDate) return false;
-    return new Date(dueDate) < new Date() && new Date(dueDate).toDateString() !== new Date().toDateString();
-  };
-
   if (isLoading) {
     return (
       <div className="space-y-4">
@@ -171,106 +149,25 @@ export function TasksTab({ leadId }: TasksTabProps) {
         </Button>
       </div>
 
-      {/* Active Tasks */}
-      {activeTasks.length > 0 && (
-        <div className="space-y-3">
-          <h4 className={subsectionTitleClass}>Active Tasks</h4>
-          {activeTasks.map((task) => (
-            <Card key={task.id} className="p-4">
-              <div className="flex items-start gap-3">
-                <Checkbox
-                  checked={task.completed}
-                  onCheckedChange={(checked) =>
-                    completeTask.mutate({ id: task.id, completed: checked as boolean })
-                  }
-                  className="mt-1"
-                />
-                <div className="flex-1 space-y-2">
-                  <div className="flex items-start justify-between gap-2">
-                    <div className="flex-1">
-                      <p className={cn("font-medium", task.completed && "line-through text-muted-foreground")}>
-                        {task.title}
-                      </p>
-                      {task.description && (
-                        <p className="text-sm text-muted-foreground mt-1">{task.description}</p>
-                      )}
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <Badge variant="outline" className={getPriorityColor(task.priority)}>
-                        {task.priority}
-                      </Badge>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="h-8 w-8"
-                        onClick={() => handleEdit(task)}
-                      >
-                        <Edit className="h-4 w-4" />
-                      </Button>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="h-8 w-8 text-destructive"
-                        onClick={() => {
-                          setSelectedTask(task);
-                          setDeleteDialogOpen(true);
-                        }}
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
-                    </div>
-                  </div>
-                  <div className="flex items-center gap-4 text-xs text-muted-foreground">
-                    {task.due_date && (
-                      <div className="flex items-center gap-1">
-                        <Calendar className="h-3 w-3" />
-                        <span className={cn(isOverdue(task.due_date) && "text-destructive font-semibold")}>
-                          {formatDistanceToNow(new Date(task.due_date), { addSuffix: true })}
-                        </span>
-                      </div>
-                    )}
-                    {task.assigned_profile && (
-                      <div className="flex items-center gap-1">
-                        <User className="h-3 w-3" />
-                        <span>{task.assigned_profile.full_name}</span>
-                      </div>
-                    )}
-                  </div>
-                </div>
-              </div>
-            </Card>
-          ))}
-        </div>
-      )}
+      <TaskListSection
+        title="Active Tasks"
+        tasks={activeTasks}
+        variant="active"
+        showEditDelete
+        onEdit={handleEdit}
+        onDelete={(task) => {
+          setSelectedTask(task);
+          setDeleteDialogOpen(true);
+        }}
+        onComplete={(params) => completeTask.mutate(params)}
+      />
 
-      {/* Completed Tasks */}
-      {completedTasks.length > 0 && (
-        <div className="space-y-3">
-          <h4 className={subsectionTitleClass}>Completed Tasks</h4>
-          {completedTasks.map((task) => (
-            <Card key={task.id} className="p-4 opacity-60">
-              <div className="flex items-start gap-3">
-                <CheckCircle2 className="h-5 w-5 text-success mt-1" />
-                <div className="flex-1">
-                  <p className="font-medium line-through text-muted-foreground">{task.title}</p>
-                  {task.completed_at && (
-                    <p className="text-xs text-muted-foreground mt-1">
-                      Completed {formatDistanceToNow(new Date(task.completed_at), { addSuffix: true })}
-                    </p>
-                  )}
-                </div>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => completeTask.mutate({ id: task.id, completed: false })}
-                >
-                  Reopen
-                </Button>
-              </div>
-            </Card>
-          ))}
-        </div>
-      )}
+      <TaskListSection
+        title="Completed Tasks"
+        tasks={completedTasks}
+        variant="completed"
+        onComplete={(params) => completeTask.mutate(params)}
+      />
 
       {tasks.length === 0 && (
         <div className="text-center py-12">
