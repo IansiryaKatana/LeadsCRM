@@ -241,7 +241,7 @@ export function Sidebar() {
       {/* Sidebar */}
       <aside
         className={cn(
-          "fixed inset-y-0 left-0 z-40 w-72 bg-card shadow-elevated transform transition-transform duration-300 lg:translate-x-0 lg:shadow-card",
+          "fixed inset-y-0 left-0 z-40 w-[calc(18rem+50px)] bg-card shadow-elevated transform transition-transform duration-300 lg:translate-x-0 lg:shadow-card",
           isOpen ? "translate-x-0" : "-translate-x-full"
         )}
       >
