@@ -41,6 +41,7 @@ import { useLeadSources } from "@/hooks/useLeadSources";
 import type { Database } from "@/integrations/supabase/types";
 import { DEPOSITS_PAYMENTS_SOURCE_SLUG } from "@/constants/leadSegments";
 import { getLeadPaymentId, getLeadPaymentAmountPounds } from "@/utils/leadPaymentAmount";
+import { leadMatchesSearch } from "@/utils/leadSearch";
 import { useSystemSettingsContext } from "@/contexts/SystemSettingsContext";
 import {
   AlertDialog,
@@ -125,11 +126,13 @@ export function LeadTable({
 
   // Apply search and filters
   const filteredLeads = leads.filter((lead) => {
-    // Search filter
-    const matchesSearch =
-      lead.full_name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      lead.email.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      (lead.phone?.includes(searchQuery) ?? false);
+    const assignedMember = teamMembers.find((member) => member.user_id === lead.assigned_to);
+    const sourceConfig = getSourceConfig(lead.source, sources);
+
+    const matchesSearch = leadMatchesSearch(lead, searchQuery, {
+      assignedToName: assignedMember?.full_name,
+      sourceLabel: sourceConfig.label,
+    });
 
     if (!matchesSearch) return false;
 
@@ -413,7 +416,7 @@ export function LeadTable({
               <div className="relative flex-1 sm:w-64">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                 <Input
-                  placeholder="Search leads..."
+                  placeholder="Search name, email, phone, payment ID..."
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
                   className="pl-10 bg-muted/50 border-0"
