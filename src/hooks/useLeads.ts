@@ -217,17 +217,31 @@ export function useUpdateLeadStatus() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: async ({ id, status }: { id: string; status: LeadStatus }) => {
+    mutationFn: async ({
+      id,
+      status,
+      assignToUserId,
+    }: {
+      id: string;
+      status: LeadStatus;
+      assignToUserId?: string;
+    }) => {
+      const updates: { lead_status: LeadStatus; assigned_to?: string } = {
+        lead_status: status,
+      };
+      if (assignToUserId) {
+        updates.assigned_to = assignToUserId;
+      }
+
       const { data, error } = await supabase
         .from("leads")
-        .update({ lead_status: status })
+        .update(updates)
         .eq("id", id)
         .select()
         .single();
 
       if (error) throw error;
 
-      // Trigger notification
       try {
         await supabase.functions.invoke("send-notification", {
           body: { leadId: id, type: "status_change", newStatus: status },
@@ -236,13 +250,27 @@ export function useUpdateLeadStatus() {
         console.error("Notification failed:", e);
       }
 
+      if (assignToUserId) {
+        try {
+          await supabase.functions.invoke("send-notification", {
+            body: { leadId: id, type: "lead_assigned", assignedTo: assignToUserId },
+          });
+        } catch (e) {
+          console.error("Assignment notification failed:", e);
+        }
+      }
+
       return data;
     },
-    onSuccess: (data) => {
+    onSuccess: (data, variables) => {
       queryClient.invalidateQueries({ queryKey: ["leads"] });
       queryClient.invalidateQueries({ queryKey: ["leads", data.id] });
       queryClient.invalidateQueries({ queryKey: ["dashboard-stats"] });
-      toast({ title: "Status updated successfully" });
+      toast({
+        title: variables.assignToUserId
+          ? "Status updated and lead assigned to you"
+          : "Status updated successfully",
+      });
     },
     onError: (error) => {
       toast({ title: "Failed to update status", description: error.message, variant: "destructive" });

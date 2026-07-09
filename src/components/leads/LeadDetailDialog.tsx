@@ -100,7 +100,8 @@ export function LeadDetailDialog({ lead, onClose, initialTab }: LeadDetailDialog
       setActiveTab(initialTab ?? "details");
     }
   }, [lead?.id, initialTab]);
-  const { hasElevatedRole, isAdmin } = useAuth();
+  const { hasElevatedRole, isAdmin, isSalesperson, user } = useAuth();
+  const canChangeStatus = hasElevatedRole || isSalesperson;
   const { formatCurrency, getRoomLabel } = useSystemSettingsContext();
   
   const updateStatus = useUpdateLeadStatus();
@@ -135,6 +136,12 @@ export function LeadDetailDialog({ lead, onClose, initialTab }: LeadDetailDialog
   const lastFollowUpDate = leadData.last_followup_date ? new Date(leadData.last_followup_date) : null;
   const nextFollowUpDate = leadData.next_followup_date ? new Date(leadData.next_followup_date) : null;
 
+  const getStatusUpdatePayload = (status: LeadStatus) => ({
+    id: leadData.id,
+    status,
+    assignToUserId: isSalesperson ? user?.id : undefined,
+  });
+
   const handleStatusChange = (status: LeadStatus) => {
     // Check if trying to close without 3 follow-ups
     if (status === "closed" && followUpCount < 3) {
@@ -142,12 +149,12 @@ export function LeadDetailDialog({ lead, onClose, initialTab }: LeadDetailDialog
       setShowCloseWarning(true);
       return;
     }
-    updateStatus.mutate({ id: leadData.id, status });
+    updateStatus.mutate(getStatusUpdatePayload(status));
   };
 
   const handleConfirmClose = () => {
     if (pendingStatus) {
-      updateStatus.mutate({ id: leadData.id, status: pendingStatus });
+      updateStatus.mutate(getStatusUpdatePayload(pendingStatus));
       setShowCloseWarning(false);
       setPendingStatus(null);
     }
@@ -458,57 +465,65 @@ export function LeadDetailDialog({ lead, onClose, initialTab }: LeadDetailDialog
               </>
             )}
 
-            {/* Actions for elevated users */}
-            {hasElevatedRole && (
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <label className="text-sm font-medium">Update Status</label>
-                  <Select value={leadData.lead_status} onValueChange={handleStatusChange}>
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {Object.entries(LEAD_STATUS_CONFIG).map(([key, config]) => {
-                        const isClosed = key === "closed";
-                        const isDisabled = isClosed && followUpCount < 3;
-                        return (
-                          <SelectItem 
-                            key={key} 
-                            value={key}
-                            disabled={isDisabled}
-                          >
+            {(canChangeStatus || hasElevatedRole) && (
+              <div
+                className={cn(
+                  "grid gap-4",
+                  canChangeStatus && hasElevatedRole ? "grid-cols-2" : "grid-cols-1",
+                )}
+              >
+                {canChangeStatus && (
+                  <div className="space-y-2">
+                    <label className="text-sm font-medium">Update Status</label>
+                    <Select value={leadData.lead_status} onValueChange={handleStatusChange}>
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {Object.entries(LEAD_STATUS_CONFIG).map(([key, config]) => {
+                          const isClosed = key === "closed";
+                          const isDisabled = isClosed && followUpCount < 3;
+                          return (
+                            <SelectItem
+                              key={key}
+                              value={key}
+                              disabled={isDisabled}
+                            >
+                              <span className="flex items-center gap-2">
+                                {config.label}
+                                {isDisabled && (
+                                  <span className="text-xs text-muted-foreground">
+                                    (Requires 3 follow-ups)
+                                  </span>
+                                )}
+                              </span>
+                            </SelectItem>
+                          );
+                        })}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                )}
+                {hasElevatedRole && (
+                  <div className="space-y-2">
+                    <label className="text-sm font-medium">Assign To</label>
+                    <Select value={leadData.assigned_to || ""} onValueChange={handleAssign}>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Unassigned" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {teamMembers.map((member) => (
+                          <SelectItem key={member.user_id} value={member.user_id}>
                             <span className="flex items-center gap-2">
-                              {config.label}
-                              {isDisabled && (
-                                <span className="text-xs text-muted-foreground">
-                                  (Requires 3 follow-ups)
-                                </span>
-                              )}
+                              <User className="h-4 w-4" />
+                              {member.full_name}
                             </span>
                           </SelectItem>
-                        );
-                      })}
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div className="space-y-2">
-                  <label className="text-sm font-medium">Assign To</label>
-                  <Select value={leadData.assigned_to || ""} onValueChange={handleAssign}>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Unassigned" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {teamMembers.map((member) => (
-                        <SelectItem key={member.user_id} value={member.user_id}>
-                          <span className="flex items-center gap-2">
-                            <User className="h-4 w-4" />
-                            {member.full_name}
-                          </span>
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                )}
               </div>
             )}
           </TabsContent>
