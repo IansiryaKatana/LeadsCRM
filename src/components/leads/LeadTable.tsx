@@ -32,6 +32,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Search, Filter, Flame, Eye, MoreHorizontal, Trash2, CheckSquare, Square, UserPlus } from "lucide-react";
 import { LeadFilters, ActiveFiltersDisplay, type LeadFilters as LeadFiltersType } from "./LeadFilters";
+import { DeleteLeadPanel } from "./DeleteLeadPanel";
 import { useDeleteLead, useToggleHotLead, useUpdateLeadStatus, useAssignLead } from "@/hooks/useLeads";
 import { useAuth } from "@/hooks/useAuth";
 import { toast } from "@/hooks/use-toast";
@@ -43,16 +44,6 @@ import { DEPOSITS_PAYMENTS_SOURCE_SLUG } from "@/constants/leadSegments";
 import { getLeadPaymentId, getLeadPaymentAmountPounds } from "@/utils/leadPaymentAmount";
 import { leadMatchesSearch } from "@/utils/leadSearch";
 import { useSystemSettingsContext } from "@/contexts/SystemSettingsContext";
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from "@/components/ui/alert-dialog";
 
 type Lead = Database["public"]["Tables"]["leads"]["Row"];
 type LeadStatus = Database["public"]["Enums"]["lead_status"];
@@ -247,11 +238,14 @@ export function LeadTable({
   };
 
   const confirmDelete = () => {
-    if (leadToDelete) {
-      deleteLead.mutate(leadToDelete.id);
-      setDeleteDialogOpen(false);
-      setLeadToDelete(null);
-    }
+    if (!leadToDelete) return;
+
+    deleteLead.mutate(leadToDelete.id, {
+      onSuccess: () => {
+        setDeleteDialogOpen(false);
+        setLeadToDelete(null);
+      },
+    });
   };
 
   const handleToggleHot = (e: React.MouseEvent, lead: Lead) => {
@@ -735,47 +729,27 @@ export function LeadTable({
         </Table>
       </div>
 
-      {/* Delete Confirmation Dialog */}
-      <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Delete Lead</AlertDialogTitle>
-            <AlertDialogDescription>
-              Are you sure you want to delete <strong>{leadToDelete?.full_name}</strong>? This action cannot be undone and will permanently remove this lead and all associated data.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction
-              onClick={confirmDelete}
-              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-            >
-              Delete
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+      <DeleteLeadPanel
+        open={deleteDialogOpen}
+        onClose={() => {
+          setDeleteDialogOpen(false);
+          setLeadToDelete(null);
+        }}
+        leadName={leadToDelete?.full_name ?? ""}
+        onConfirm={confirmDelete}
+        isPending={deleteLead.isPending}
+      />
 
-      {/* Bulk Delete Confirmation Dialog */}
-      <AlertDialog open={bulkDeleteDialogOpen} onOpenChange={setBulkDeleteDialogOpen}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Delete Multiple Leads</AlertDialogTitle>
-            <AlertDialogDescription>
-              Are you sure you want to delete <strong>{selectedLeads.size} lead(s)</strong>? This action cannot be undone and will permanently remove these leads and all associated data.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction
-              onClick={confirmBulkDelete}
-              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-            >
-              Delete {selectedLeads.size} Lead(s)
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+      <DeleteLeadPanel
+        open={bulkDeleteDialogOpen}
+        onClose={() => setBulkDeleteDialogOpen(false)}
+        title="Delete Multiple Leads"
+        leadName={`${selectedLeads.size} lead(s)`}
+        description={`Are you sure you want to delete ${selectedLeads.size} lead(s)? This action cannot be undone and will permanently remove these leads and all associated data.`}
+        confirmLabel={`Delete ${selectedLeads.size} Lead(s)`}
+        onConfirm={confirmBulkDelete}
+        isPending={deleteLead.isPending}
+      />
     </div>
   );
 }

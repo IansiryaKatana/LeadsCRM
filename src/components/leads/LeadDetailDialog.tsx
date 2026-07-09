@@ -35,7 +35,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { useUpdateLeadStatus, useAssignLead, useToggleHotLead, useLead } from "@/hooks/useLeads";
+import { useUpdateLeadStatus, useAssignLead, useToggleHotLead, useDeleteLead, useLead } from "@/hooks/useLeads";
 import { LeadNotesTab } from "@/components/leads/LeadNotesTab";
 import { useLeadNotes } from "@/hooks/useLeadNotes";
 import { useFollowUps, useCanCloseLead } from "@/hooks/useFollowUps";
@@ -49,6 +49,8 @@ import { LeadSourceBadge, LeadStatusBadge } from "@/components/leads/LeadMetaBad
 import { FollowUpHistory } from "@/components/leads/FollowUpHistory";
 import { FollowUpForm } from "@/components/leads/FollowUpForm";
 import { ExceptionRequestDialog } from "@/components/leads/ExceptionRequestDialog";
+import { ConvertLeadPanel } from "@/components/leads/ConvertLeadPanel";
+import { DeleteLeadPanel } from "@/components/leads/DeleteLeadPanel";
 import { AuditTrailDisplay } from "@/components/leads/AuditTrailDisplay";
 import { EmailTab } from "@/components/leads/EmailTab";
 import { TasksTab } from "@/components/leads/TasksTab";
@@ -56,7 +58,7 @@ import { CalendarTab } from "@/components/leads/CalendarTab";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Progress } from "@/components/ui/progress";
 import { ScrollProgressArea } from "@/components/ui/scroll-progress-area";
-import { Flame, Mail, Phone, Calendar, DollarSign, User, MessageSquare, Loader2, PhoneCall, Plus, History, CheckSquare, CalendarDays } from "lucide-react";
+import { Flame, Mail, Phone, Calendar, DollarSign, User, MessageSquare, Loader2, PhoneCall, Plus, History, CheckSquare, CalendarDays, Trash2 } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
 import type { Database } from "@/integrations/supabase/types";
 import { DEPOSITS_PAYMENTS_SOURCE_SLUG } from "@/constants/leadSegments";
@@ -92,6 +94,8 @@ export function LeadDetailDialog({ lead, onClose, initialTab }: LeadDetailDialog
   const [showFollowUpForm, setShowFollowUpForm] = useState(false);
   const [showCloseWarning, setShowCloseWarning] = useState(false);
   const [showExceptionDialog, setShowExceptionDialog] = useState(false);
+  const [showConvertDialog, setShowConvertDialog] = useState(false);
+  const [showDeletePanel, setShowDeletePanel] = useState(false);
   const [pendingStatus, setPendingStatus] = useState<LeadStatus | null>(null);
   const [activeTab, setActiveTab] = useState(initialTab ?? "details");
 
@@ -107,6 +111,7 @@ export function LeadDetailDialog({ lead, onClose, initialTab }: LeadDetailDialog
   const updateStatus = useUpdateLeadStatus();
   const assignLead = useAssignLead();
   const toggleHot = useToggleHotLead();
+  const deleteLead = useDeleteLead();
   
   // Fetch lead data reactively to get updated follow-up count
   const { data: currentLead, isLoading: leadLoading } = useLead(lead?.id || "");
@@ -136,11 +141,17 @@ export function LeadDetailDialog({ lead, onClose, initialTab }: LeadDetailDialog
   const lastFollowUpDate = leadData.last_followup_date ? new Date(leadData.last_followup_date) : null;
   const nextFollowUpDate = leadData.next_followup_date ? new Date(leadData.next_followup_date) : null;
 
-  const getStatusUpdatePayload = (status: LeadStatus) => ({
+  const getStatusUpdatePayload = (status: LeadStatus, potentialRevenue?: number) => ({
     id: leadData.id,
     status,
     assignToUserId: isSalesperson ? user?.id : undefined,
+    potentialRevenue,
   });
+
+  const getDefaultConvertRevenue = () =>
+    isDepositsPaymentsLead
+      ? (paymentAmount ?? leadData.potential_revenue ?? 0)
+      : (leadData.potential_revenue ?? 0);
 
   const handleStatusChange = (status: LeadStatus) => {
     // Check if trying to close without 3 follow-ups
@@ -149,7 +160,30 @@ export function LeadDetailDialog({ lead, onClose, initialTab }: LeadDetailDialog
       setShowCloseWarning(true);
       return;
     }
+    if (status === "converted" && leadData.lead_status !== "converted") {
+      setPendingStatus(status);
+      setShowConvertDialog(true);
+      return;
+    }
     updateStatus.mutate(getStatusUpdatePayload(status));
+  };
+
+  const handleConfirmConvert = (revenue: number) => {
+    updateStatus.mutate(getStatusUpdatePayload("converted", revenue), {
+      onSuccess: () => {
+        setShowConvertDialog(false);
+        setPendingStatus(null);
+      },
+    });
+  };
+
+  const handleConfirmDelete = () => {
+    deleteLead.mutate(leadData.id, {
+      onSuccess: () => {
+        setShowDeletePanel(false);
+        onClose();
+      },
+    });
   };
 
   const handleConfirmClose = () => {
@@ -524,6 +558,20 @@ export function LeadDetailDialog({ lead, onClose, initialTab }: LeadDetailDialog
                     </Select>
                   </div>
                 )}
+              </div>
+            )}
+
+            {isAdmin && (
+              <div className="border-t pt-4">
+                <Button
+                  variant="destructive"
+                  size="sm"
+                  onClick={() => setShowDeletePanel(true)}
+                  disabled={deleteLead.isPending}
+                >
+                  <Trash2 className="mr-2 h-4 w-4" />
+                  Delete Lead
+                </Button>
               </div>
             )}
           </TabsContent>
@@ -938,6 +986,26 @@ export function LeadDetailDialog({ lead, onClose, initialTab }: LeadDetailDialog
             </AlertDialogFooter>
           </AlertDialogContent>
         </AlertDialog>
+
+        <ConvertLeadPanel
+          open={showConvertDialog}
+          onClose={() => {
+            setShowConvertDialog(false);
+            setPendingStatus(null);
+          }}
+          defaultRevenue={getDefaultConvertRevenue()}
+          formatCurrency={formatCurrency}
+          onConfirm={handleConfirmConvert}
+          isPending={updateStatus.isPending}
+        />
+
+        <DeleteLeadPanel
+          open={showDeletePanel}
+          onClose={() => setShowDeletePanel(false)}
+          leadName={leadData.full_name}
+          onConfirm={handleConfirmDelete}
+          isPending={deleteLead.isPending}
+        />
 
         {/* Exception Request Dialog */}
         <ExceptionRequestDialog

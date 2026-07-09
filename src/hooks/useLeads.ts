@@ -221,16 +221,25 @@ export function useUpdateLeadStatus() {
       id,
       status,
       assignToUserId,
+      potentialRevenue,
     }: {
       id: string;
       status: LeadStatus;
       assignToUserId?: string;
+      potentialRevenue?: number;
     }) => {
-      const updates: { lead_status: LeadStatus; assigned_to?: string } = {
+      const updates: {
+        lead_status: LeadStatus;
+        assigned_to?: string;
+        potential_revenue?: number;
+      } = {
         lead_status: status,
       };
       if (assignToUserId) {
         updates.assigned_to = assignToUserId;
+      }
+      if (potentialRevenue !== undefined) {
+        updates.potential_revenue = potentialRevenue;
       }
 
       const { data, error } = await supabase
